@@ -15,14 +15,12 @@ export default function NihaiUrunlerPage() {
   const { user } = useAuthStore();
   const products = useFinishedProducts();
   const loading = useStockStore((state) => state.loading.finishedProducts);
+  const pagination = useStockStore((state) => state.pagination.finishedProducts);
   const actions = useStockActions();
-  // const filters = useStockFilters(); // Removed
   
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<FinishedProduct | null>(null);
   const [isSaving, setIsSaving] = useState(false);
-  const [totalPages, setTotalPages] = useState(1);
-  const [currentPage, setCurrentPage] = useState(1);
   
   // Real-time updates for finished products
   useRoleBasedRealtime('depo');
@@ -31,16 +29,12 @@ export default function NihaiUrunlerPage() {
     actions.fetchFinishedProducts();
   }, [actions]);
 
-  // fetchProducts function removed - using store actions instead
-
   const handlePageChange = (page: number) => {
-    setCurrentPage(page);
-    // Store will handle the data fetching
+    actions.fetchFinishedProducts({ page, limit: 50 });
   };
 
   const handleSearch = (search: string) => {
-    // Store will handle the search
-    actions.fetchFinishedProducts();
+    actions.fetchFinishedProducts({ search, page: 1, limit: 50 });
   };
 
   const handleAdd = () => {
@@ -67,7 +61,7 @@ export default function NihaiUrunlerPage() {
       }
 
       toast.success('Nihai ürün silindi');
-      fetchProducts();
+      actions.fetchFinishedProducts();
     } catch (error: any) {
       toast.error(error.message || 'Silme hatası');
     }
@@ -94,7 +88,7 @@ export default function NihaiUrunlerPage() {
 
       toast.success(editingProduct ? 'Nihai ürün güncellendi' : 'Nihai ürün oluşturuldu');
       setIsFormOpen(false);
-      fetchProducts();
+      actions.fetchFinishedProducts();
     } catch (error: any) {
       toast.error(error.message || 'Kayıt hatası');
     } finally {
@@ -123,9 +117,9 @@ export default function NihaiUrunlerPage() {
           ) : (
             <FinishedProductsTable
               products={products}
-              totalPages={totalPages}
-              currentPage={currentPage}
-              onPageChange={setCurrentPage}
+              totalPages={Math.ceil(pagination.total / pagination.limit)}
+              currentPage={pagination.page}
+              onPageChange={handlePageChange}
               onSearch={handleSearch}
               onEdit={handleEdit}
               onDelete={handleDelete}

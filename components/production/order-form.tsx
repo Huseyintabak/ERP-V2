@@ -54,8 +54,8 @@ export function OrderForm({ onSuccess }: Props) {
   const watchedItems = watch('items');
 
   useEffect(() => {
-    // Finished products'ları yükle
-    fetch('/api/stock/finished')
+    // Finished products'ları yükle (tüm ürünler)
+    fetch('/api/stock/finished?limit=1000')
       .then(res => res.json())
       .then(data => {
         if (data.data) {

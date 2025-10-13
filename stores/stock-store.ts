@@ -191,10 +191,10 @@ const initialState = {
     stockMovements: { page: 1, total: 0, limit: 50 },
   },
   filters: {
-    rawMaterials: { page: 1, limit: 50, sortBy: 'code', sortOrder: 'asc' },
-    semiFinishedProducts: { page: 1, limit: 50, sortBy: 'code', sortOrder: 'asc' },
-    finishedProducts: { page: 1, limit: 50, sortBy: 'code', sortOrder: 'asc' },
-    stockMovements: { page: 1, limit: 50, sortBy: 'created_at', sortOrder: 'desc' },
+    rawMaterials: { page: 1, limit: 50, sortBy: 'code', sortOrder: 'asc' as const },
+    semiFinishedProducts: { page: 1, limit: 50, sortBy: 'code', sortOrder: 'asc' as const },
+    finishedProducts: { page: 1, limit: 50, sortBy: 'code', sortOrder: 'asc' as const },
+    stockMovements: { page: 1, limit: 50, sortBy: 'created_at', sortOrder: 'desc' as const },
   },
 };
 
@@ -221,7 +221,7 @@ export const useStockStore = create<StockStore>()(
       actions: {
         // Fetch Raw Materials
         fetchRawMaterials: async (filters?: StockFilters) => {
-          const currentFilters = filters || get().filters.rawMaterials;
+          const currentFilters = { ...get().filters.rawMaterials, ...filters };
           
           set((state) => ({
             loading: { ...state.loading, rawMaterials: true },

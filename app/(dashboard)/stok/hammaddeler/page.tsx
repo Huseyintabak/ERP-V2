@@ -15,6 +15,7 @@ export default function HammaddelerPage() {
   const { user } = useAuthStore();
   const materials = useRawMaterials();
   const loading = useStockStore((state) => state.loading.rawMaterials);
+  const pagination = useStockStore((state) => state.pagination.rawMaterials);
   const actions = useStockActions();
   
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -28,9 +29,12 @@ export default function HammaddelerPage() {
     actions.fetchRawMaterials();
   }, [actions]);
 
+  const handlePageChange = (page: number) => {
+    actions.fetchRawMaterials({ page, limit: 50 });
+  };
+
   const handleSearch = (search: string) => {
-    actions.setRawMaterialsFilter({ search, page: 1 });
-    actions.fetchRawMaterials({ search, page: 1, limit: 50, sortBy: 'code', sortOrder: 'asc' });
+    actions.fetchRawMaterials({ search, page: 1, limit: 50 });
   };
 
   const handleAdd = () => {
@@ -92,11 +96,6 @@ export default function HammaddelerPage() {
     }
   };
 
-  const handlePageChange = (page: number) => {
-    actions.setRawMaterialsFilter({ page });
-    actions.fetchRawMaterials({ page, limit: 50, sortBy: 'code', sortOrder: 'asc' });
-  };
-
   return (
     <div className="space-y-6">
       <div>
@@ -116,8 +115,8 @@ export default function HammaddelerPage() {
           ) : (
             <RawMaterialsTable
               materials={materials}
-              totalPages={Math.ceil((materials.length || 0) / 50)}
-              currentPage={1}
+              totalPages={Math.ceil(pagination.total / pagination.limit)}
+              currentPage={pagination.page}
               onPageChange={handlePageChange}
               onSearch={handleSearch}
               onEdit={handleEdit}

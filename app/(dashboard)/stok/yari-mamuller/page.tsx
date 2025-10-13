@@ -15,14 +15,12 @@ export default function YariMamullerPage() {
   const { user } = useAuthStore();
   const materials = useSemiFinishedProducts();
   const loading = useStockStore((state) => state.loading.semiFinishedProducts);
+  const pagination = useStockStore((state) => state.pagination.semiFinishedProducts);
   const actions = useStockActions();
-  // const filters = useStockFilters(); // Removed
   
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingMaterial, setEditingMaterial] = useState<SemiFinishedProduct | null>(null);
   const [isSaving, setIsSaving] = useState(false);
-  const [totalPages, setTotalPages] = useState(1);
-  const [currentPage, setCurrentPage] = useState(1);
   
   // Real-time updates for semi-finished products
   useRoleBasedRealtime('depo');
@@ -31,16 +29,12 @@ export default function YariMamullerPage() {
     actions.fetchSemiFinishedProducts();
   }, [actions]);
 
-  // fetchMaterials function removed - using store actions instead
-
   const handlePageChange = (page: number) => {
-    setCurrentPage(page);
-    // Store will handle the data fetching
+    actions.fetchSemiFinishedProducts({ page, limit: 50 });
   };
 
   const handleSearch = (search: string) => {
-    // Store will handle the search
-    actions.fetchSemiFinishedProducts();
+    actions.fetchSemiFinishedProducts({ search, page: 1, limit: 50 });
   };
 
   const handleAdd = () => {
@@ -123,9 +117,9 @@ export default function YariMamullerPage() {
           ) : (
             <SemiFinishedTable
               materials={materials}
-              totalPages={totalPages}
-              currentPage={currentPage}
-              onPageChange={setCurrentPage}
+              totalPages={Math.ceil(pagination.total / pagination.limit)}
+              currentPage={pagination.page}
+              onPageChange={handlePageChange}
               onSearch={handleSearch}
               onEdit={handleEdit}
               onDelete={handleDelete}
