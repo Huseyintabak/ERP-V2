@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
 
     response.cookies.set('thunder_token', token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: false, // HTTP deployment için false
       sameSite: 'lax',
       maxAge: 60 * 60 * 24 * 7, // 7 days
       path: '/',

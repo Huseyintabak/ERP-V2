@@ -9,7 +9,7 @@ export async function POST() {
   // Cookie'yi temizle
   response.cookies.set('thunder_token', '', {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure: false, // HTTP deployment için false
     sameSite: 'lax',
     maxAge: 0,
     path: '/',
