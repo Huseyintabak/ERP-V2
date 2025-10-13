@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -54,6 +55,8 @@ interface DepoStats {
 }
 
 export default function DepoDashboard() {
+  const router = useRouter();
+  
   // Performance and memory monitoring - DISABLED FOR NOW
   // const memoryDetector = useMemoryLeakDetector('DepoDashboard');
   // const performanceMonitor = usePerformanceMonitor('DepoDashboard');
@@ -353,28 +356,47 @@ export default function DepoDashboard() {
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <Button variant="outline" className="h-auto p-4">
+            <Button 
+              variant="outline" 
+              className="h-auto p-4 hover:bg-green-50 hover:border-green-300 transition-colors opacity-50 cursor-not-allowed"
+              disabled
+              title="Yakında eklenecek"
+            >
               <div className="text-left">
                 <div className="font-medium">Stok Girişi</div>
-                <div className="text-sm text-muted-foreground">Yeni stok ekle</div>
+                <div className="text-sm text-muted-foreground">Yeni stok ekle (Yakında)</div>
               </div>
             </Button>
-            <Button variant="outline" className="h-auto p-4">
+            <Button 
+              variant="outline" 
+              className="h-auto p-4 hover:bg-red-50 hover:border-red-300 transition-colors opacity-50 cursor-not-allowed"
+              disabled
+              title="Yakında eklenecek"
+            >
               <div className="text-left">
                 <div className="font-medium">Stok Çıkışı</div>
-                <div className="text-sm text-muted-foreground">Stok çıkış işlemi</div>
+                <div className="text-sm text-muted-foreground">Stok çıkış işlemi (Yakında)</div>
               </div>
             </Button>
-            <Button variant="outline" className="h-auto p-4">
+            <Button 
+              variant="outline" 
+              className="h-auto p-4 hover:bg-orange-50 hover:border-orange-300 transition-colors opacity-50 cursor-not-allowed"
+              disabled
+              title="Yakında eklenecek"
+            >
               <div className="text-left">
                 <div className="font-medium">Envanter Sayımı</div>
-                <div className="text-sm text-muted-foreground">Fiziki sayım başlat</div>
+                <div className="text-sm text-muted-foreground">Fiziki sayım (Yakında)</div>
               </div>
             </Button>
-            <Button variant="outline" className="h-auto p-4">
+            <Button 
+              variant="outline" 
+              className="h-auto p-4 hover:bg-blue-50 hover:border-blue-300 transition-colors"
+              onClick={() => router.push('/stok/hareketler')}
+            >
               <div className="text-left">
-                <div className="font-medium">Stok Raporu</div>
-                <div className="text-sm text-muted-foreground">Detaylı analiz</div>
+                <div className="font-medium">Stok Hareketleri</div>
+                <div className="text-sm text-muted-foreground">Hareket geçmişini gör</div>
               </div>
             </Button>
           </div>
