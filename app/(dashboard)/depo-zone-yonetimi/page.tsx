@@ -441,9 +441,9 @@ export default function DepoZoneYonetimiPage() {
               </div>
             ) : (
               <div className="rounded-md border">
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto max-h-[400px] overflow-y-auto">
                   <table className="w-full">
-                    <thead className="bg-gray-50">
+                    <thead className="bg-gray-50 sticky top-0 z-10">
                       <tr>
                         <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">Ürün</th>
                         <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">Kod</th>
@@ -454,7 +454,7 @@ export default function DepoZoneYonetimiPage() {
                     </thead>
                     <tbody className="divide-y divide-gray-200">
                       {selectedZoneInventory.map((inventory) => (
-                        <tr key={inventory.id}>
+                        <tr key={inventory.id} className="hover:bg-gray-50">
                           <td className="px-4 py-3">
                             <div className="font-medium">{inventory.product?.name || 'Ürün Yok'}</div>
                           </td>
