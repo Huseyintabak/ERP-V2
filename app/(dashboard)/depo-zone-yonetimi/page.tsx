@@ -456,22 +456,22 @@ export default function DepoZoneYonetimiPage() {
                       {selectedZoneInventory.map((inventory) => (
                         <tr key={inventory.id}>
                           <td className="px-4 py-3">
-                            <div className="font-medium">{inventory.product.name}</div>
+                            <div className="font-medium">{inventory.product?.name || 'Ürün Yok'}</div>
                           </td>
                           <td className="px-4 py-3 text-sm text-gray-500">
-                            {inventory.product.code}
+                            {inventory.product?.code || 'N/A'}
                           </td>
                           <td className="px-4 py-3">
                             <Badge variant="secondary">{inventory.quantity} adet</Badge>
                           </td>
                           <td className="px-4 py-3">
-                            {inventory.product.unit_price.toLocaleString('tr-TR', {
+                            {(inventory.product?.unit_price || 0).toLocaleString('tr-TR', {
                               style: 'currency',
                               currency: 'TRY'
                             })}
                           </td>
                           <td className="px-4 py-3 font-medium">
-                            {(inventory.quantity * inventory.product.unit_price).toLocaleString('tr-TR', {
+                            {(inventory.quantity * (inventory.product?.unit_price || 0)).toLocaleString('tr-TR', {
                               style: 'currency',
                               currency: 'TRY'
                             })}
