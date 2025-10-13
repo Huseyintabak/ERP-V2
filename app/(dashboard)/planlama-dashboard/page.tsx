@@ -368,7 +368,9 @@ export default function PlanlamaDashboard() {
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">Tamamlama Oranı</span>
                 <Badge variant="secondary">
-                  {((stats.weeklyActual / stats.weeklyTarget) * 100).toFixed(1)}%
+                  {stats.weeklyTarget > 0 
+                    ? ((stats.weeklyActual / stats.weeklyTarget) * 100).toFixed(1) 
+                    : '0.0'}%
                 </Badge>
               </div>
               <div className="flex items-center justify-between">
