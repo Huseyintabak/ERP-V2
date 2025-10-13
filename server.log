@@ -1,0 +1,183 @@
+
+> thunder-erp@0.1.0 dev
+> next dev --turbopack
+
+   ▲ Next.js 15.5.4 (Turbopack)
+   - Local:        http://localhost:3000
+   - Network:      http://192.168.1.121:3000
+   - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Compiled middleware in 95ms
+ ✓ Ready in 945ms
+ ○ Compiling /depo-zone-yonetimi ...
+ ✓ Compiled /depo-zone-yonetimi in 2.6s
+ GET /depo-zone-yonetimi 200 in 2905ms
+ ✓ Compiled /api/auth/me in 286ms
+ GET /favicon.ico?favicon.0b3bf435.ico 200 in 477ms
+ GET /api/auth/me 200 in 1046ms
+ ✓ Compiled /api/notifications in 175ms
+ GET /api/notifications? 200 in 792ms
+ GET /api/customers 200 in 794ms
+ GET /api/warehouse/zones 200 in 937ms
+ GET /api/customers 200 in 405ms
+ GET /api/notifications? 200 in 586ms
+ GET /api/warehouse/zones 200 in 553ms
+ GET /api/warehouse/zones 200 in 950ms
+ GET /depo-zone-yonetimi 200 in 114ms
+ GET /favicon.ico?favicon.0b3bf435.ico 200 in 238ms
+ GET /api/auth/me 200 in 558ms
+ GET /api/notifications? 200 in 458ms
+ GET /api/customers 200 in 679ms
+ GET /api/warehouse/zones 200 in 808ms
+ GET /api/notifications? 200 in 425ms
+ GET /api/customers 200 in 562ms
+ GET /api/warehouse/zones 200 in 868ms
+ ✓ Compiled /api/warehouse/zones/[id]/inventory in 94ms
+Error: Route "/api/warehouse/zones/[id]/inventory" used `params.id`. `params` should be awaited before using its properties. Learn more: https://nextjs.org/docs/messages/sync-dynamic-apis
+    at GET (app/api/warehouse/zones/[id]/inventory/route.ts:26:27)
+  24 |     }
+  25 |
+> 26 |     const zoneId = params.id;
+     |                           ^
+  27 |     const supabase = await createClient();
+  28 |
+  29 |     // Fetch zone inventory with product details
+Error fetching zone inventory: {
+  code: 'PGRST205',
+  details: null,
+  hint: "Perhaps you meant the table 'public.zone_inventories'",
+  message: "Could not find the table 'public.zone_inventory' in the schema cache"
+}
+ GET /api/warehouse/zones/41b496ba-0e3f-4a08-89ae-6119e3cfd0e3/inventory 500 in 1761ms
+ GET /favicon.ico 200 in 275ms
+ ✓ Compiled /login in 347ms
+ GET /login 200 in 538ms
+ GET /login 200 in 535ms
+ GET /login 200 in 552ms
+ GET /favicon.ico?favicon.0b3bf435.ico 200 in 231ms
+Error: Route "/api/warehouse/zones/[id]/inventory" used `params.id`. `params` should be awaited before using its properties. Learn more: https://nextjs.org/docs/messages/sync-dynamic-apis
+    at GET (app/api/warehouse/zones/[id]/inventory/route.ts:26:27)
+  24 |     }
+  25 |
+> 26 |     const zoneId = params.id;
+     |                           ^
+  27 |     const supabase = await createClient();
+  28 |
+  29 |     // Fetch zone inventory with product details
+Error fetching zone inventory: {
+  code: 'PGRST200',
+  details: "Searched for a foreign key relationship between 'zone_inventories' and 'finished_products' in the schema 'public', but no matches were found.",
+  hint: null,
+  message: "Could not find a relationship between 'zone_inventories' and 'finished_products' in the schema cache"
+}
+ GET /api/warehouse/zones/41b496ba-0e3f-4a08-89ae-6119e3cfd0e3/inventory 500 in 956ms
+ ✓ Compiled /uretim/siparisler in 466ms
+ GET /uretim/siparisler 200 in 536ms
+ GET /api/auth/me 200 in 785ms
+ ✓ Compiled /api/orders in 106ms
+ GET /api/notifications? 200 in 465ms
+ GET /api/notifications? 200 in 653ms
+ GET /api/orders?page=1&limit=50&sortBy=created_at&sortOrder=desc 200 in 763ms
+ GET /api/orders?page=1&limit=50&sortBy=created_at&sortOrder=desc 200 in 784ms
+ GET /depo-zone-yonetimi 200 in 81ms
+ GET /favicon.ico?favicon.0b3bf435.ico 200 in 255ms
+ GET /api/auth/me 200 in 804ms
+ GET /api/notifications? 200 in 473ms
+ GET /api/customers 200 in 651ms
+ GET /api/warehouse/zones 200 in 841ms
+ GET /api/notifications? 200 in 421ms
+ GET /api/customers 200 in 597ms
+ GET /api/warehouse/zones 200 in 748ms
+Error: Route "/api/warehouse/zones/[id]/inventory" used `params.id`. `params` should be awaited before using its properties. Learn more: https://nextjs.org/docs/messages/sync-dynamic-apis
+    at GET (app/api/warehouse/zones/[id]/inventory/route.ts:26:27)
+  24 |     }
+  25 |
+> 26 |     const zoneId = params.id;
+     |                           ^
+  27 |     const supabase = await createClient();
+  28 |
+  29 |     // Fetch zone inventory with product details
+Error fetching zone inventory: {
+  code: 'PGRST200',
+  details: "Searched for a foreign key relationship between 'zone_inventories' and 'finished_products' in the schema 'public', but no matches were found.",
+  hint: null,
+  message: "Could not find a relationship between 'zone_inventories' and 'finished_products' in the schema cache"
+}
+ GET /api/warehouse/zones/41b496ba-0e3f-4a08-89ae-6119e3cfd0e3/inventory 500 in 661ms
+ GET /api/warehouse/zones/41b496ba-0e3f-4a08-89ae-6119e3cfd0e3/inventory 200 in 1417ms
+ GET /api/warehouse/zones/41b496ba-0e3f-4a08-89ae-6119e3cfd0e3/inventory 200 in 830ms
+Zone inventory API error: ReferenceError: createAdminClient is not defined
+    at GET (app/api/warehouse/zones/[id]/inventory/route.ts:27:27)
+  25 |
+  26 |     const { id: zoneId } = await params;
+> 27 |     const adminSupabase = await createAdminClient();
+     |                           ^
+  28 |
+  29 |     // Fetch zone inventory (polymorphic - cannot join directly, use admin client for RLS bypass)
+  30 |     const { data: inventoryRecords, error: invError } = await adminSupabase
+ GET /api/warehouse/zones/41b496ba-0e3f-4a08-89ae-6119e3cfd0e3/inventory 500 in 389ms
+Zone inventory API error: ReferenceError: createAdminClient is not defined
+    at GET (app/api/warehouse/zones/[id]/inventory/route.ts:27:27)
+  25 |
+  26 |     const { id: zoneId } = await params;
+> 27 |     const adminSupabase = await createAdminClient();
+     |                           ^
+  28 |
+  29 |     // Fetch zone inventory (polymorphic - cannot join directly, use admin client for RLS bypass)
+  30 |     const { data: inventoryRecords, error: invError } = await adminSupabase
+ GET /api/warehouse/zones/41b496ba-0e3f-4a08-89ae-6119e3cfd0e3/inventory 500 in 466ms
+ GET /api/warehouse/zones/41b496ba-0e3f-4a08-89ae-6119e3cfd0e3/inventory 200 in 1488ms
+ GET /api/warehouse/zones/41b496ba-0e3f-4a08-89ae-6119e3cfd0e3/inventory 200 in 1028ms
+ ✓ Compiled in 203ms
+ ✓ Compiled in 196ms
+ ✓ Compiled in 49ms
+ GET /api/customers 200 in 734ms
+ GET /api/notifications? 200 in 779ms
+ GET /api/warehouse/zones 200 in 1078ms
+ ✓ Compiled in 120ms
+ ✓ Compiled in 91ms
+ ✓ Compiled in 71ms
+ GET /api/warehouse/zones/41b496ba-0e3f-4a08-89ae-6119e3cfd0e3/inventory 200 in 1014ms
+ ✓ Compiled /api/warehouse/transfer in 234ms
+ POST /api/warehouse/transfer 400 in 1373ms
+ GET /api/warehouse/zones/41b496ba-0e3f-4a08-89ae-6119e3cfd0e3/inventory 200 in 1448ms
+Transfer function error: {
+  code: '42P01',
+  details: null,
+  hint: null,
+  message: 'relation "zone_inventory" does not exist'
+}
+ POST /api/warehouse/transfer 500 in 1501ms
+ GET /api/warehouse/zones/41b496ba-0e3f-4a08-89ae-6119e3cfd0e3/inventory 200 in 1219ms
+Transfer function error: {
+  code: '42P01',
+  details: null,
+  hint: null,
+  message: 'relation "zone_inventory" does not exist'
+}
+ POST /api/warehouse/transfer 500 in 952ms
+ POST /api/warehouse/transfer 400 in 1656ms
+ POST /api/warehouse/transfer 400 in 1096ms
+ POST /api/warehouse/transfer 200 in 1214ms
+ GET /api/warehouse/zones 200 in 565ms
+ GET /api/warehouse/zones/41b496ba-0e3f-4a08-89ae-6119e3cfd0e3/inventory 200 in 1116ms
+ POST /api/warehouse/transfer 200 in 1154ms
+ GET /api/warehouse/zones 200 in 692ms
+ GET /api/warehouse/zones/c6ef3be6-3854-4df6-a458-f4f01a29cfb7/inventory 200 in 1263ms
+ GET /api/warehouse/zones/c6ef3be6-3854-4df6-a458-f4f01a29cfb7/inventory 200 in 720ms
+ POST /api/warehouse/transfer 200 in 1108ms
+ GET /api/warehouse/zones 200 in 675ms
+ GET /depo-zone-yonetimi 200 in 271ms
+ GET /favicon.ico?favicon.0b3bf435.ico 200 in 238ms
+ GET /api/auth/me 200 in 616ms
+ GET /api/notifications? 200 in 495ms
+ GET /api/customers 200 in 661ms
+ GET /api/warehouse/zones 200 in 849ms
+ GET /api/notifications? 200 in 493ms
+ GET /api/customers 200 in 880ms
+ GET /api/warehouse/zones 200 in 896ms
+ GET /api/warehouse/zones/41b496ba-0e3f-4a08-89ae-6119e3cfd0e3/inventory 200 in 958ms
+ POST /api/warehouse/transfer 200 in 1156ms
+ GET /api/warehouse/zones 200 in 557ms
+ GET /api/warehouse/zones/41b496ba-0e3f-4a08-89ae-6119e3cfd0e3/inventory 200 in 1787ms
