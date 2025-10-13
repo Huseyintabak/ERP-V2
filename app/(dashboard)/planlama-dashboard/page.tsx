@@ -76,6 +76,8 @@ export default function PlanlamaDashboard() {
     lowStockItems: 0,
     reservedMaterials: 0,
   });
+  
+  const [operators, setOperators] = useState<any[]>([]);
 
   // Real-time subscriptions
   useRealtime('raw_materials', fetchStats);
@@ -90,83 +92,150 @@ export default function PlanlamaDashboard() {
 
   async function fetchStats() {
     try {
-      const [raw, semi, finished, plans, orders] = await Promise.all([
-        fetch('/api/stock/raw?limit=1').then(async r => {
-          if (!r.ok) return { pagination: { total: 0 } };
-          const text = await r.text();
-          if (text === '/login' || text.trim() === '') return { pagination: { total: 0 } };
-          try {
-            return JSON.parse(text);
-          } catch {
-            return { pagination: { total: 0 } };
-          }
-        }),
-        fetch('/api/stock/semi?limit=1').then(async r => {
-          if (!r.ok) return { pagination: { total: 0 } };
-          const text = await r.text();
-          if (text === '/login' || text.trim() === '') return { pagination: { total: 0 } };
-          try {
-            return JSON.parse(text);
-          } catch {
-            return { pagination: { total: 0 } };
-          }
-        }),
-        fetch('/api/stock/finished?limit=1').then(async r => {
-          if (!r.ok) return { pagination: { total: 0 } };
-          const text = await r.text();
-          if (text === '/login' || text.trim() === '') return { pagination: { total: 0 } };
-          try {
-            return JSON.parse(text);
-          } catch {
-            return { pagination: { total: 0 } };
-          }
-        }),
-        fetch('/api/production/plans?status=planlandi,devam_ediyor').then(async r => {
-          if (!r.ok) return { data: [] };
-          const text = await r.text();
-          if (text === '/login' || text.trim() === '') return { data: [] };
-          try {
-            return JSON.parse(text);
-          } catch {
-            return { data: [] };
-          }
-        }),
-        fetch('/api/orders?status=beklemede,onaylandi').then(async r => {
-          if (!r.ok) return { data: [] };
-          const text = await r.text();
-          if (text === '/login' || text.trim() === '') return { data: [] };
-          try {
-            return JSON.parse(text);
-          } catch {
-            return { data: [] };
-          }
-        }),
+      const [
+        raw, 
+        semi, 
+        finished, 
+        activePlans, 
+        pendingOrders,
+        completedPlans,
+        allPlans,
+        operators,
+        reservations,
+        movements
+      ] = await Promise.all([
+        // Stok sayıları
+        fetch('/api/stock/raw?limit=1').then(r => r.ok ? r.json() : { pagination: { total: 0 }, data: [] }),
+        fetch('/api/stock/semi?limit=1').then(r => r.ok ? r.json() : { pagination: { total: 0 }, data: [] }),
+        fetch('/api/stock/finished?limit=1').then(r => r.ok ? r.json() : { pagination: { total: 0 }, data: [] }),
+        
+        // Aktif üretim planları
+        fetch('/api/production/plans?status=planlandi,devam_ediyor&limit=1000').then(r => r.ok ? r.json() : { data: [] }),
+        
+        // Bekleyen siparişler
+        fetch('/api/orders?status=beklemede&limit=1000').then(r => r.ok ? r.json() : { data: [] }),
+        
+        // Bugün tamamlanan planlar
+        fetch('/api/production/plans?status=tamamlandi&limit=1000').then(r => r.ok ? r.json() : { data: [] }),
+        
+        // Tüm planlar (haftalık hesap için)
+        fetch('/api/production/plans?limit=1000').then(r => r.ok ? r.json() : { data: [] }),
+        
+        // Operatörler
+        fetch('/api/operators').then(r => r.ok ? r.json() : []),
+        
+        // Rezervasyonlar
+        fetch('/api/stock/raw?limit=1000').then(r => r.ok ? r.json() : { data: [] }),
+        
+        // Son 7 günün hareketleri
+        fetch('/api/stock/movements?limit=1000').then(r => r.ok ? r.json() : { data: [] })
       ]);
 
+      // Bugün tamamlanan planlar
+      const today = new Date().toISOString().split('T')[0];
+      const completedToday = completedPlans.data?.filter((p: any) => 
+        p.completed_at && p.completed_at.startsWith(today)
+      ).length || 0;
+
+      // Sipariş öncelik dağılımı (gerçek)
+      const urgentOrders = pendingOrders.data?.filter((o: any) => o.priority === 'yuksek').length || 0;
+      const normalOrders = pendingOrders.data?.filter((o: any) => o.priority === 'orta').length || 0;
+      const lowOrders = pendingOrders.data?.filter((o: any) => o.priority === 'dusuk').length || 0;
+
+      // Haftalık hesaplamalar (son 7 gün)
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      const weeklyCompleted = completedPlans.data?.filter((p: any) => 
+        new Date(p.completed_at) >= sevenDaysAgo
+      ).length || 0;
+      
+      const weeklyOrders = allPlans.data?.filter((p: any) => 
+        new Date(p.created_at) >= sevenDaysAgo
+      ).length || 0;
+
+      // Ortalama üretim süresi (saat cinsinden)
+      const completedWithTimes = completedPlans.data?.filter((p: any) => p.started_at && p.completed_at) || [];
+      const avgProductionTime = completedWithTimes.length > 0
+        ? completedWithTimes.reduce((sum: number, p: any) => {
+            const start = new Date(p.started_at).getTime();
+            const end = new Date(p.completed_at).getTime();
+            return sum + ((end - start) / (1000 * 60 * 60)); // milliseconds to hours
+          }, 0) / completedWithTimes.length
+        : 0;
+
+      // Planlama doğruluğu (tamamlanan / toplam * 100)
+      const totalPlansThisWeek = weeklyOrders || 1;
+      const planningAccuracy = weeklyOrders > 0 
+        ? (weeklyCompleted / weeklyOrders) * 100 
+        : 0;
+
+      // Kapasite kullanımı (aktif planlar / total operatör kapasitesi)
+      const totalOperators = Array.isArray(operators) ? operators.length : 0;
+      const activeOperators = activePlans.data?.reduce((acc: Set<string>, p: any) => {
+        if (p.assigned_operator_id) acc.add(p.assigned_operator_id);
+        return acc;
+      }, new Set()).size || 0;
+      const capacityUtilization = totalOperators > 0 
+        ? (activeOperators / totalOperators) * 100 
+        : 0;
+
+      // Malzeme hazırlık (stok / toplam ihtiyaç)
+      const totalStockItems = (raw.pagination?.total || 0) + (semi.pagination?.total || 0);
+      const criticalStock = raw.data?.filter((m: any) => m.quantity <= m.critical_level).length || 0;
+      const materialAvailability = totalStockItems > 0 
+        ? ((totalStockItems - criticalStock) / totalStockItems) * 100 
+        : 100;
+
+      // Verimlilik oranı (tamamlanan / planlanan)
+      const totalPlanned = allPlans.data?.length || 1;
+      const totalCompleted = completedPlans.data?.length || 0;
+      const efficiencyRate = totalPlanned > 0 
+        ? (totalCompleted / totalPlanned) * 100 
+        : 0;
+
+      // Gecikme oranı
+      const delayedPlans = activePlans.data?.filter((p: any) => {
+        if (!p.order) return false;
+        const deliveryDate = new Date(p.order.delivery_date);
+        return deliveryDate < new Date() && p.status !== 'tamamlandi';
+      }).length || 0;
+      const delayRate = activePlans.data?.length > 0 
+        ? (delayedPlans / activePlans.data.length) * 100 
+        : 0;
+
+      // Düşük stok (gerçek)
+      const lowStockItems = (raw.data?.filter((m: any) => 
+        m.quantity <= m.min_level && m.quantity > m.critical_level
+      ).length || 0);
+
+      // Toplam stok çeşidi
       const totalStock = (raw.pagination?.total || 0) + (semi.pagination?.total || 0) + (finished.pagination?.total || 0);
-      const pendingCount = orders.data?.length || 0;
-      const activeCount = plans.data?.length || 0;
+
+      // Operators state'e kaydet
+      if (Array.isArray(operators)) {
+        setOperators(operators);
+      }
 
       setStats({
-        pendingOrders: pendingCount,
-        activeProduction: activeCount,
-        completedToday: Math.floor(activeCount * 0.4), // Mock calculation
-        planningAccuracy: 92.5, // Mock data
-        capacityUtilization: 78.3, // Mock data
-        averageProductionTime: 3.8, // Mock data in hours
-        materialAvailability: 88.7, // Mock data
+        pendingOrders: pendingOrders.data?.length || 0,
+        activeProduction: activePlans.data?.length || 0,
+        completedToday,
+        planningAccuracy: Math.round(planningAccuracy * 10) / 10,
+        capacityUtilization: Math.round(capacityUtilization * 10) / 10,
+        averageProductionTime: Math.round(avgProductionTime * 10) / 10,
+        materialAvailability: Math.round(materialAvailability * 10) / 10,
         orderPriority: { 
-          urgent: Math.floor(pendingCount * 0.2), 
-          normal: Math.floor(pendingCount * 0.6), 
-          low: Math.floor(pendingCount * 0.2) 
+          urgent: urgentOrders, 
+          normal: normalOrders, 
+          low: lowOrders 
         },
-        weeklyTarget: 45, // Mock data
-        weeklyActual: 38, // Mock data
-        efficiencyRate: 84.4, // Mock data
-        delayRate: 12.3, // Mock data
+        weeklyTarget: weeklyOrders,
+        weeklyActual: weeklyCompleted,
+        efficiencyRate: Math.round(efficiencyRate * 10) / 10,
+        delayRate: Math.round(delayRate * 10) / 10,
         totalStockVarieties: totalStock,
-        lowStockItems: Math.floor((raw.pagination?.total || 0) * 0.15), // Mock calculation
-        reservedMaterials: Math.floor((raw.pagination?.total || 0) * 0.3), // Mock calculation
+        lowStockItems,
+        reservedMaterials: totalStockItems,
       });
     } catch (error) {
       console.error('Planlama Dashboard Stats fetch error:', error);
@@ -378,15 +447,15 @@ export default function PlanlamaDashboard() {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">Aktif Operatör</span>
-                <Badge variant="default">2</Badge>
+                <Badge variant="default">{stats.activeProduction > 0 ? Math.min(stats.activeProduction, Array.isArray(operators) ? operators.length : 0) : 0}</Badge>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Boşta Operatör</span>
-                <Badge variant="secondary">1</Badge>
+                <span className="text-sm font-medium">Toplam Operatör</span>
+                <Badge variant="secondary">{Array.isArray(operators) ? operators.length : 0}</Badge>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Ort. Verimlilik</span>
-                <Badge variant="outline">85%</Badge>
+                <span className="text-sm font-medium">Kapasite Kullanımı</span>
+                <Badge variant="outline">{stats.capacityUtilization.toFixed(1)}%</Badge>
               </div>
             </div>
           </CardContent>
