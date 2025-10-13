@@ -4,7 +4,7 @@ import { verifyJWT } from '@/lib/auth/jwt';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Authentication check
@@ -47,7 +47,7 @@ export async function GET(
     const productIds = inventoryRecords.map(inv => inv.material_id);
     const { data: products, error: prodError } = await adminSupabase
       .from('finished_products')
-      .select('id, name, code, sale_price')
+      .select('id, name, code, sale_price, unit')
       .in('id', productIds);
 
     if (prodError) {
@@ -55,12 +55,15 @@ export async function GET(
       return NextResponse.json({ error: prodError.message }, { status: 500 });
     }
 
-    // Combine inventory with product details
+    // Combine inventory with product details (map sale_price to unit_price for consistency)
     const inventory = inventoryRecords.map(inv => {
       const product = products?.find(p => p.id === inv.material_id);
       return {
         ...inv,
-        product
+        product: product ? {
+          ...product,
+          unit_price: product.sale_price // Map sale_price to unit_price
+        } : null
       };
     });
 
@@ -98,7 +101,7 @@ export async function GET(
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Authentication check
