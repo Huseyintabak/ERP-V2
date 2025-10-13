@@ -20,6 +20,7 @@ import {
   Activity
 } from 'lucide-react';
 import { useRealtime } from '@/lib/hooks/use-realtime';
+import { QuickStockEntryDialog } from '@/components/stock/quick-stock-entry-dialog';
 // import { useMemoryLeakDetector } from '@/lib/hooks/use-memory-leak-detector';
 // import { usePerformanceMonitor } from '@/lib/hooks/use-performance-monitor';
 // import { useStoreSync } from '@/lib/hooks/use-store-sync';
@@ -87,6 +88,9 @@ export default function DepoDashboard() {
     weeklyOutbound: 0,
     stockMovementTrend: 0,
   });
+
+  const [stockEntryOpen, setStockEntryOpen] = useState(false);
+  const [stockExitOpen, setStockExitOpen] = useState(false);
 
   // Real-time subscriptions
   useRealtime('raw_materials', fetchStats);
@@ -358,24 +362,22 @@ export default function DepoDashboard() {
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <Button 
               variant="outline" 
-              className="h-auto p-4 hover:bg-green-50 hover:border-green-300 transition-colors opacity-50 cursor-not-allowed"
-              disabled
-              title="Yakında eklenecek"
+              className="h-auto p-4 hover:bg-green-50 hover:border-green-300 transition-colors"
+              onClick={() => setStockEntryOpen(true)}
             >
               <div className="text-left">
                 <div className="font-medium">Stok Girişi</div>
-                <div className="text-sm text-muted-foreground">Yeni stok ekle (Yakında)</div>
+                <div className="text-sm text-muted-foreground">Yeni stok ekle</div>
               </div>
             </Button>
             <Button 
               variant="outline" 
-              className="h-auto p-4 hover:bg-red-50 hover:border-red-300 transition-colors opacity-50 cursor-not-allowed"
-              disabled
-              title="Yakında eklenecek"
+              className="h-auto p-4 hover:bg-red-50 hover:border-red-300 transition-colors"
+              onClick={() => setStockExitOpen(true)}
             >
               <div className="text-left">
                 <div className="font-medium">Stok Çıkışı</div>
-                <div className="text-sm text-muted-foreground">Stok çıkış işlemi (Yakında)</div>
+                <div className="text-sm text-muted-foreground">Stok çıkış işlemi</div>
               </div>
             </Button>
             <Button 
@@ -402,6 +404,18 @@ export default function DepoDashboard() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Stock Entry/Exit Dialogs */}
+      <QuickStockEntryDialog 
+        open={stockEntryOpen} 
+        onClose={() => setStockEntryOpen(false)} 
+        type="giris" 
+      />
+      <QuickStockEntryDialog 
+        open={stockExitOpen} 
+        onClose={() => setStockExitOpen(false)} 
+        type="cikis" 
+      />
     </div>
   );
 }
