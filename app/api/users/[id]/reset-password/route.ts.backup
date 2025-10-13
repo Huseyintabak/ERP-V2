@@ -1,0 +1,87 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@/lib/supabase/server';
+import { verifyJWT } from '@/lib/auth/jwt';
+import { hashPassword } from '@/lib/auth/password';
+import { z } from 'zod';
+
+const resetPasswordSchema = z.object({
+  new_password: z.string().min(6).max(100),
+});
+
+export async function POST(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const token = request.cookies.get('thunder_token')?.value;
+    if (!token) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const payload = await verifyJWT(token);
+    
+    // Only admin can reset passwords
+    if (payload.role !== 'yonetici') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    const body = await request.json();
+    const validatedData = resetPasswordSchema.parse(body);
+    const userId = request.headers.get('x-user-id');
+    
+    if (!userId) {
+      return NextResponse.json({ error: 'User context required' }, { status: 401 });
+    }
+
+    const supabase = await createClient();
+    await supabase.rpc('set_user_context', { user_id: userId });
+
+    // Check if target user exists
+    const { data: targetUser, error: userError } = await supabase
+      .from('users')
+      .select('id, email, name, is_active')
+      .eq('id', id)
+      .single();
+
+    if (userError || !targetUser) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    if (!targetUser.is_active) {
+      return NextResponse.json({ error: 'Cannot reset password for inactive user' }, { status: 400 });
+    }
+
+    // Hash new password
+    const hashedPassword = await hashPassword(validatedData.new_password);
+
+    // Update password
+    const { error: updateError } = await supabase
+      .from('users')
+      .update({ 
+        password_hash: hashedPassword,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', id);
+
+    if (updateError) {
+      console.error('Error updating password:', updateError);
+      return NextResponse.json({ error: 'Failed to update password' }, { status: 500 });
+    }
+
+    return NextResponse.json({
+      message: 'Password reset successfully',
+      user: {
+        id: targetUser.id,
+        email: targetUser.email,
+        name: targetUser.name,
+      },
+    });
+  } catch (error: any) {
+    if (error instanceof z.ZodError) {
+      return NextResponse.json({ error: 'Invalid data', details: error.errors }, { status: 400 });
+    }
+    console.error('Unexpected error resetting password:', error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}

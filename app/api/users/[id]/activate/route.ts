@@ -1,0 +1,75 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@/lib/supabase/server';
+import { verifyJWT } from '@/lib/auth/jwt';
+
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const token = request.cookies.get('thunder_token')?.value;
+    if (!token) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const payload = await verifyJWT(token);
+    
+    // Only admin can activate users
+    if (payload.role !== 'yonetici') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    const userId = request.headers.get('x-user-id');
+    
+    if (!userId) {
+      return NextResponse.json({ error: 'User context required' }, { status: 401 });
+    }
+
+    const supabase = await createClient();
+    await supabase.rpc('set_user_context', { user_id: userId });
+
+    // Check if target user exists
+    const { data: targetUser, error: userError } = await supabase
+      .from('users')
+      .select('id, email, name, is_active, role')
+      .eq('id', id)
+      .single();
+
+    if (userError || !targetUser) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    if (targetUser.is_active) {
+      return NextResponse.json({ error: 'User is already active' }, { status: 400 });
+    }
+
+    // Activate user
+    const { error: updateError } = await supabase
+      .from('users')
+      .update({ 
+        is_active: true,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', id);
+
+    if (updateError) {
+      console.error('Error activating user:', updateError);
+      return NextResponse.json({ error: 'Failed to activate user' }, { status: 500 });
+    }
+
+    return NextResponse.json({
+      message: 'User activated successfully',
+      user: {
+        id: targetUser.id,
+        email: targetUser.email,
+        name: targetUser.name,
+        role: targetUser.role,
+        is_active: true,
+      },
+    });
+  } catch (error: unknown) {
+    console.error('Unexpected error activating user:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
+  }
+}
