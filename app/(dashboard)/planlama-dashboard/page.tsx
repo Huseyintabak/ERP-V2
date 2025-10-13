@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -49,6 +50,8 @@ interface PlanlamaStats {
 }
 
 export default function PlanlamaDashboard() {
+  const router = useRouter();
+  
   // Performance and memory monitoring - DISABLED FOR NOW
   // const memoryDetector = useMemoryLeakDetector('PlanlamaDashboard');
   // const performanceMonitor = usePerformanceMonitor('PlanlamaDashboard');
@@ -472,21 +475,41 @@ export default function PlanlamaDashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              <Button variant="outline" size="sm" className="w-full justify-start">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="w-full justify-start hover:bg-blue-50"
+                onClick={() => router.push('/uretim/siparisler')}
+              >
                 <Calendar className="h-4 w-4 mr-2" />
-                Yeni Üretim Planı
+                Yeni Sipariş Oluştur
               </Button>
-              <Button variant="outline" size="sm" className="w-full justify-start">
-                <Clock className="h-4 w-4 mr-2" />
-                Sipariş Önceliklendir
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="w-full justify-start hover:bg-orange-50"
+                onClick={() => router.push('/uretim/planlar')}
+              >
+                <Factory className="h-4 w-4 mr-2" />
+                Üretim Planları
               </Button>
-              <Button variant="outline" size="sm" className="w-full justify-start">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="w-full justify-start hover:bg-green-50"
+                onClick={() => router.push('/stok/hammaddeler')}
+              >
                 <Package className="h-4 w-4 mr-2" />
-                Malzeme Kontrolü
+                Stok Kontrolü
               </Button>
-              <Button variant="outline" size="sm" className="w-full justify-start">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="w-full justify-start hover:bg-purple-50"
+                onClick={() => router.push('/raporlar')}
+              >
                 <BarChart3 className="h-4 w-4 mr-2" />
-                Kapasite Raporu
+                Raporlar
               </Button>
             </div>
           </CardContent>
