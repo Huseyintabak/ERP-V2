@@ -93,40 +93,125 @@ export default function RaporlarPage() {
 
   const fetchReportData = async () => {
     try {
-      // Gerçek API'ler eklenecek - şimdilik mock data
-      setProductionData([
-        { date: '2024-10-01', planned: 45, completed: 42, efficiency: 93.3, revenue: 125000 },
-        { date: '2024-10-02', planned: 52, completed: 48, efficiency: 92.3, revenue: 142000 },
-        { date: '2024-10-03', planned: 38, completed: 36, efficiency: 94.7, revenue: 98000 },
-        { date: '2024-10-04', planned: 61, completed: 58, efficiency: 95.1, revenue: 168000 },
-        { date: '2024-10-05', planned: 47, completed: 45, efficiency: 95.7, revenue: 132000 },
-        { date: '2024-10-06', planned: 55, completed: 52, efficiency: 94.5, revenue: 155000 },
-        { date: '2024-10-07', planned: 43, completed: 41, efficiency: 95.3, revenue: 118000 },
+      // Gerçek API çağrıları
+      const [plans, operators, rawMaterials, semiFinished, finishedProducts, orders, movements] = await Promise.all([
+        fetch('/api/production/plans?limit=1000').then(r => r.ok ? r.json() : { data: [] }),
+        fetch('/api/operators').then(r => r.ok ? r.json() : []),
+        fetch('/api/stock/raw?limit=1000').then(r => r.ok ? r.json() : { data: [] }),
+        fetch('/api/stock/semi?limit=1000').then(r => r.ok ? r.json() : { data: [] }),
+        fetch('/api/stock/finished?limit=1000').then(r => r.ok ? r.json() : { data: [] }),
+        fetch('/api/orders?limit=1000').then(r => r.ok ? r.json() : { data: [] }),
+        fetch('/api/stock/movements?limit=1000').then(r => r.ok ? r.json() : { data: [] })
       ]);
 
-      setStockData([
-        { material: 'Çelik Sac', currentStock: 850, criticalLevel: 100, status: 'normal', lastMovement: '2024-10-06', movementType: 'in' },
-        { material: 'Alüminyum Profil', currentStock: 45, criticalLevel: 50, status: 'low', lastMovement: '2024-10-05', movementType: 'out' },
-        { material: 'Vida Seti', currentStock: 25, criticalLevel: 30, status: 'critical', lastMovement: '2024-10-04', movementType: 'out' },
-        { material: 'Boyama Malzemesi', currentStock: 120, criticalLevel: 80, status: 'normal', lastMovement: '2024-10-07', movementType: 'in' },
-        { material: 'Elektrik Kablosu', currentStock: 35, criticalLevel: 40, status: 'low', lastMovement: '2024-10-03', movementType: 'out' },
-      ]);
+      // 1. PRODUCTION REPORT - Son 7 günün günlük üretim raporu
+      const last7Days = Array.from({ length: 7 }, (_, i) => {
+        const date = new Date();
+        date.setDate(date.getDate() - (6 - i));
+        return date.toISOString().split('T')[0];
+      });
 
-      setOperatorData([
-        { name: 'Thunder Operatör', totalProductions: 156, completedProductions: 150, efficiency: 96.2, avgTime: 45, revenue: 85000 },
-        { name: 'ThunderPro Operatör', totalProductions: 142, completedProductions: 135, efficiency: 95.1, avgTime: 48, revenue: 78000 },
-        { name: 'Operatör 3', totalProductions: 128, completedProductions: 118, efficiency: 92.2, avgTime: 52, revenue: 68000 },
-        { name: 'Operatör 4', totalProductions: 134, completedProductions: 125, efficiency: 93.3, avgTime: 49, revenue: 72000 },
-      ]);
+      const productionReport = last7Days.map(date => {
+        const dayPlans = plans.data?.filter((p: any) => 
+          p.created_at && p.created_at.startsWith(date)
+        ) || [];
+        
+        const dayCompleted = plans.data?.filter((p: any) => 
+          p.completed_at && p.completed_at.startsWith(date)
+        ) || [];
 
-      setOrderData([
-        { orderNumber: 'ORD-2024-001', customer: 'ABC Şirketi', totalValue: 45000, status: 'Tamamlandı', orderDate: '2024-10-01', deliveryDate: '2024-10-05' },
-        { orderNumber: 'ORD-2024-002', customer: 'XYZ Ltd.', totalValue: 78000, status: 'Üretimde', orderDate: '2024-10-02', deliveryDate: '2024-10-08' },
-        { orderNumber: 'ORD-2024-003', customer: 'DEF A.Ş.', totalValue: 32000, status: 'Beklemede', orderDate: '2024-10-03', deliveryDate: '2024-10-10' },
-        { orderNumber: 'ORD-2024-004', customer: 'GHI Sanayi', totalValue: 95000, status: 'Tamamlandı', orderDate: '2024-10-04', deliveryDate: '2024-10-07' },
-        { orderNumber: 'ORD-2024-005', customer: 'JKL Ticaret', totalValue: 28000, status: 'Üretimde', orderDate: '2024-10-05', deliveryDate: '2024-10-12' },
-      ]);
+        const planned = dayPlans.reduce((sum: number, p: any) => sum + (p.planned_quantity || 0), 0);
+        const completed = dayCompleted.reduce((sum: number, p: any) => sum + (p.produced_quantity || 0), 0);
+        const efficiency = planned > 0 ? (completed / planned) * 100 : 0;
+        const revenue = completed * 3000; // Ortalama ürün fiyatı (gerçek fiyat sistemi eklenebilir)
 
+        return { 
+          date, 
+          planned: Math.round(planned), 
+          completed: Math.round(completed), 
+          efficiency: Math.round(efficiency * 10) / 10, 
+          revenue 
+        };
+      });
+
+      setProductionData(productionReport);
+
+      // 2. STOCK REPORT - Tüm malzemelerin durumu
+      const allMaterials = [
+        ...(rawMaterials.data || []).map((m: any) => ({ ...m, type: 'raw' })),
+        ...(semiFinished.data || []).map((m: any) => ({ ...m, type: 'semi' })),
+        ...(finishedProducts.data || []).map((m: any) => ({ ...m, type: 'finished' }))
+      ];
+
+      const stockReport = allMaterials.map((m: any) => {
+        let status: 'normal' | 'low' | 'critical' = 'normal';
+        if (m.quantity <= m.critical_level) status = 'critical';
+        else if (m.quantity <= m.min_level) status = 'low';
+
+        // Son hareket
+        const lastMovement = movements.data?.find((mv: any) => 
+          mv.material_id === m.id && mv.material_type === m.type
+        );
+
+        return {
+          material: m.name,
+          currentStock: m.quantity,
+          criticalLevel: m.critical_level,
+          status,
+          lastMovement: lastMovement?.created_at?.split('T')[0] || 'N/A',
+          movementType: lastMovement?.movement_type === 'giris' ? 'in' as const : 'out' as const
+        };
+      }).slice(0, 20); // İlk 20 malzeme
+
+      setStockData(stockReport);
+
+      // 3. OPERATOR REPORT - Operatör performansları
+      const operatorReport = Array.isArray(operators) 
+        ? await Promise.all(operators.map(async (op: any) => {
+            // Operatörün planları
+            const opPlans = plans.data?.filter((p: any) => p.assigned_operator_id === op.id) || [];
+            const completed = opPlans.filter((p: any) => p.status === 'tamamlandi');
+            
+            // Ortalama süre hesaplama
+            const timesWithDuration = completed.filter((p: any) => p.started_at && p.completed_at);
+            const avgTime = timesWithDuration.length > 0
+              ? timesWithDuration.reduce((sum: number, p: any) => {
+                  const duration = (new Date(p.completed_at).getTime() - new Date(p.started_at).getTime()) / (1000 * 60); // dakika
+                  return sum + duration;
+                }, 0) / timesWithDuration.length
+              : 0;
+
+            const efficiency = opPlans.length > 0 ? (completed.length / opPlans.length) * 100 : 0;
+            const totalProduced = completed.reduce((sum: number, p: any) => sum + (p.produced_quantity || 0), 0);
+            const revenue = totalProduced * 3000; // Ortalama ürün fiyatı
+
+            return {
+              name: op.name || 'Operatör',
+              totalProductions: opPlans.length,
+              completedProductions: completed.length,
+              efficiency: Math.round(efficiency * 10) / 10,
+              avgTime: Math.round(avgTime),
+              revenue
+            };
+          }))
+        : [];
+
+      setOperatorData(operatorReport);
+
+      // 4. ORDER REPORT - Sipariş detayları
+      const orderReport = (orders.data || []).map((order: any) => ({
+        orderNumber: order.order_number,
+        customer: order.customer?.name || order.customer_name || 'Müşteri Yok',
+        totalValue: order.total_quantity * 3000, // Ortalama ürün fiyatı
+        status: order.status === 'beklemede' ? 'Beklemede' 
+              : order.status === 'onaylandi' ? 'Üretimde'
+              : order.status === 'tamamlandi' ? 'Tamamlandı'
+              : 'Bilinmiyor',
+        orderDate: order.created_at?.split('T')[0] || 'N/A',
+        deliveryDate: order.delivery_date?.split('T')[0] || 'N/A'
+      })).slice(0, 20); // İlk 20 sipariş
+
+      setOrderData(orderReport);
       setLoading(false);
     } catch (error) {
       console.error('Rapor verileri yüklenemedi:', error);
@@ -204,8 +289,22 @@ export default function RaporlarPage() {
               {productionData.reduce((sum, item) => sum + item.completed, 0)}
             </div>
             <p className="text-xs text-muted-foreground flex items-center">
-              <TrendingUp className="inline h-3 w-3 mr-1 text-green-600" />
-              +12.5% bu hafta
+              {(() => {
+                const thisWeek = productionData.slice(-7).reduce((sum, item) => sum + item.completed, 0);
+                const lastWeek = productionData.slice(-14, -7).reduce((sum, item) => sum + item.completed, 0);
+                const trend = lastWeek > 0 ? ((thisWeek - lastWeek) / lastWeek) * 100 : 0;
+                const isPositive = trend >= 0;
+                return (
+                  <>
+                    {isPositive ? (
+                      <TrendingUp className="inline h-3 w-3 mr-1 text-green-600" />
+                    ) : (
+                      <TrendingDown className="inline h-3 w-3 mr-1 text-red-600" />
+                    )}
+                    {isPositive ? '+' : ''}{trend.toFixed(1)}% bu hafta
+                  </>
+                );
+              })()}
             </p>
           </CardContent>
         </Card>
@@ -233,11 +332,21 @@ export default function RaporlarPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              %{Math.round(operatorData.reduce((sum, item) => sum + item.efficiency, 0) / operatorData.length)}
+              %{operatorData.length > 0 ? Math.round(operatorData.reduce((sum, item) => sum + item.efficiency, 0) / operatorData.length) : 0}
             </div>
             <p className="text-xs text-muted-foreground flex items-center">
-              <TrendingUp className="inline h-3 w-3 mr-1 text-green-600" />
-              +2.1% bu hafta
+              {operatorData.length > 0 ? (
+                <>
+                  {operatorData.reduce((sum, item) => sum + item.efficiency, 0) / operatorData.length >= 90 ? (
+                    <TrendingUp className="inline h-3 w-3 mr-1 text-green-600" />
+                  ) : (
+                    <TrendingDown className="inline h-3 w-3 mr-1 text-orange-600" />
+                  )}
+                  {operatorData.length} aktif operatör
+                </>
+              ) : (
+                'Operatör yok'
+              )}
             </p>
           </CardContent>
         </Card>
