@@ -278,8 +278,17 @@ const calculateRoleStats = async (role: keyof RoleBasedStats): Promise<Dashboard
       });
       stats.onTimeDelivery = orders.length > 0 ? (onTimeOrders.length / orders.length) * 100 : 0;
       
-      // Operator utilization (simplified)
-      stats.operatorUtilization = 85; // Placeholder - would need operator data
+      // Operator utilization (gerçek hesaplama)
+      const operatorsResponse = await fetch('/api/operators');
+      const operators = operatorsResponse.ok ? await operatorsResponse.json() : [];
+      const totalOperators = Array.isArray(operators) ? operators.length : 0;
+      const activeOperators = productionPlans
+        .filter((p: any) => p.status === 'devam_ediyor' && p.assigned_operator_id)
+        .reduce((acc: Set<string>, p: any) => {
+          acc.add(p.assigned_operator_id);
+          return acc;
+        }, new Set()).size;
+      stats.operatorUtilization = totalOperators > 0 ? (activeOperators / totalOperators) * 100 : 0;
     }
     
     // Recent activity

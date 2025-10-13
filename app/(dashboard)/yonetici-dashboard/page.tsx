@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -26,6 +27,7 @@ import { useAuthStore } from '@/stores/auth-store';
 // import { useStoreSync } from '@/lib/hooks/use-store-sync';
 
 export default function YoneticiDashboard() {
+  const router = useRouter();
   const { user } = useAuthStore();
   const stats = useDashboardStats('yonetici');
   const loading = useDashboardLoading('yonetici');
@@ -265,25 +267,41 @@ export default function YoneticiDashboard() {
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <Button variant="outline" className="h-auto p-4">
+            <Button 
+              variant="outline" 
+              className="h-auto p-4 hover:bg-blue-50 hover:border-blue-300 transition-colors"
+              onClick={() => router.push('/uretim/siparisler')}
+            >
               <div className="text-left">
                 <div className="font-medium">Sipariş Onayla</div>
                 <div className="text-sm text-muted-foreground">Bekleyen siparişleri incele</div>
               </div>
             </Button>
-            <Button variant="outline" className="h-auto p-4">
+            <Button 
+              variant="outline" 
+              className="h-auto p-4 hover:bg-green-50 hover:border-green-300 transition-colors"
+              onClick={() => router.push('/raporlar')}
+            >
               <div className="text-left">
                 <div className="font-medium">Stok Raporu</div>
                 <div className="text-sm text-muted-foreground">Detaylı stok analizi</div>
               </div>
             </Button>
-            <Button variant="outline" className="h-auto p-4">
+            <Button 
+              variant="outline" 
+              className="h-auto p-4 hover:bg-orange-50 hover:border-orange-300 transition-colors"
+              onClick={() => router.push('/uretim/planlar')}
+            >
               <div className="text-left">
                 <div className="font-medium">Üretim Planı</div>
-                <div className="text-sm text-muted-foreground">Yeni üretim planı oluştur</div>
+                <div className="text-sm text-muted-foreground">Üretim planlarını görüntüle</div>
               </div>
             </Button>
-            <Button variant="outline" className="h-auto p-4">
+            <Button 
+              variant="outline" 
+              className="h-auto p-4 hover:bg-purple-50 hover:border-purple-300 transition-colors"
+              onClick={() => router.push('/kullanicilar')}
+            >
               <div className="text-left">
                 <div className="font-medium">Kullanıcı Yönetimi</div>
                 <div className="text-sm text-muted-foreground">Sistem kullanıcılarını yönet</div>
