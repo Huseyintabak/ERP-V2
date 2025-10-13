@@ -1,5 +1,12 @@
 # ⚡ ThunderV2 ERP System
 
+[![GitHub](https://img.shields.io/badge/GitHub-Huseyintabak%2FERP--V2-blue?logo=github)](https://github.com/Huseyintabak/ERP-V2)
+[![Next.js](https://img.shields.io/badge/Next.js-15-black?logo=next.js)](https://nextjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue?logo=typescript)](https://www.typescriptlang.org/)
+[![Supabase](https://img.shields.io/badge/Supabase-PostgreSQL-green?logo=supabase)](https://supabase.com/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind-4.1-38bdf8?logo=tailwind-css)](https://tailwindcss.com/)
+[![License](https://img.shields.io/badge/License-Private-red)](LICENSE)
+
 > Modern, gerçek zamanlı üretim yönetimi platformu
 
 **ThunderV2**, üretim şirketleri için tasarlanmış, Next.js 15 ve Supabase ile geliştirilmiş kapsamlı bir ERP sistemidir. Sipariş yönetiminden üretim takibine, stok kontrolünden operatör performansına kadar tüm üretim süreçlerinizi tek platformda yönetin.
