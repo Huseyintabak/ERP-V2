@@ -23,7 +23,11 @@ export async function GET(request: NextRequest) {
         *,
         order:orders(order_number, customer_name, priority, delivery_date),
         product:finished_products(id, name, code, barcode),
-        assigned_operator:users!production_plans_assigned_operator_id_fkey(id, name, email)
+        operator:operators!production_plans_assigned_operator_id_fkey(
+          id,
+          series,
+          user:users(id, name, email)
+        )
       `, { count: 'exact' });
 
     if (status) {
