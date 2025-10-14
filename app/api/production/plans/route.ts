@@ -22,12 +22,7 @@ export async function GET(request: NextRequest) {
       .select(`
         *,
         order:orders(order_number, customer_name, priority, delivery_date),
-        product:finished_products(id, name, code, barcode),
-        operator:operators!production_plans_assigned_operator_id_fkey(
-          id,
-          series,
-          user:users(id, name, email)
-        )
+        product:finished_products(id, name, code, barcode)
       `, { count: 'exact' });
 
     if (status) {
@@ -64,7 +59,39 @@ export async function GET(request: NextRequest) {
 
     const { data, error, count } = await query;
 
-    if (error) throw error;
+    if (error) {
+      console.error('❌ Production plans query error:', error);
+      throw error;
+    }
+
+    // Operatör bilgilerini ekle (assigned_operator_id üzerinden)
+    if (data && data.length > 0) {
+      const operatorIds = data
+        .filter(plan => plan.assigned_operator_id)
+        .map(plan => plan.assigned_operator_id);
+
+      if (operatorIds.length > 0) {
+        const { data: operators } = await supabase
+          .from('operators')
+          .select('id, series, user_id, user:users(id, name, email)')
+          .in('user_id', operatorIds);
+
+        // Her plana operator bilgisini ekle
+        data.forEach(plan => {
+          if (plan.assigned_operator_id) {
+            const operator = operators?.find(op => op.user_id === plan.assigned_operator_id);
+            if (operator) {
+              plan.operator = {
+                id: operator.id,
+                series: operator.series,
+                name: operator.user?.name || '',
+                user: operator.user
+              };
+            }
+          }
+        });
+      }
+    }
 
     return NextResponse.json({
       data,
@@ -76,6 +103,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error: any) {
+    console.error('❌ Production plans GET error:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
