@@ -300,6 +300,28 @@ export default function BOMPage() {
     ));
   };
 
+  // Otomatik maliyet hesaplama
+  const autoCalculateCost = async (productId: string) => {
+    try {
+      console.log('🔄 Otomatik maliyet hesaplanıyor...');
+      
+      const response = await fetch('/api/pricing/calculate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ productId })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log('✅ Maliyet otomatik güncellendi:', result.calculation.total_cost);
+        toast.success('Maliyet otomatik güncellendi', { duration: 2000 });
+      }
+    } catch (error) {
+      console.warn('Otomatik maliyet hesaplama hatası:', error);
+      // Silent fail - kullanıcıyı rahatsız etme
+    }
+  };
+
   const handleAddBOMEntries = async () => {
     if (!selectedProduct) {
       toast.error('Lütfen bir ürün seçin');
@@ -351,7 +373,10 @@ export default function BOMPage() {
       
       // BOM verilerini yenile
       if (selectedProduct) {
-        fetchBOMData(selectedProduct.id);
+        await fetchBOMData(selectedProduct.id);
+        
+        // Otomatik maliyet hesapla
+        await autoCalculateCost(selectedProduct.id);
       }
     } catch (error: any) {
       console.error('Error adding BOM entries:', error);
@@ -386,7 +411,10 @@ export default function BOMPage() {
       
       // BOM verilerini yenile
       if (selectedProduct) {
-        fetchBOMData(selectedProduct.id);
+        await fetchBOMData(selectedProduct.id);
+        
+        // Otomatik maliyet hesapla
+        await autoCalculateCost(selectedProduct.id);
       }
     } catch (error: any) {
       console.error('Error deleting BOM entry:', error);
@@ -467,7 +495,10 @@ export default function BOMPage() {
       // Refresh current product's BOM if selected
       if (selectedProduct) {
         console.log('🔄 Refreshing BOM data...');
-        fetchBOMData(selectedProduct.id);
+        await fetchBOMData(selectedProduct.id);
+        
+        // Otomatik maliyet hesapla
+        await autoCalculateCost(selectedProduct.id);
       }
 
       event.target.value = ''; // Reset file input
