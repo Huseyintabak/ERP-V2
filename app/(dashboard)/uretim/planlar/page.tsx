@@ -100,7 +100,6 @@ export default function UretimPlanlariPage() {
       
       if (!response.ok) throw new Error(result.error);
       
-      console.log('📥 Operators fetched:', result);
       setOperators(Array.isArray(result) ? result : []);
     } catch (error: any) {
       console.error('Error fetching operators:', error);
