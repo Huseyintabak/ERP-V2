@@ -251,6 +251,13 @@ export default function BOMPage() {
       }
       
       const result = await response.json();
+      
+      // Güncel fiyatları allProducts'tan al ve merge et
+      const currentProduct = allProducts.find(p => p.id === productId);
+      if (currentProduct && result.product) {
+        result.product.sale_price = currentProduct.sale_price || currentProduct.unit_cost || result.product.sale_price;
+      }
+      
       setBomData(result);
     } catch (error) {
       console.error('Error fetching BOM data:', error);
@@ -355,8 +362,11 @@ export default function BOMPage() {
       await fetchSemiFinishedProducts();
       
       // Refresh current product if selected
+      // Small delay to ensure state updates complete
       if (selectedProduct) {
-        fetchBOMData(selectedProduct.id);
+        setTimeout(() => {
+          fetchBOMData(selectedProduct.id);
+        }, 100);
       }
     } catch (error: any) {
       console.error('❌ Bulk calculation error:', error);
