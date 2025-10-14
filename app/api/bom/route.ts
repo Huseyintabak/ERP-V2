@@ -80,10 +80,15 @@ export async function POST(request: NextRequest) {
       material = semiMaterial;
     }
 
-    // BOM kaydı oluştur
+    // BOM kaydı oluştur (sadece gerekli alanlar)
     const { data: bomRecord, error } = await supabase
       .from('bom')
-      .insert([validated])
+      .insert([{
+        finished_product_id: validated.finished_product_id,
+        material_type: validated.material_type,
+        material_id: validated.material_id,
+        quantity_needed: validated.quantity_needed
+      }])
       .select('*')
       .single();
 
@@ -107,7 +112,7 @@ export async function POST(request: NextRequest) {
     if (error.name === 'ZodError') {
       return NextResponse.json({ error: 'Validation error', details: error.errors }, { status: 400 });
     }
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return NextResponse.json({ error: error.message || 'BOM creation failed' }, { status: 400 });
   }
 }
 
