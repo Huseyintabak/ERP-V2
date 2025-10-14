@@ -322,6 +322,44 @@ export default function BOMPage() {
     }
   };
 
+  // Toplu maliyet hesaplama
+  const handleCalculateAllCosts = async () => {
+    if (!confirm('Tüm BOM\'u olan ürünlerin maliyetlerini hesaplamak istiyor musunuz?\n\nBu işlem birkaç dakika sürebilir.')) {
+      return;
+    }
+
+    try {
+      toast.info('Toplu maliyet hesaplama başlatılıyor...');
+      
+      const response = await fetch('/api/pricing/calculate-all', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Toplu hesaplama hatası');
+      }
+
+      toast.success(result.message);
+      
+      // Show errors if any
+      if (result.stats.failed > 0) {
+        console.warn('⚠️ Toplu hesaplama hataları:', result.stats.errors);
+        toast.warning(`${result.stats.failed} ürün hesaplanamadı. Konsolu kontrol edin.`);
+      }
+
+      // Refresh current product if selected
+      if (selectedProduct) {
+        fetchBOMData(selectedProduct.id);
+      }
+    } catch (error: any) {
+      console.error('❌ Bulk calculation error:', error);
+      toast.error(error.message || 'Toplu hesaplama hatası');
+    }
+  };
+
   const handleAddBOMEntries = async () => {
     if (!selectedProduct) {
       toast.error('Lütfen bir ürün seçin');
@@ -590,6 +628,14 @@ export default function BOMPage() {
           >
             <Download className="h-4 w-4 mr-2" />
             Excel Export
+          </Button>
+          <Button 
+            variant="default"
+            onClick={handleCalculateAllCosts}
+            className="bg-green-600 hover:bg-green-700"
+          >
+            <Calculator className="h-4 w-4 mr-2" />
+            Tüm Maliyetleri Hesapla
           </Button>
         </div>
       </div>
