@@ -25,41 +25,93 @@ export async function GET(request: NextRequest) {
     const supabase = await createClient();
     await supabase.rpc('set_user_context', { user_id: userId });
 
-    // Get BOM data with product and material names
+    // Get BOM data
     const { data: bomData } = await supabase
       .from('bom')
-      .select(`
-        *,
-        product:finished_products(name, code),
-        material:raw_materials(name, code)
-      `)
-      .order('product_id');
+      .select('*')
+      .order('finished_product_id');
 
     if (!bomData || bomData.length === 0) {
       // Create empty template
       const templateData = [{
-        product_code: '',
-        product_name: '',
-        material_code: '',
-        material_name: '',
-        quantity: 0,
-        unit: '',
-        notes: ''
+        'Ürün Kodu': '',
+        'Ürün Adı': '',
+        'Ürün Tipi': '',
+        'Malzeme Tipi': '',
+        'Malzeme Kodu': '',
+        'Malzeme Adı': '',
+        'Miktar': 0,
+        'Notlar': ''
       }];
       
       return createExcelFile(templateData, 'BOM Template');
     }
 
+    // Get all product IDs (both finished and semi)
+    const productIds = [...new Set(bomData.map(b => b.finished_product_id))];
+    
+    // Fetch finished products
+    const { data: finishedProducts } = await supabase
+      .from('finished_products')
+      .select('id, name, code')
+      .in('id', productIds);
+    
+    // Fetch semi-finished products
+    const { data: semiProducts } = await supabase
+      .from('semi_finished_products')
+      .select('id, name, code')
+      .in('id', productIds);
+    
+    // Get all material IDs
+    const rawMaterialIds = bomData.filter(b => b.material_type === 'raw').map(b => b.material_id);
+    const semiMaterialIds = bomData.filter(b => b.material_type === 'semi').map(b => b.material_id);
+    
+    // Fetch raw materials
+    let rawMaterials: any[] = [];
+    if (rawMaterialIds.length > 0) {
+      const { data } = await supabase
+        .from('raw_materials')
+        .select('id, name, code, unit')
+        .in('id', rawMaterialIds);
+      rawMaterials = data || [];
+    }
+    
+    // Fetch semi-finished materials
+    let semiMaterials: any[] = [];
+    if (semiMaterialIds.length > 0) {
+      const { data } = await supabase
+        .from('semi_finished_products')
+        .select('id, name, code, unit')
+        .in('id', semiMaterialIds);
+      semiMaterials = data || [];
+    }
+
     // Prepare data for export
-    const exportData = bomData.map(item => ({
-      product_code: item.product?.code || '',
-      product_name: item.product?.name || '',
-      material_code: item.material?.code || '',
-      material_name: item.material?.name || '',
-      quantity: item.quantity,
-      unit: item.unit,
-      notes: item.notes || ''
-    }));
+    const exportData = bomData.map(item => {
+      // Find product (check both finished and semi)
+      const product = finishedProducts?.find(p => p.id === item.finished_product_id) || 
+                      semiProducts?.find(p => p.id === item.finished_product_id);
+      const productType = finishedProducts?.find(p => p.id === item.finished_product_id) ? 'Nihai Ürün' : 'Yarı Mamul';
+      
+      // Find material based on type
+      let material = null;
+      if (item.material_type === 'raw') {
+        material = rawMaterials?.find(m => m.id === item.material_id);
+      } else {
+        material = semiMaterials?.find(m => m.id === item.material_id);
+      }
+      
+      return {
+        'Ürün Kodu': product?.code || '',
+        'Ürün Adı': product?.name || '',
+        'Ürün Tipi': productType,
+        'Malzeme Tipi': item.material_type === 'raw' ? 'Hammadde' : 'Yarı Mamul',
+        'Malzeme Kodu': material?.code || '',
+        'Malzeme Adı': material?.name || '',
+        'Miktar': item.quantity_needed || 0,
+        'Notlar': item.notes || ''
+      };
+    });
 
     return createExcelFile(exportData, 'BOM Listesi');
 
@@ -76,13 +128,14 @@ function createExcelFile(data: any[], sheetName: string) {
   
   // Set column widths
   const columnWidths = [
-    { wch: 20 }, // product_code
-    { wch: 30 }, // product_name
-    { wch: 20 }, // material_code
-    { wch: 30 }, // material_name
-    { wch: 10 }, // quantity
-    { wch: 10 }, // unit
-    { wch: 40 }, // notes
+    { wch: 15 }, // Ürün Kodu
+    { wch: 30 }, // Ürün Adı
+    { wch: 15 }, // Ürün Tipi
+    { wch: 15 }, // Malzeme Tipi
+    { wch: 15 }, // Malzeme Kodu
+    { wch: 30 }, // Malzeme Adı
+    { wch: 10 }, // Miktar
+    { wch: 30 }, // Notlar
   ];
   worksheet['!cols'] = columnWidths;
 
