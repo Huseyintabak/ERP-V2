@@ -851,6 +851,87 @@ Feature eklerken sorun yaşarsan:
 
 ---
 
+---
+
+#### 14 Ekim 2025 - Production Bug Fixes & Optimizations v1.1
+**Geliştirme Süresi:** 4-5 saat  
+**Değiştirilen Dosyalar:** 8 dosya  
+**Yeni Dosyalar:** 1 API endpoint
+
+**🐛 Düzeltilen Hatalar:**
+1. ✅ **Üretim Planları Veri Görüntüleme**
+   - Problem: planned_quantity vs target_quantity uyumsuzluğu
+   - Çözüm: API'de mapping eklendi (planned_quantity → target_quantity)
+   - Etki: Hedef ve Üretilen miktarlar artık doğru görünüyor
+
+2. ✅ **BOM Maliyet Hesaplama Kritik Hata**
+   - Problem: cost_price kolonu database'de yok (405 hatası)
+   - Çözüm: Tüm API'ler sale_price kullanacak şekilde güncellendi
+   - Etki: "Tüm Maliyetleri Hesapla" artık çalışıyor
+
+3. ✅ **BOM Endpoint Slug Conflict**
+   - Problem: [id] ve [productId] slug çakışması
+   - Çözüm: Query param kullanımına geçildi
+   - Etki: 405 Method Not Allowed hatası çözüldü
+
+**✨ Yeni Özellikler:**
+4. ✅ **BOM Malzeme Düzenleme**
+   - Malzeme miktarı artık düzenlenebilir (sil-ekle yapmaya gerek yok)
+   - PUT /api/bom?id=xxx endpoint eklendi
+   - Edit dialog ile kullanıcı dostu arayüz
+
+5. ✅ **BOM Excel Toplu Güncelleme (UPSERT)**
+   - Excel import artık mevcut BOM'ları güncelliyor
+   - Varsa UPDATE, yoksa INSERT mantığı
+   - İstatistik: "3 yeni, 12 güncellendi, 5 değişiklik yok"
+
+6. ✅ **Nihai Ürünler UI İyileştirmesi**
+   - "Satış Fiyatı" → "Birim Maliyet" değişimi
+   - Form'dan satış fiyatı alanı kaldırıldı
+   - Tutarlılık: Hammadde/Yarı mamul ile aynı terminoloji
+
+**🔧 Optimizasyonlar:**
+7. ✅ **Frontend Cache Bypass**
+   - API çağrılarına timestamp eklendi (?t=Date.now())
+   - cache: 'no-store' parametresi
+   - Güncel verilerin anında görünmesi
+
+8. ✅ **Otomatik Refresh Mantığı**
+   - BOM güncellendikten sonra ürün listesi otomatik refresh
+   - Maliyet hesaplama sonrası UI güncelleniyor
+   - setTimeout ile state sync sağlandı
+
+**📁 Değiştirilen Dosyalar:**
+- `app/(dashboard)/uretim/bom/page.tsx` - BOM düzenleme UI + UPSERT
+- `app/api/bom/route.ts` - PUT endpoint eklendi
+- `app/api/bom/import/route.ts` - UPSERT mantığı
+- `app/api/production/plans/route.ts` - Kolon mapping
+- `app/api/pricing/calculate-all/route.ts` - sale_price fix
+- `app/api/pricing/calculate/route.ts` - cost_price kaldırıldı
+- `components/stock/finished-products-table.tsx` - Birim Maliyet
+- `components/stock/finished-product-form.tsx` - Satış fiyatı kaldırıldı
+- `types/index.ts` - Schema güncelleme
+
+**🎯 Impact:**
+- 🐛 3 kritik bug düzeltildi
+- ✨ 3 yeni özellik eklendi
+- 🚀 2 performans optimizasyonu
+- ✅ Production-ready kod kalitesi
+
+**Commit'ler:**
+- `e858262` - BOM Excel Import/Update (UPSERT)
+- `b1b64a7` - BOM endpoint slug conflict düzeltildi
+- `4c5948a` - BOM malzemelerini düzenleme özelliği
+- `5871393` - Nihai ürün formundan satış fiyatı kaldırıldı
+- `df5723f` - Satış Fiyatı → Birim Maliyet
+- `3519cfc` - cost_price → sale_price düzeltmesi
+- `63710d2` - BOM fiyat güncellemesi
+- `4495e4e` - Toplu maliyet hesaplama refresh
+- `e2f9e30` - Production plans kolon mapping
+- `bb54864` - Debug log temizliği
+
+---
+
 ### ⏳ Sonraki Özellik: Email Notification Sistemi
 **Tahmini Süre:** 2-3 saat  
 **Başlangıç:** TBD
