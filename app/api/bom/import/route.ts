@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
     
     // Validation ve processing
     const errors: string[] = [];
-    const successCount = { created: 0, skipped: 0, errors: 0 };
+    const successCount = { created: 0, updated: 0, skipped: 0, errors: 0 };
 
     for (let i = 0; i < data.length; i++) {
       const row = data[i];
@@ -143,31 +143,50 @@ export async function POST(request: NextRequest) {
         // Check if BOM entry already exists
         const { data: existingBOM } = await supabase
           .from('bom')
-          .select('id')
+          .select('id, quantity_needed')
           .eq('finished_product_id', productId)
           .eq('material_id', materialId)
           .single();
 
+        const newQuantity = parseFloat(row['Miktar']) || 1;
+
         if (existingBOM) {
-          successCount.skipped++;
-          continue;
-        }
+          // UPDATE: Eğer miktar değişmişse güncelle
+          if (existingBOM.quantity_needed !== newQuantity) {
+            const { error: updateError } = await supabase
+              .from('bom')
+              .update({ quantity_needed: newQuantity })
+              .eq('id', existingBOM.id);
 
-        // Insert BOM entry
-        const { error: insertError } = await supabase
-          .from('bom')
-          .insert([{
-            finished_product_id: productId,
-            material_type: materialType,
-            material_id: materialId,
-            quantity_needed: parseFloat(row['Miktar']) || 1
-          }]);
-
-        if (insertError) {
-          errors.push(`Satır ${rowNum}: ${insertError.message}`);
-          successCount.errors++;
+            if (updateError) {
+              errors.push(`Satır ${rowNum}: ${updateError.message}`);
+              successCount.errors++;
+            } else {
+              console.log(`✅ Updated: ${row['Ürün Kodu']} + ${row['Malzeme Kodu']} (${existingBOM.quantity_needed} → ${newQuantity})`);
+              successCount.updated++;
+            }
+          } else {
+            // Miktar aynı, değişiklik yok
+            successCount.skipped++;
+          }
         } else {
-          successCount.created++;
+          // INSERT: Yeni BOM entry
+          const { error: insertError } = await supabase
+            .from('bom')
+            .insert([{
+              finished_product_id: productId,
+              material_type: materialType,
+              material_id: materialId,
+              quantity_needed: newQuantity
+            }]);
+
+          if (insertError) {
+            errors.push(`Satır ${rowNum}: ${insertError.message}`);
+            successCount.errors++;
+          } else {
+            console.log(`✅ Created: ${row['Ürün Kodu']} + ${row['Malzeme Kodu']} (${newQuantity})`);
+            successCount.created++;
+          }
         }
 
       } catch (error: any) {
@@ -178,7 +197,7 @@ export async function POST(request: NextRequest) {
 
     const result = {
       success: true,
-      message: `Import tamamlandı: ${successCount.created} kayıt eklendi, ${successCount.skipped} kayıt atlandı, ${successCount.errors} hata`,
+      message: `Import tamamlandı: ${successCount.created} yeni, ${successCount.updated} güncellendi, ${successCount.skipped} değişiklik yok, ${successCount.errors} hata`,
       stats: successCount,
       errors: errors.length > 0 ? errors : undefined
     };
