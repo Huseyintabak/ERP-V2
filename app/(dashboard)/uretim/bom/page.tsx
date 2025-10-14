@@ -557,20 +557,18 @@ export default function BOMPage() {
               </CardTitle>
               {selectedProduct && (
                 <div className="flex gap-2">
-                  {selectedProduct.product_type === 'finished' && (
-                    <CostCalculationDialog
-                      productId={selectedProduct.id}
-                      productCode={selectedProduct.code}
-                      productName={selectedProduct.name}
-                      currentSalePrice={selectedProduct.sale_price || 0}
-                      trigger={
-                        <Button variant="outline" size="sm">
-                          <Calculator className="h-4 w-4 mr-2" />
-                          Maliyet Hesapla
-                        </Button>
-                      }
-                    />
-                  )}
+                  <CostCalculationDialog
+                    productId={selectedProduct.id}
+                    productCode={selectedProduct.code}
+                    productName={selectedProduct.name}
+                    currentSalePrice={selectedProduct.sale_price || selectedProduct.unit_cost || 0}
+                    trigger={
+                      <Button variant="outline" size="sm">
+                        <Calculator className="h-4 w-4 mr-2" />
+                        Maliyet Hesapla
+                      </Button>
+                    }
+                  />
                   <Button
                     onClick={() => setIsAddDialogOpen(true)}
                     size="sm"

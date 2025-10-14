@@ -38,14 +38,38 @@ export async function POST(request: NextRequest) {
 
     const result = costData[0];
 
-    // Ürün bilgilerini al
-    const { data: product, error: productError } = await supabase
+    // Ürün bilgilerini al (önce finished, sonra semi)
+    let product: any = null;
+    let productType: 'finished' | 'semi' = 'finished';
+
+    const { data: finishedProduct } = await supabase
       .from('finished_products')
       .select('id, code, name, sale_price, cost_price, profit_margin, quantity')
       .eq('id', productId)
       .single();
 
-    if (productError) throw productError;
+    if (finishedProduct) {
+      product = finishedProduct;
+      productType = 'finished';
+    } else {
+      const { data: semiProduct, error: semiError } = await supabase
+        .from('semi_finished_products')
+        .select('id, code, name, unit_cost, quantity')
+        .eq('id', productId)
+        .single();
+
+      if (semiError || !semiProduct) {
+        throw new Error('Product not found in finished or semi-finished products');
+      }
+
+      product = {
+        ...semiProduct,
+        sale_price: semiProduct.unit_cost, // Map unit_cost to sale_price
+        cost_price: null,
+        profit_margin: null
+      };
+      productType = 'semi';
+    }
 
     // Kar marjı hesapla
     const totalCost = parseFloat(result.total_cost || '0');
@@ -78,14 +102,24 @@ export async function POST(request: NextRequest) {
         .insert(breakdownRecords);
     }
 
-    // Ürün cost_price'ını güncelle (opsiyonel - sadece talep edilirse)
-    // await supabase
-    //   .from('finished_products')
-    //   .update({ 
-    //     cost_price: totalCost,
-    //     last_price_update: new Date().toISOString()
-    //   })
-    //   .eq('id', productId);
+    // Ürün maliyetini otomatik güncelle
+    if (productType === 'finished') {
+      await supabase
+        .from('finished_products')
+        .update({ 
+          cost_price: totalCost,
+          last_price_update: new Date().toISOString()
+        })
+        .eq('id', productId);
+    } else {
+      // Yarı mamul için unit_cost'u güncelle
+      await supabase
+        .from('semi_finished_products')
+        .update({ 
+          unit_cost: totalCost
+        })
+        .eq('id', productId);
+    }
 
     return NextResponse.json({
       success: true,
