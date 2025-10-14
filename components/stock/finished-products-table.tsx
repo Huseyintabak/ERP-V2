@@ -12,10 +12,11 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Pencil, Trash2, Search, Plus } from 'lucide-react';
+import { Pencil, Trash2, Search, Plus, Calculator } from 'lucide-react';
 import type { FinishedProduct } from '@/types';
 import { ExcelImportDialog } from './excel-import-dialog';
 import { ExcelExportDialog } from './excel-export-dialog';
+import { CostCalculationDialog } from '@/components/pricing/cost-calculation-dialog';
 
 interface Props {
   products: FinishedProduct[];
@@ -130,10 +131,23 @@ export function FinishedProductsTable({
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
+                        <CostCalculationDialog
+                          productId={product.id}
+                          productCode={product.code}
+                          productName={product.name}
+                          currentSalePrice={product.sale_price}
+                          currentCostPrice={(product as any).cost_price}
+                          trigger={
+                            <Button variant="ghost" size="icon" title="Maliyet Hesapla">
+                              <Calculator className="h-4 w-4 text-blue-600" />
+                            </Button>
+                          }
+                        />
                         <Button
                           variant="ghost"
                           size="icon"
                           onClick={() => onEdit(product)}
+                          title="Düzenle"
                         >
                           <Pencil className="h-4 w-4" />
                         </Button>
@@ -141,6 +155,7 @@ export function FinishedProductsTable({
                           variant="ghost"
                           size="icon"
                           onClick={() => onDelete(product.id)}
+                          title="Sil"
                         >
                           <Trash2 className="h-4 w-4 text-red-600" />
                         </Button>

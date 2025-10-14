@@ -40,7 +40,8 @@ import {
   Users,
   AlertTriangle,
   Calendar,
-  Filter
+  Filter,
+  FileSpreadsheet
 } from 'lucide-react';
 
 interface ProductionReport {
@@ -219,9 +220,59 @@ export default function RaporlarPage() {
     }
   };
 
-  const exportReport = (type: string) => {
-    // Export functionality - Excel/PDF export
-    console.log(`Exporting ${type} report...`);
+  const exportReport = async (type: string) => {
+    try {
+      let url = '';
+      
+      switch (type) {
+        case 'production':
+          url = '/api/reports/export/production';
+          break;
+        case 'stock':
+          url = '/api/reports/export/stock';
+          break;
+        case 'operators':
+          url = '/api/reports/export/operators';
+          break;
+        case 'orders':
+          url = '/api/reports/export/orders';
+          break;
+        case 'all':
+          // Tümünü sırayla indir
+          await exportReport('production');
+          await new Promise(resolve => setTimeout(resolve, 500));
+          await exportReport('stock');
+          await new Promise(resolve => setTimeout(resolve, 500));
+          await exportReport('operators');
+          await new Promise(resolve => setTimeout(resolve, 500));
+          await exportReport('orders');
+          return;
+        default:
+          console.log(`Exporting ${type} report...`);
+          return;
+      }
+
+      // Excel dosyasını indir
+      const response = await fetch(url);
+      
+      if (!response.ok) {
+        throw new Error('Export hatası');
+      }
+
+      const blob = await response.blob();
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = downloadUrl;
+      a.download = `${type}-raporu-${new Date().toISOString().split('T')[0]}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(downloadUrl);
+      document.body.removeChild(a);
+
+    } catch (error) {
+      console.error('Export error:', error);
+      alert('Rapor indirilemedi. Lütfen tekrar deneyin.');
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -366,13 +417,26 @@ export default function RaporlarPage() {
           <div className="grid gap-4">
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Factory className="w-5 h-5 mr-2" />
-                  Günlük Üretim Trendi
-                </CardTitle>
-                <CardDescription>
-                  Planlanan vs Tamamlanan üretim miktarları
-                </CardDescription>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center">
+                      <Factory className="w-5 h-5 mr-2" />
+                      Günlük Üretim Trendi
+                    </CardTitle>
+                    <CardDescription>
+                      Planlanan vs Tamamlanan üretim miktarları
+                    </CardDescription>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => exportReport('production')}
+                    className="gap-2"
+                  >
+                    <FileSpreadsheet className="w-4 h-4" />
+                    Excel İndir
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
                 <div className="h-[300px]">
@@ -443,13 +507,26 @@ export default function RaporlarPage() {
         <TabsContent value="stock" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center">
-                <Package className="w-5 h-5 mr-2" />
-                Stok Durumu Raporu
-              </CardTitle>
-              <CardDescription>
-                Kritik stok seviyeleri ve hareket analizi
-              </CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center">
+                    <Package className="w-5 h-5 mr-2" />
+                    Stok Durumu Raporu
+                  </CardTitle>
+                  <CardDescription>
+                    Kritik stok seviyeleri ve hareket analizi
+                  </CardDescription>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => exportReport('stock')}
+                  className="gap-2"
+                >
+                  <FileSpreadsheet className="w-4 h-4" />
+                  Excel İndir
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               <div className="rounded-md border">
@@ -510,6 +587,17 @@ export default function RaporlarPage() {
 
         {/* Operator Reports */}
         <TabsContent value="operators" className="space-y-4">
+          <div className="flex justify-end mb-4">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => exportReport('operators')}
+              className="gap-2"
+            >
+              <FileSpreadsheet className="w-4 h-4" />
+              Operatör Raporu İndir
+            </Button>
+          </div>
           <div className="grid gap-4 md:grid-cols-2">
             <Card>
               <CardHeader>
@@ -619,13 +707,26 @@ export default function RaporlarPage() {
         <TabsContent value="orders" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center">
-                <Calendar className="w-5 h-5 mr-2" />
-                Sipariş Raporu
-              </CardTitle>
-              <CardDescription>
-                Sipariş durumları ve teslim analizi
-              </CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center">
+                    <Calendar className="w-5 h-5 mr-2" />
+                    Sipariş Raporu
+                  </CardTitle>
+                  <CardDescription>
+                    Sipariş durumları ve teslim analizi
+                  </CardDescription>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => exportReport('orders')}
+                  className="gap-2"
+                >
+                  <FileSpreadsheet className="w-4 h-4" />
+                  Excel İndir
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               <div className="rounded-md border">

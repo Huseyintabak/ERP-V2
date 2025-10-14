@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -66,6 +67,24 @@ export function SemiFinishedForm({ open, onClose, onSubmit, initialData, isLoadi
   ];
 
   const selectedUnit = watch('unit');
+
+  // initialData değiştiğinde formu güncelle
+  useEffect(() => {
+    if (open && initialData) {
+      reset(initialData);
+    } else if (open && !initialData) {
+      reset({
+        code: '',
+        name: '',
+        barcode: '',
+        quantity: 0,
+        unit: 'adet',
+        unit_cost: 0,
+        critical_level: 5,
+        description: ''
+      });
+    }
+  }, [open, initialData, reset]);
 
   const handleFormSubmit = async (data: SemiFinishedProductFormData) => {
     await onSubmit(data);

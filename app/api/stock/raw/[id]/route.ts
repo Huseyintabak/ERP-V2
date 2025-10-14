@@ -65,13 +65,20 @@ export async function PUT(
       .single();
 
     if (error) {
-      return NextResponse.json({ error: 'Failed to update material' }, { status: 400 });
+      console.error('❌ Update error:', error);
+      return NextResponse.json({ 
+        error: 'Güncelleme başarısız', 
+        details: error.message,
+        code: error.code 
+      }, { status: 400 });
     }
 
     return NextResponse.json(material);
   } catch (error) {
-    console.error('Error updating raw material:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    console.error('❌ Error updating raw material:', error);
+    return NextResponse.json({ 
+      error: error instanceof Error ? error.message : 'Internal server error' 
+    }, { status: 500 });
   }
 }
 

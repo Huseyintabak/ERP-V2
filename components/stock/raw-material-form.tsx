@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { rawMaterialSchema, type RawMaterialFormData } from '@/types';
@@ -75,6 +76,26 @@ export function RawMaterialForm({
   ];
 
   const selectedUnit = watch('unit');
+
+  // initialData değiştiğinde formu güncelle
+  useEffect(() => {
+    if (open && initialData) {
+      reset(initialData);
+    } else if (open && !initialData) {
+      reset({
+        code: '',
+        name: '',
+        unit: 'adet',
+        quantity: 0,
+        min_level: 10,
+        max_level: 100,
+        critical_level: 5,
+        unit_price: 0,
+        supplier: '',
+        description: ''
+      });
+    }
+  }, [open, initialData, reset]);
 
   const handleFormSubmit = async (data: RawMaterialFormData) => {
     try {

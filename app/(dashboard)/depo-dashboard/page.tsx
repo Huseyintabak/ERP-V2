@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { useRealtime } from '@/lib/hooks/use-realtime';
 import { QuickStockEntryDialog } from '@/components/stock/quick-stock-entry-dialog';
+import { InventoryCountDialog } from '@/components/stock/inventory-count-dialog';
 // import { useMemoryLeakDetector } from '@/lib/hooks/use-memory-leak-detector';
 // import { usePerformanceMonitor } from '@/lib/hooks/use-performance-monitor';
 // import { useStoreSync } from '@/lib/hooks/use-store-sync';
@@ -91,6 +92,7 @@ export default function DepoDashboard() {
 
   const [stockEntryOpen, setStockEntryOpen] = useState(false);
   const [stockExitOpen, setStockExitOpen] = useState(false);
+  const [inventoryCountOpen, setInventoryCountOpen] = useState(false);
 
   // Real-time subscriptions
   useRealtime('raw_materials', fetchStats);
@@ -209,23 +211,23 @@ export default function DepoDashboard() {
 
         <Card className="border-l-4 border-l-indigo-500">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Stok Değeri</CardTitle>
-            <DollarSign className="h-4 w-4 text-indigo-600" />
+            <CardTitle className="text-sm font-medium">Rezerve Stok</CardTitle>
+            <Package className="h-4 w-4 text-indigo-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">₺{stats.totalStockValue.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">Toplam değer</p>
+            <div className="text-2xl font-bold">{stats.reservedStock.toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground">Rezerve edilmiş ürün</p>
           </CardContent>
         </Card>
 
         <Card className="border-l-4 border-l-teal-500">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Ortalama Yaş</CardTitle>
-            <Calendar className="h-4 w-4 text-teal-600" />
+            <CardTitle className="text-sm font-medium">Toplam Hareket</CardTitle>
+            <ArrowUpDown className="h-4 w-4 text-teal-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.averageStockAge}</div>
-            <p className="text-xs text-muted-foreground">Gün</p>
+            <div className="text-2xl font-bold">{stats.dailyInbound + stats.dailyOutbound}</div>
+            <p className="text-xs text-muted-foreground">Bugünkü giriş + çıkış</p>
           </CardContent>
         </Card>
       </div>
@@ -382,13 +384,12 @@ export default function DepoDashboard() {
             </Button>
             <Button 
               variant="outline" 
-              className="h-auto p-4 hover:bg-orange-50 hover:border-orange-300 transition-colors opacity-50 cursor-not-allowed"
-              disabled
-              title="Yakında eklenecek"
+              className="h-auto p-4 hover:bg-orange-50 hover:border-orange-300 transition-colors"
+              onClick={() => setInventoryCountOpen(true)}
             >
               <div className="text-left">
                 <div className="font-medium">Envanter Sayımı</div>
-                <div className="text-sm text-muted-foreground">Fiziki sayım (Yakında)</div>
+                <div className="text-sm text-muted-foreground">Fiziki stok sayımı</div>
               </div>
             </Button>
             <Button 
@@ -415,6 +416,13 @@ export default function DepoDashboard() {
         open={stockExitOpen} 
         onClose={() => setStockExitOpen(false)} 
         type="cikis" 
+      />
+      
+      {/* Inventory Count Dialog */}
+      <InventoryCountDialog
+        open={inventoryCountOpen}
+        onOpenChange={setInventoryCountOpen}
+        onSuccess={fetchStats}
       />
     </div>
   );

@@ -17,9 +17,21 @@ import {
   Upload,
   Download,
   Eye,
-  Edit
+  Edit,
+  Calculator
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { CostCalculationDialog } from '@/components/pricing/cost-calculation-dialog';
+
+interface Product {
+  id: string;
+  name: string;
+  code: string;
+  unit: string;
+  sale_price?: number;
+  unit_cost?: number;
+  product_type: 'finished' | 'semi'; // Ürün tipi
+}
 
 interface FinishedProduct {
   id: string;
@@ -66,10 +78,11 @@ interface SemiFinishedProduct {
 }
 
 export default function BOMPage() {
+  const [allProducts, setAllProducts] = useState<Product[]>([]); // Nihai + Yarı mamul birlikte
   const [finishedProducts, setFinishedProducts] = useState<FinishedProduct[]>([]);
   const [rawMaterials, setRawMaterials] = useState<RawMaterial[]>([]);
   const [semiFinishedProducts, setSemiFinishedProducts] = useState<SemiFinishedProduct[]>([]);
-  const [selectedProduct, setSelectedProduct] = useState<FinishedProduct | null>(null);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [bomData, setBomData] = useState<BOMData | null>(null);
   const [loading, setLoading] = useState(false);
   const [materialsLoading, setMaterialsLoading] = useState(false);
@@ -94,9 +107,26 @@ export default function BOMPage() {
     fetchSemiFinishedProducts();
   }, []);
 
+  // Nihai + Yarı mamulleri birleştir
+  useEffect(() => {
+    const combined: Product[] = [
+      ...finishedProducts.map(p => ({
+        ...p,
+        product_type: 'finished' as const,
+        unit_cost: p.sale_price
+      })),
+      ...semiFinishedProducts.map(p => ({
+        ...p,
+        product_type: 'semi' as const,
+        sale_price: p.unit_cost
+      }))
+    ];
+    setAllProducts(combined);
+  }, [finishedProducts, semiFinishedProducts]);
+
   const fetchFinishedProducts = async () => {
     try {
-      const response = await fetch('/api/stock/finished', {
+      const response = await fetch('/api/stock/finished?limit=1000', {
         headers: {
           'Content-Type': 'application/json',
         }
@@ -123,7 +153,7 @@ export default function BOMPage() {
   const fetchRawMaterials = async () => {
     try {
       setMaterialsLoading(true);
-      const response = await fetch('/api/stock/raw', {
+      const response = await fetch('/api/stock/raw?limit=1000', {
         headers: {
           'Content-Type': 'application/json',
         }
@@ -153,7 +183,7 @@ export default function BOMPage() {
   const fetchSemiFinishedProducts = async () => {
     try {
       setMaterialsLoading(true);
-      const response = await fetch('/api/stock/semi', {
+      const response = await fetch('/api/stock/semi?limit=1000', {
         headers: {
           'Content-Type': 'application/json',
         }
@@ -192,10 +222,16 @@ export default function BOMPage() {
       if (!response.ok) {
         if (response.status === 404) {
           // BOM yoksa boş data döndür
-          const product = finishedProducts.find(p => p.id === productId);
+          const product = allProducts.find(p => p.id === productId);
           if (product) {
             setBomData({
-              product,
+              product: {
+                id: product.id,
+                name: product.name,
+                code: product.code,
+                unit: product.unit,
+                sale_price: product.sale_price || product.unit_cost || 0
+              },
               materials: [],
             });
           }
@@ -226,10 +262,19 @@ export default function BOMPage() {
   };
 
   const handleProductSelect = (productId: string) => {
-    const product = finishedProducts.find(p => p.id === productId);
+    const product = allProducts.find(p => p.id === productId);
     if (product) {
       setSelectedProduct(product);
       fetchBOMData(productId);
+      
+      // Yarı mamul seçiliyse, newBOMEntries'i sadece hammadde olarak resetle
+      if (product.product_type === 'semi') {
+        setNewBOMEntries([{
+          material_type: 'raw',
+          material_id: '',
+          quantity_needed: 1,
+        }]);
+      }
     }
   };
 
@@ -396,7 +441,7 @@ export default function BOMPage() {
     }
   };
 
-  const filteredProducts = finishedProducts.filter(product =>
+  const filteredProducts = allProducts.filter(product =>
     product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     product.code.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -448,7 +493,7 @@ export default function BOMPage() {
           <CardHeader>
             <CardTitle className="flex items-center">
               <Package className="h-5 w-5 mr-2" />
-              Nihai Ürünler
+              Ürünler (Nihai + Yarı Mamul)
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -474,12 +519,17 @@ export default function BOMPage() {
                     }`}
                     onClick={() => handleProductSelect(product.id)}
                   >
-                    <div className="font-medium">{product.name}</div>
+                    <div className="flex items-center gap-2">
+                      <div className="font-medium">{product.name}</div>
+                      <Badge variant={product.product_type === 'finished' ? 'default' : 'secondary'} className="text-xs">
+                        {product.product_type === 'finished' ? 'Nihai' : 'Yarı'}
+                      </Badge>
+                    </div>
                     <div className="text-sm text-muted-foreground">
                       {product.code} • {product.unit}
                     </div>
                     <div className="text-sm font-medium text-green-600">
-                      ₺{product.sale_price.toFixed(2)}
+                      ₺{(product.sale_price || product.unit_cost || 0).toFixed(2)}
                     </div>
                   </div>
                 ))}
@@ -498,17 +548,36 @@ export default function BOMPage() {
                 {selectedProduct && (
                   <span className="ml-2 text-lg font-normal text-muted-foreground">
                     - {selectedProduct.name}
+                    <Badge variant={selectedProduct.product_type === 'finished' ? 'default' : 'secondary'} className="ml-2">
+                      {selectedProduct.product_type === 'finished' ? 'Nihai' : 'Yarı Mamul'}
+                    </Badge>
                   </span>
                 )}
               </CardTitle>
               {selectedProduct && (
-                <Button
-                  onClick={() => setIsAddDialogOpen(true)}
-                  size="sm"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Malzeme Ekle
-                </Button>
+                <div className="flex gap-2">
+                  {selectedProduct.product_type === 'finished' && (
+                    <CostCalculationDialog
+                      productId={selectedProduct.id}
+                      productCode={selectedProduct.code}
+                      productName={selectedProduct.name}
+                      currentSalePrice={selectedProduct.sale_price || 0}
+                      trigger={
+                        <Button variant="outline" size="sm">
+                          <Calculator className="h-4 w-4 mr-2" />
+                          Maliyet Hesapla
+                        </Button>
+                      }
+                    />
+                  )}
+                  <Button
+                    onClick={() => setIsAddDialogOpen(true)}
+                    size="sm"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Malzeme Ekle
+                  </Button>
+                </div>
               )}
             </div>
           </CardHeader>
@@ -611,6 +680,14 @@ export default function BOMPage() {
         <DialogContent className="max-w-[calc(7xl+50px)] max-h-[95vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>BOM Malzemeleri Ekle</DialogTitle>
+            {selectedProduct && (
+              <p className="text-sm text-muted-foreground">
+                {selectedProduct.code} - {selectedProduct.name}
+                <Badge variant={selectedProduct.product_type === 'finished' ? 'default' : 'secondary'} className="ml-2">
+                  {selectedProduct.product_type === 'finished' ? 'Nihai Ürün' : 'Yarı Mamul'}
+                </Badge>
+              </p>
+            )}
           </DialogHeader>
           <div className="space-y-6">
             {/* Malzeme Listesi */}
@@ -640,15 +717,23 @@ export default function BOMPage() {
                           updateBOMEntry(index, 'material_type', value);
                           updateBOMEntry(index, 'material_id', '');
                         }}
+                        disabled={selectedProduct?.product_type === 'semi'}
                       >
                         <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="raw">Hammadde</SelectItem>
-                          <SelectItem value="semi">Yarı Mamul</SelectItem>
+                          {selectedProduct?.product_type === 'finished' && (
+                            <SelectItem value="semi">Yarı Mamul</SelectItem>
+                          )}
                         </SelectContent>
                       </Select>
+                      {selectedProduct?.product_type === 'semi' && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Yarı mamul ürünlere sadece hammadde eklenebilir
+                        </p>
+                      )}
                     </div>
 
                     <div className="xl:col-span-2">

@@ -221,3 +221,4 @@ export function QuickStockEntryDialog({ open, onClose, type }: Props) {
   );
 }
 
+

@@ -61,7 +61,7 @@ export default function YariMamullerPage() {
       }
 
       toast.success('Yarı mamul silindi');
-      fetchMaterials();
+      actions.fetchSemiFinishedProducts();
     } catch (error: any) {
       toast.error(error.message || 'Silme hatası');
     }
@@ -88,7 +88,7 @@ export default function YariMamullerPage() {
 
       toast.success(editingMaterial ? 'Yarı mamul güncellendi' : 'Yarı mamul oluşturuldu');
       setIsFormOpen(false);
-      fetchMaterials();
+      actions.fetchSemiFinishedProducts();
     } catch (error: any) {
       toast.error(error.message || 'Kayıt hatası');
     } finally {

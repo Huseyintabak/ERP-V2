@@ -22,6 +22,7 @@ import {
 import { useDashboardStats, useDashboardActions, useDashboardLoading } from '@/stores/dashboard-stats-store';
 import { useRoleBasedRealtime } from '@/lib/hooks/use-realtime-store';
 import { useAuthStore } from '@/stores/auth-store';
+import { InventoryApprovalList } from '@/components/stock/inventory-approval-list';
 // import { useMemoryLeakDetector } from '@/lib/hooks/use-memory-leak-detector';
 // import { usePerformanceMonitor } from '@/lib/hooks/use-performance-monitor';
 // import { useStoreSync } from '@/lib/hooks/use-store-sync';
@@ -310,6 +311,9 @@ export default function YoneticiDashboard() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Envanter Sayım Onayları */}
+      <InventoryApprovalList />
     </div>
   );
 }

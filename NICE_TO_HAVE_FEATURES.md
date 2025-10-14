@@ -1,103 +1,109 @@
 # 🚀 ThunderV2 ERP - Nice-to-Have Features Roadmap
 
 > **Durum:** Production'da çalışan sisteme eklenebilecek iyileştirmeler ve yeni özellikler  
-> **Son Güncelleme:** 14 Ekim 2025
+> **Son Güncelleme:** 14 Ekim 2025  
+> **Tamamlanan Özellikler:** 3/15 (✅ Fiyatlandırma, ✅ Envanter Sayımı, ✅ Excel Export)
 
 ---
 
 ## 📊 Priority Matrix
 
-| Öncelik | Feature Count | Toplam Süre |
-|---------|---------------|-------------|
-| 🔴 Yüksek (High) | 3 | ~4-5 saat |
-| 🟡 Orta (Medium) | 4 | ~8-10 saat |
-| 🟢 Düşük (Low) | 8 | ~20-30 saat |
+| Öncelik | Feature Count | Tamamlanan | Kalan Süre |
+|---------|---------------|------------|------------|
+| 🔴 Yüksek (High) | 3 | ✅ 3 | - |
+| 🟡 Orta (Medium) | 4 | - | ~8-10 saat |
+| 🟢 Düşük (Low) | 8 | - | ~20-30 saat |
+| **TOPLAM** | **15** | **3** | **~28-38 saat** |
 
 ---
 
 ## 🔴 YÜKSEK ÖNCELİK (Quick Wins)
 
-### 1. ✨ Envanter Sayımı Modülü
+### 1. ✨ Envanter Sayımı Modülü ✅ TAMAMLANDI
 **Nerede:** Depo Dashboard → Quick Actions  
-**Süre:** 30-40 dakika  
+**Süre:** 30-40 dakika (Tamamlandı: 14 Ekim 2025)  
 **Impact:** ⭐⭐⭐ (Yüksek)  
 **Zorluk:** 🔨 (Kolay)
 
-#### Özellikler:
-- Fiziki envanter sayımı başlatma
-- Barkod okutarak hızlı sayım
-- Sistem stoğu vs fiziki stok fark analizi
-- Otomatik stok düzeltme önerisi
-- Sayım raporu (PDF/Excel export)
+**✅ TAMAMLANAN ÖZELLİKLER:**
+- ✅ Fiziki envanter sayımı başlatma (3 malzeme tipi)
+- ✅ Sistem stoğu vs fiziki stok fark analizi
+- ✅ Otomatik sapma yüzdesi hesaplama (düşük/orta/yüksek)
+- ✅ Yönetici onay/red sistemi
+- ✅ Otomatik stok güncelleme
+- ✅ Stok hareketi kaydı oluşturma
+- ✅ CSV/Excel export
+- ✅ Detaylı sayım raporu
 
-#### Database Schema:
-```sql
-CREATE TABLE inventory_counts (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  material_type TEXT NOT NULL,
-  material_id UUID NOT NULL,
-  system_quantity NUMERIC(12, 2) NOT NULL,
-  physical_quantity NUMERIC(12, 2) NOT NULL,
-  difference NUMERIC(12, 2) GENERATED ALWAYS AS (physical_quantity - system_quantity) STORED,
-  counted_by UUID REFERENCES users(id),
-  notes TEXT,
-  status TEXT DEFAULT 'pending', -- pending, approved, rejected
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  approved_at TIMESTAMPTZ,
-  approved_by UUID REFERENCES users(id)
-);
-```
+**📁 Oluşturulan Dosyalar:**
+- `supabase/migrations/20251014-inventory-count.sql`
+- `app/api/stock/count/route.ts`
+- `app/api/stock/count/[id]/route.ts`
+- `app/api/stock/count/export/route.ts`
+- `components/stock/inventory-count-dialog.tsx`
+- `components/stock/inventory-approval-list.tsx`
+- `INVENTORY_COUNT_README.md`
 
-#### Implementation:
-- `/components/stock/inventory-count-dialog.tsx` (yeni component)
-- `/app/api/stock/count/route.ts` (yeni API)
-- Depo dashboard'a entegre et
+**📖 Dokümantasyon:** `INVENTORY_COUNT_README.md`
 
 ---
 
-### 2. 📥 Excel Export İyileştirmeleri
+### 2. 📥 Excel Export İyileştirmeleri ✅ TAMAMLANDI
 **Nerede:** Raporlar, Stok sayfaları  
-**Süre:** 1 saat  
+**Süre:** 1 saat (Tamamlandı: 14 Ekim 2025)  
 **Impact:** ⭐⭐⭐ (Yüksek)  
 **Zorluk:** 🔨 (Kolay)
 
-#### Eklenecekler:
-- Tüm raporları Excel'e export (Production, Stock, Operator, Order)
-- Özel tarih aralığı seçimi
-- Grafikleri Excel'e ekleme (chart images)
-- Çoklu sayfa (worksheets) export
-- Formatlı Excel (renkli headers, borders)
+**✅ TAMAMLANAN ÖZELLİKLER:**
+- ✅ 4 tip rapor Excel export (Üretim, Stok, Operatör, Sipariş)
+- ✅ Çoklu worksheet support (Özet + Detay sayfaları)
+- ✅ Formatlı Excel (kolon genişlikleri, header'lar)
+- ✅ Tarih aralığı ve durum filtreleme
+- ✅ "Tümünü İndir" özelliği (4 rapor birden)
+- ✅ Otomatik dosya adlandırma
+- ✅ Müşteri analizi (sipariş raporunda)
+- ✅ Detaylı hesaplamalar (toplam, ortalama, yüzde)
 
-#### Dosyalar:
-```typescript
-// lib/utils/excel-export.ts
-export const exportProductionReport = (data: any[], dateRange: any) => {
-  const workbook = XLSX.utils.book_new();
-  
-  // Worksheet 1: Summary
-  const summarySheet = XLSX.utils.json_to_sheet([...]);
-  
-  // Worksheet 2: Detailed data
-  const detailSheet = XLSX.utils.json_to_sheet(data);
-  
-  XLSX.utils.book_append_sheet(workbook, summarySheet, 'Özet');
-  XLSX.utils.book_append_sheet(workbook, detailSheet, 'Detay');
-  
-  XLSX.writeFile(workbook, `uretim-raporu-${date}.xlsx`);
-};
-```
+**📁 Oluşturulan Dosyalar:**
+- `lib/utils/excel-export.ts`
+- `app/api/reports/export/production/route.ts`
+- `app/api/reports/export/stock/route.ts`
+- `app/api/reports/export/operators/route.ts`
+- `app/api/reports/export/orders/route.ts`
+- `EXCEL_EXPORT_README.md`
 
-#### Entegrasyon:
-- Raporlar sayfasına "Excel İndir" butonu ekle
-- Her rapor tipi için ayrı export fonksiyonu
+**📖 Dokümantasyon:** `EXCEL_EXPORT_README.md`
 
 ---
 
-### 3. 💰 Fiyatlandırma & Maliyet Sistemi
+### 3. 💰 Fiyatlandırma & Maliyet Sistemi ✅ TAMAMLANDI
 **Nerede:** BOM, Orders, Products  
-**Süre:** 2-3 saat  
+**Süre:** 2-3 saat (Tamamlandı: 14 Ekim 2025)  
 **Impact:** ⭐⭐⭐ (Yüksek)  
 **Zorluk:** 🔨🔨 (Orta)
+
+**✅ TAMAMLANAN ÖZELLİKLER:**
+- ✅ BOM bazlı otomatik maliyet hesaplama
+- ✅ Gerçek zamanlı kar marjı analizi
+- ✅ Önerilen fiyat hesaplama (hedef marj ile)
+- ✅ Detaylı malzeme breakdown
+- ✅ Müşteri özel fiyatlandırma sistemi
+- ✅ Otomatik fiyat geçmişi kayıt (trigger)
+- ✅ Karlılık analizi view'ları
+- ✅ BOM sayfasına maliyet hesaplama butonu
+- ✅ Finished products sayfasına maliyet hesaplama butonu
+- ✅ API Endpoints (calculate, history, customer-special)
+
+**📁 Oluşturulan Dosyalar:**
+- `supabase/migrations/20251014-pricing-system.sql`
+- `app/api/pricing/calculate/route.ts`
+- `app/api/pricing/history/[productId]/route.ts`
+- `app/api/pricing/customer-special/route.ts`
+- `components/pricing/cost-calculation-dialog.tsx`
+- `components/pricing/pricing-update-form.tsx`
+- `PRICING_SYSTEM_README.md`
+
+**📖 Dokümantasyon:** `PRICING_SYSTEM_README.md`
 
 #### Özellikler:
 - Ürün fiyatlandırma sistemi (dinamik)
@@ -682,12 +688,12 @@ React Native + Expo
 
 ## 🎯 ÖNERİLEN UYGULAMA SIRASI
 
-### **Faz 1: Quick Wins (1 hafta)**
+### **Faz 1: Quick Wins (✅ TAMAMLANDI!)**
 ```
-1. Envanter Sayımı Modal ✅ (40 dk)
-2. Excel Export İyileştirmeleri ✅ (1 saat)
-3. Pricing System ✅ (2-3 saat)
-4. HTTPS/SSL Setup ✅ (30 dk - domain varsa)
+1. Pricing System ✅ TAMAMLANDI (2-3 saat) - 14 Ekim 2025
+2. Inventory Count ✅ TAMAMLANDI (30-40 dk) - 14 Ekim 2025
+3. Excel Export ✅ TAMAMLANDI (1 saat) - 14 Ekim 2025
+4. HTTPS/SSL Setup ⏳ (30 dk - domain varsa) - İsteğe bağlı
 ```
 
 ### **Faz 2: Core Improvements (2-3 hafta)**
@@ -758,4 +764,94 @@ Feature eklerken sorun yaşarsan:
 **🎯 SONUÇ:** ThunderV2 şu anda tam fonksiyonel bir production sistemi. Bu dosyadaki özellikler "bonus" iyileştirmeler - sistem bunlar olmadan da mükemmel çalışıyor!
 
 **Ne zaman eklemeye başlamak isterseniz, bu dosyayı referans alın!** ⚡
+
+---
+
+## 📝 CHANGELOG
+
+### ✅ Tamamlanan Özellikler
+
+#### 14 Ekim 2025 - Fiyatlandırma & Maliyet Sistemi v1.0
+**Geliştirme Süresi:** 2-3 saat  
+**Eklenen Dosyalar:** 7 dosya  
+**Değiştirilen Dosyalar:** 2 dosya
+
+**Özellikler:**
+- ✅ BOM bazlı otomatik maliyet hesaplama
+- ✅ Gerçek zamanlı kar marjı analizi
+- ✅ Önerilen fiyat hesaplama (hedef marj ile)
+- ✅ Detaylı malzeme breakdown (hammadde + yarı mamul)
+- ✅ Müşteri özel fiyatlandırma sistemi
+- ✅ Otomatik fiyat geçmişi kayıt (trigger)
+- ✅ Karlılık analizi view'ları (`v_product_profitability`, `v_active_customer_pricing`)
+- ✅ API Endpoints (3 adet)
+- ✅ Frontend Components (2 adet)
+
+**Database Changes:**
+- `finished_products`: +3 kolon (`cost_price`, `profit_margin`, `last_price_update`)
+- `customer_pricing`: Yeni tablo
+- `price_history`: Yeni tablo
+- `bom_cost_breakdown`: Yeni tablo
+- `calculate_bom_cost()`: Yeni function
+- `log_price_change()`: Yeni trigger
+- 2 adet view
+
+**Dokümantasyon:** `PRICING_SYSTEM_README.md`
+
+---
+
+#### 14 Ekim 2025 - Envanter Sayım Sistemi v1.0
+**Geliştirme Süresi:** 30-40 dakika  
+**Eklenen Dosyalar:** 7 dosya  
+**Değiştirilen Dosyalar:** 2 dosya
+
+**Özellikler:**
+- ✅ Fiziki envanter sayımı başlatma (3 malzeme tipi)
+- ✅ Sistem stoğu vs fiziki sayım karşılaştırması
+- ✅ Otomatik fark ve sapma hesaplama
+- ✅ Yönetici onay/red sistemi
+- ✅ Otomatik stok güncelleme
+- ✅ Stok hareketi kaydı
+- ✅ CSV/Excel export
+- ✅ Detaylı sayım raporları
+
+**Database Changes:**
+- `inventory_counts`: Yeni tablo
+- `inventory_count_batches`: Yeni tablo
+- `approve_inventory_count()`: Yeni function
+- `reject_inventory_count()`: Yeni function
+- 2 adet view (`v_pending_inventory_counts`, `v_inventory_count_summary`)
+
+**Dokümantasyon:** `INVENTORY_COUNT_README.md`
+
+---
+
+#### 14 Ekim 2025 - Excel Export Sistemi v1.0
+**Geliştirme Süresi:** 1 saat  
+**Eklenen Dosyalar:** 6 dosya  
+**Değiştirilen Dosyalar:** 1 dosya
+
+**Özellikler:**
+- ✅ 4 tip rapor Excel export (Üretim, Stok, Operatör, Sipariş)
+- ✅ Çoklu worksheet (Özet + Detay + Analiz sayfaları)
+- ✅ Formatlı Excel (otomatik kolon genişlikleri)
+- ✅ Tarih ve durum filtreleme
+- ✅ "Tümünü İndir" özelliği (4 rapor sırayla)
+- ✅ Detaylı hesaplamalar (toplam, ortalama, yüzde)
+- ✅ Müşteri bazlı analiz (sipariş raporunda)
+- ✅ Otomatik dosya adlandırma
+
+**API Endpoints:**
+- `GET /api/reports/export/production`
+- `GET /api/reports/export/stock`
+- `GET /api/reports/export/operators`
+- `GET /api/reports/export/orders`
+
+**Dokümantasyon:** `EXCEL_EXPORT_README.md`
+
+---
+
+### ⏳ Sonraki Özellik: Email Notification Sistemi
+**Tahmini Süre:** 2-3 saat  
+**Başlangıç:** TBD
 
