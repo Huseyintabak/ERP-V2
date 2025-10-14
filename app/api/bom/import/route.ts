@@ -35,6 +35,12 @@ export async function POST(request: NextRequest) {
     const worksheet = workbook.Sheets[sheetName];
     const data = XLSX.utils.sheet_to_json(worksheet) as any[];
 
+    console.log('📊 Excel data parsed:', {
+      sheetName,
+      rowCount: data.length,
+      firstRow: data[0]
+    });
+
     if (data.length === 0) {
       return NextResponse.json({ error: 'Excel dosyası boş' }, { status: 400 });
     }
@@ -49,9 +55,13 @@ export async function POST(request: NextRequest) {
       const row = data[i];
       const rowNum = i + 2; // Excel row number (1-based + header)
 
+      console.log(`\n📝 Processing row ${rowNum}:`, row);
+
       // Validate required fields
       if (!row['Ürün Kodu'] || !row['Malzeme Kodu'] || !row['Miktar']) {
-        errors.push(`Satır ${rowNum}: Ürün Kodu, Malzeme Kodu ve Miktar zorunludur`);
+        const error = `Satır ${rowNum}: Ürün Kodu, Malzeme Kodu ve Miktar zorunludur`;
+        console.log(`❌ ${error}`);
+        errors.push(error);
         successCount.errors++;
         continue;
       }
@@ -167,12 +177,16 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({
+    const result = {
       success: true,
       message: `Import tamamlandı: ${successCount.created} kayıt eklendi, ${successCount.skipped} kayıt atlandı, ${successCount.errors} hata`,
       stats: successCount,
       errors: errors.length > 0 ? errors : undefined
-    });
+    };
+
+    console.log('✅ Import completed:', result);
+
+    return NextResponse.json(result);
 
   } catch (error: any) {
     console.error('BOM import error:', error);
