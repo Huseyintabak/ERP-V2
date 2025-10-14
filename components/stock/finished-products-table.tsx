@@ -87,7 +87,7 @@ export function FinishedProductsTable({
               <TableHead className="text-right">Rezerve</TableHead>
               <TableHead className="text-right">Kritik Seviye</TableHead>
               <TableHead>Birim</TableHead>
-              <TableHead className="text-right">Satış Fiyatı</TableHead>
+              <TableHead className="text-right">Birim Maliyet</TableHead>
               <TableHead>Durum</TableHead>
               <TableHead className="text-right">İşlemler</TableHead>
             </TableRow>
