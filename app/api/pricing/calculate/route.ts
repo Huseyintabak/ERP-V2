@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
 
     const { data: finishedProduct } = await supabase
       .from('finished_products')
-      .select('id, code, name, sale_price, cost_price, profit_margin, quantity')
+      .select('id, code, name, sale_price, quantity')
       .eq('id', productId)
       .single();
 
@@ -64,9 +64,7 @@ export async function POST(request: NextRequest) {
 
       product = {
         ...semiProduct,
-        sale_price: semiProduct.unit_cost, // Map unit_cost to sale_price
-        cost_price: null,
-        profit_margin: null
+        sale_price: semiProduct.unit_cost // Map unit_cost to sale_price
       };
       productType = 'semi';
     }
@@ -107,8 +105,8 @@ export async function POST(request: NextRequest) {
       await supabase
         .from('finished_products')
         .update({ 
-          cost_price: totalCost,
-          last_price_update: new Date().toISOString()
+          sale_price: totalCost,
+          updated_at: new Date().toISOString()
         })
         .eq('id', productId);
     } else {
@@ -128,7 +126,7 @@ export async function POST(request: NextRequest) {
         code: product.code,
         name: product.name,
         sale_price: salePrice,
-        current_cost_price: parseFloat(product.cost_price || '0'),
+        current_cost_price: totalCost,
         quantity: parseFloat(product.quantity || '0')
       },
       calculation: {
@@ -141,8 +139,8 @@ export async function POST(request: NextRequest) {
       profitability: {
         profit_amount: profitAmount,
         profit_percentage: Math.round(profitPercentage * 100) / 100,
-        target_margin: parseFloat(product.profit_margin || '20'),
-        recommended_price: totalCost * (1 + parseFloat(product.profit_margin || '20') / 100),
+        target_margin: 20, // Default 20% margin
+        recommended_price: totalCost * 1.20, // 20% markup
         status: profitAmount < 0 ? 'loss' : profitAmount === 0 ? 'break_even' : 'profitable'
       },
       calculated_at: new Date().toISOString()

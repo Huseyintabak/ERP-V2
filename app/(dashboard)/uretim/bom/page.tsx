@@ -125,10 +125,11 @@ export default function BOMPage() {
 
   const fetchFinishedProducts = async () => {
     try {
-      const response = await fetch('/api/stock/finished?limit=1000', {
+      const response = await fetch(`/api/stock/finished?limit=1000&t=${Date.now()}`, {
         headers: {
           'Content-Type': 'application/json',
-        }
+        },
+        cache: 'no-store'
       });
       
       if (!response.ok) {
@@ -182,10 +183,11 @@ export default function BOMPage() {
   const fetchSemiFinishedProducts = async () => {
     try {
       setMaterialsLoading(true);
-      const response = await fetch('/api/stock/semi?limit=1000', {
+      const response = await fetch(`/api/stock/semi?limit=1000&t=${Date.now()}`, {
         headers: {
           'Content-Type': 'application/json',
-        }
+        },
+        cache: 'no-store'
       });
       
       if (!response.ok) {

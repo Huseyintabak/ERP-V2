@@ -82,12 +82,12 @@ export async function POST(request: NextRequest) {
           .single();
 
         if (finishedProduct) {
-          // Update finished product cost
+          // Update finished product cost (sale_price = maliyet)
           const { error: updateError } = await supabase
             .from('finished_products')
             .update({ 
-              cost_price: totalCost,
-              last_price_update: new Date().toISOString()
+              sale_price: totalCost,
+              updated_at: new Date().toISOString()
             })
             .eq('id', productId);
 
