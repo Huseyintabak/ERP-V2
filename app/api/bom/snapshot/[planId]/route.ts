@@ -4,7 +4,7 @@ import { verifyJWT } from '@/lib/auth/jwt';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { planId: string } }
+  { params }: { params: Promise<{ planId: string }> }
 ) {
   try {
     // Auth check
@@ -21,7 +21,7 @@ export async function GET(
     const operatorId = payload.userId;
     const supabase = await createClient();
 
-    const { planId } = params;
+    const { planId } = await params;
 
     // Plan'ın operatöre atanmış olduğunu kontrol et (operatör için)
     if (payload.role === 'operator') {

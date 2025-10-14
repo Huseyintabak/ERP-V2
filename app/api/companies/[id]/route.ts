@@ -40,7 +40,7 @@ const companyUpdateSchema = z.object({
 // GET - Get company details
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const token = request.cookies.get('thunder_token')?.value;
@@ -49,7 +49,7 @@ export async function GET(
     }
 
     const payload = await verifyJWT(token);
-    const companyId = params.id;
+    const { id: companyId } = await params;
 
     const supabase = await createClient();
 
@@ -99,7 +99,7 @@ export async function GET(
 // PUT - Update company
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const token = request.cookies.get('thunder_token')?.value;
@@ -108,7 +108,7 @@ export async function PUT(
     }
 
     const payload = await verifyJWT(token);
-    const companyId = params.id;
+    const { id: companyId } = await params;
 
     const body = await request.json();
     const updateData = companyUpdateSchema.parse(body);
@@ -163,7 +163,7 @@ export async function PUT(
 // DELETE - Delete company (Super Admin only)
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const token = request.cookies.get('thunder_token')?.value;
@@ -172,7 +172,7 @@ export async function DELETE(
     }
 
     const payload = await verifyJWT(token);
-    const companyId = params.id;
+    const { id: companyId } = await params;
 
     // Only super admin can delete companies
     if (payload.role !== 'super_admin') {

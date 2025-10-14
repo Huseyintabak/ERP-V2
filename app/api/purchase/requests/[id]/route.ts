@@ -4,7 +4,7 @@ import { verifyJWT } from '@/lib/auth/jwt';
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Authentication check
@@ -23,7 +23,7 @@ export async function PATCH(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const requestId = params.id;
+    const { id: requestId } = await params;
     const { status, notes, approved_quantity } = await request.json();
 
     if (!status) {
@@ -173,7 +173,7 @@ export async function PATCH(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Authentication check
@@ -192,7 +192,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const requestId = params.id;
+    const { id: requestId } = await params;
     const supabase = await createClient();
 
     // Check if request exists and can be deleted
