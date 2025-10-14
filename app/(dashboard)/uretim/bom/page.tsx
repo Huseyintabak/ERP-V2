@@ -350,6 +350,10 @@ export default function BOMPage() {
         toast.warning(`${result.stats.failed} ürün hesaplanamadı. Konsolu kontrol edin.`);
       }
 
+      // Refresh product lists to show updated costs
+      await fetchFinishedProducts();
+      await fetchSemiFinishedProducts();
+      
       // Refresh current product if selected
       if (selectedProduct) {
         fetchBOMData(selectedProduct.id);
