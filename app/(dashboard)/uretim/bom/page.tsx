@@ -420,6 +420,47 @@ export default function BOMPage() {
     }
   };
 
+  const handleImportBOM = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await fetch('/api/bom/import', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Import hatası');
+      }
+
+      toast.success(result.message || 'BOM import başarılı');
+      
+      // Show errors if any
+      if (result.errors && result.errors.length > 0) {
+        console.warn('Import warnings:', result.errors);
+        toast.warning(`${result.stats.errors} satırda hata oluştu. Konsolu kontrol edin.`);
+      }
+
+      // Refresh current product's BOM if selected
+      if (selectedProduct) {
+        fetchBOMData(selectedProduct.id);
+      }
+
+      setIsImportDialogOpen(false);
+      event.target.value = ''; // Reset file input
+    } catch (error: any) {
+      console.error('Import error:', error);
+      toast.error(error.message || 'Import hatası');
+      event.target.value = ''; // Reset file input
+    }
+  };
+
   const getMaterialOptions = (materialType: 'raw' | 'semi') => {
     console.log('getMaterialOptions called:', {
       material_type: materialType,
@@ -471,13 +512,42 @@ export default function BOMPage() {
             <Download className="h-4 w-4 mr-2" />
             Sample Excel
           </Button>
-          <Button
-            variant="outline"
-            onClick={() => setIsImportDialogOpen(true)}
-          >
-            <Upload className="h-4 w-4 mr-2" />
-            Excel Import
-          </Button>
+          <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline">
+                <Upload className="h-4 w-4 mr-2" />
+                Excel Import
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>BOM Excel Import</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="text-sm text-muted-foreground">
+                  <p className="mb-2">Excel dosyası şu kolonlara sahip olmalıdır:</p>
+                  <ul className="list-disc list-inside space-y-1 ml-2">
+                    <li>Ürün Kodu</li>
+                    <li>Ürün Adı</li>
+                    <li>Ürün Tipi (Nihai Ürün / Yarı Mamul)</li>
+                    <li>Malzeme Tipi (Hammadde / Yarı Mamul)</li>
+                    <li>Malzeme Kodu</li>
+                    <li>Malzeme Adı</li>
+                    <li>Miktar</li>
+                    <li>Notlar</li>
+                  </ul>
+                  <p className="mt-3 text-xs text-orange-600">
+                    ⚠️ Not: Yarı mamul ürünlere sadece hammadde eklenebilir
+                  </p>
+                </div>
+                <Input
+                  type="file"
+                  accept=".xlsx,.xls"
+                  onChange={handleImportBOM}
+                />
+              </div>
+            </DialogContent>
+          </Dialog>
           <Button 
             variant="outline"
             onClick={handleExportBOM}
