@@ -70,16 +70,27 @@ export async function GET(request: NextRequest) {
         .filter(plan => plan.assigned_operator_id)
         .map(plan => plan.assigned_operator_id);
 
+      console.log('👥 Operator IDs to fetch:', operatorIds);
+
       if (operatorIds.length > 0) {
-        const { data: operators } = await supabase
+        // operators.id == users.id (one-to-one relationship)
+        const { data: operators, error: opError } = await supabase
           .from('operators')
-          .select('id, series, user_id, user:users(id, name, email)')
-          .in('user_id', operatorIds);
+          .select('id, series, user:users(id, name, email)')
+          .in('id', operatorIds);
+
+        console.log('📥 Operators fetched for plans:', operators);
+        if (opError) console.error('❌ Operator fetch error:', opError);
 
         // Her plana operator bilgisini ekle
         data.forEach(plan => {
           if (plan.assigned_operator_id) {
-            const operator = operators?.find(op => op.user_id === plan.assigned_operator_id);
+            const operator = operators?.find(op => op.id === plan.assigned_operator_id);
+            console.log(`🔗 Matching operator for plan ${plan.plan_number}:`, {
+              assigned_operator_id: plan.assigned_operator_id,
+              found: !!operator,
+              operator_series: operator?.series
+            });
             if (operator) {
               plan.operator = {
                 id: operator.id,
