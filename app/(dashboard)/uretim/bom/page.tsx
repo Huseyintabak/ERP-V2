@@ -470,7 +470,6 @@ export default function BOMPage() {
         fetchBOMData(selectedProduct.id);
       }
 
-      setIsImportDialogOpen(false);
       event.target.value = ''; // Reset file input
     } catch (error: any) {
       console.error('❌ Import error:', error);
