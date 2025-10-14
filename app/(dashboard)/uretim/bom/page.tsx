@@ -88,6 +88,8 @@ export default function BOMPage() {
   const [materialsLoading, setMaterialsLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editingBOM, setEditingBOM] = useState<BOMEntry | null>(null);
 
   // Yeni BOM entry form state - array olarak değiştir
   const [newBOMEntries, setNewBOMEntries] = useState<Array<{
@@ -438,13 +440,59 @@ export default function BOMPage() {
     }
   };
 
+  const handleEditBOMEntry = (entry: BOMEntry) => {
+    setEditingBOM(entry);
+    setIsEditDialogOpen(true);
+  };
+
+  const handleUpdateBOMEntry = async (quantity: number) => {
+    if (!editingBOM) return;
+
+    try {
+      const response = await fetch(`/api/bom/${editingBOM.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          quantity_needed: quantity,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        if (errorText.includes('/login')) {
+          console.warn('Redirect to login detected');
+          return;
+        }
+        const error = JSON.parse(errorText);
+        throw new Error(error.error || 'Failed to update BOM entry');
+      }
+
+      toast.success('BOM kaydı güncellendi');
+      setIsEditDialogOpen(false);
+      setEditingBOM(null);
+      
+      // BOM verilerini yenile
+      if (selectedProduct) {
+        await fetchBOMData(selectedProduct.id);
+        
+        // Otomatik maliyet hesapla
+        await autoCalculateCost(selectedProduct.id);
+      }
+    } catch (error: any) {
+      console.error('Error updating BOM entry:', error);
+      toast.error(error.message || 'BOM kaydı güncellenirken hata oluştu');
+    }
+  };
+
   const handleDeleteBOMEntry = async (bomId: string) => {
     if (!confirm('Bu BOM kaydını silmek istediğinizden emin misiniz?')) {
       return;
     }
 
     try {
-      const response = await fetch(`/api/bom?id=${bomId}`, {
+      const response = await fetch(`/api/bom/${bomId}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
@@ -823,13 +871,24 @@ export default function BOMPage() {
                             ₺{(((entry.material.unit_price || entry.material.unit_cost) || 0) * entry.quantity_needed).toFixed(2)}
                           </TableCell>
                           <TableCell>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleDeleteBOMEntry(entry.id)}
-                            >
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
+                            <div className="flex gap-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleEditBOMEntry(entry)}
+                                title="Düzenle"
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDeleteBOMEntry(entry.id)}
+                                title="Sil"
+                              >
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -977,6 +1036,70 @@ export default function BOMPage() {
               </Button>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Malzeme Düzenleme Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>BOM Malzemesi Düzenle</DialogTitle>
+          </DialogHeader>
+          {editingBOM && (
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium text-muted-foreground">Malzeme Tipi</label>
+                <p className="text-sm mt-1">
+                  <Badge variant={editingBOM.material_type === 'raw' ? 'default' : 'secondary'}>
+                    {editingBOM.material_type === 'raw' ? 'Hammadde' : 'Yarı Mamul'}
+                  </Badge>
+                </p>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-muted-foreground">Malzeme</label>
+                <div className="mt-1">
+                  <p className="font-medium">{editingBOM.material.name}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {editingBOM.material.code} • {editingBOM.material.unit}
+                  </p>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium">Gerekli Miktar *</label>
+                <Input
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  defaultValue={editingBOM.quantity_needed}
+                  id="edit-quantity"
+                  placeholder="0.00"
+                  className="mt-1"
+                />
+              </div>
+
+              <div className="flex justify-end space-x-2">
+                <Button variant="outline" onClick={() => {
+                  setIsEditDialogOpen(false);
+                  setEditingBOM(null);
+                }}>
+                  İptal
+                </Button>
+                <Button onClick={() => {
+                  const input = document.getElementById('edit-quantity') as HTMLInputElement;
+                  const quantity = parseFloat(input.value);
+                  if (quantity > 0) {
+                    handleUpdateBOMEntry(quantity);
+                  } else {
+                    toast.error('Miktar 0\'dan büyük olmalı');
+                  }
+                }}>
+                  Güncelle
+                </Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>
