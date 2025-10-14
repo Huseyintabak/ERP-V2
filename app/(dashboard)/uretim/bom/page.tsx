@@ -88,7 +88,6 @@ export default function BOMPage() {
   const [materialsLoading, setMaterialsLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
 
   // Yeni BOM entry form state - array olarak değiştir
   const [newBOMEntries, setNewBOMEntries] = useState<Array<{
@@ -422,9 +421,25 @@ export default function BOMPage() {
 
   const handleImportBOM = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file) return;
+    
+    console.log('📥 Import file selected:', file?.name);
+    
+    if (!file) {
+      console.log('❌ No file selected');
+      return;
+    }
+
+    // Validate file extension
+    if (!file.name.endsWith('.xlsx') && !file.name.endsWith('.xls')) {
+      toast.error('Sadece Excel dosyaları (.xlsx, .xls) yüklenebilir');
+      event.target.value = '';
+      return;
+    }
 
     try {
+      console.log('🚀 Starting import...');
+      toast.info('Import işlemi başlatılıyor...');
+
       const formData = new FormData();
       formData.append('file', file);
 
@@ -433,7 +448,9 @@ export default function BOMPage() {
         body: formData,
       });
 
+      console.log('📡 Response status:', response.status);
       const result = await response.json();
+      console.log('📦 Response data:', result);
 
       if (!response.ok) {
         throw new Error(result.error || 'Import hatası');
@@ -443,19 +460,20 @@ export default function BOMPage() {
       
       // Show errors if any
       if (result.errors && result.errors.length > 0) {
-        console.warn('Import warnings:', result.errors);
+        console.warn('⚠️ Import warnings:', result.errors);
         toast.warning(`${result.stats.errors} satırda hata oluştu. Konsolu kontrol edin.`);
       }
 
       // Refresh current product's BOM if selected
       if (selectedProduct) {
+        console.log('🔄 Refreshing BOM data...');
         fetchBOMData(selectedProduct.id);
       }
 
       setIsImportDialogOpen(false);
       event.target.value = ''; // Reset file input
     } catch (error: any) {
-      console.error('Import error:', error);
+      console.error('❌ Import error:', error);
       toast.error(error.message || 'Import hatası');
       event.target.value = ''; // Reset file input
     }
@@ -512,42 +530,30 @@ export default function BOMPage() {
             <Download className="h-4 w-4 mr-2" />
             Sample Excel
           </Button>
-          <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
-            <DialogTrigger asChild>
-              <Button variant="outline">
-                <Upload className="h-4 w-4 mr-2" />
-                Excel Import
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>BOM Excel Import</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div className="text-sm text-muted-foreground">
-                  <p className="mb-2">Excel dosyası şu kolonlara sahip olmalıdır:</p>
-                  <ul className="list-disc list-inside space-y-1 ml-2">
-                    <li>Ürün Kodu</li>
-                    <li>Ürün Adı</li>
-                    <li>Ürün Tipi (Nihai Ürün / Yarı Mamul)</li>
-                    <li>Malzeme Tipi (Hammadde / Yarı Mamul)</li>
-                    <li>Malzeme Kodu</li>
-                    <li>Malzeme Adı</li>
-                    <li>Miktar</li>
-                    <li>Notlar</li>
-                  </ul>
-                  <p className="mt-3 text-xs text-orange-600">
-                    ⚠️ Not: Yarı mamul ürünlere sadece hammadde eklenebilir
-                  </p>
-                </div>
-                <Input
-                  type="file"
-                  accept=".xlsx,.xls"
-                  onChange={handleImportBOM}
-                />
-              </div>
-            </DialogContent>
-          </Dialog>
+          <div>
+            <input
+              ref={(input) => {
+                if (input) {
+                  (window as any).bomImportInput = input;
+                }
+              }}
+              type="file"
+              accept=".xlsx,.xls"
+              onChange={handleImportBOM}
+              style={{ display: 'none' }}
+              id="bom-import-input"
+            />
+            <Button
+              variant="outline"
+              onClick={() => {
+                const input = document.getElementById('bom-import-input') as HTMLInputElement;
+                input?.click();
+              }}
+            >
+              <Upload className="h-4 w-4 mr-2" />
+              Excel Import
+            </Button>
+          </div>
           <Button 
             variant="outline"
             onClick={handleExportBOM}
@@ -876,56 +882,6 @@ export default function BOMPage() {
               </Button>
               <Button onClick={handleAddBOMEntries}>
                 Tüm Malzemeleri Ekle ({newBOMEntries.length})
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Excel Import Dialog */}
-      <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Excel'den BOM Import</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="text-sm text-muted-foreground">
-              <p>Excel dosyası formatı:</p>
-              <ul className="list-disc list-inside mt-2 space-y-1">
-                <li>product_code | product_name | material_code | material_name | quantity | unit | notes</li>
-                <li>Sample Excel dosyasını indirerek formatı görebilirsiniz</li>
-                <li>Excel dosyasında 2 tab var: "BOM Sample" ve "Nihai Ürünler"</li>
-                <li>"Nihai Ürünler" tab'ından mevcut ürün kodlarını görebilirsiniz</li>
-                <li>Örnek: THP-001 | Thunder Pro Laptop | CPU-001 | Intel Core i7 | 1 | adet | Ana işlemci</li>
-              </ul>
-            </div>
-            
-            <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-8 text-center">
-              <Upload className="h-8 w-8 mx-auto mb-4 text-muted-foreground" />
-              <p className="text-sm text-muted-foreground">
-                Excel dosyasını buraya sürükleyin veya tıklayarak seçin
-              </p>
-              <input
-                type="file"
-                accept=".xlsx,.xls"
-                className="hidden"
-                id="bom-import-file"
-              />
-              <Button
-                variant="outline"
-                className="mt-4"
-                onClick={() => document.getElementById('bom-import-file')?.click()}
-              >
-                Dosya Seç
-              </Button>
-            </div>
-
-            <div className="flex justify-end space-x-2">
-              <Button variant="outline" onClick={() => setIsImportDialogOpen(false)}>
-                İptal
-              </Button>
-              <Button disabled>
-                Import Et
               </Button>
             </div>
           </div>
