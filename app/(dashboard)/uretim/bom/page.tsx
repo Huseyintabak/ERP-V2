@@ -327,6 +327,7 @@ export default function BOMPage() {
           },
           body: JSON.stringify({
             finished_product_id: selectedProduct.id,
+            product_type: selectedProduct.product_type, // Ürün tipini ekle
             material_type: entry.material_type,
             material_id: entry.material_id,
             quantity_needed: entry.quantity_needed,

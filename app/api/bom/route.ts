@@ -4,6 +4,7 @@ import { z } from 'zod';
 
 const bomSchema = z.object({
   finished_product_id: z.string().uuid(),
+  product_type: z.enum(['finished', 'semi']).optional().default('finished'), // Ürün tipi
   material_type: z.enum(['raw', 'semi']),
   material_id: z.string().uuid(),
   quantity_needed: z.number().positive(),
@@ -17,15 +18,41 @@ export async function POST(request: NextRequest) {
 
     const supabase = await createClient();
 
+    // Ürün tipi belirleme (finished veya semi)
+    const productType = validated.product_type || 'finished';
+    
+    // Yarı mamul ürünlere sadece hammadde eklenebilir
+    if (productType === 'semi' && validated.material_type !== 'raw') {
+      return NextResponse.json({ 
+        error: 'Yarı mamul ürünlere sadece hammadde eklenebilir' 
+      }, { status: 400 });
+    }
+    
     // Ürün ve malzeme varlık kontrolü
-    const { data: product, error: productError } = await supabase
-      .from('finished_products')
-      .select('id, name, code')
-      .eq('id', validated.finished_product_id)
-      .single();
+    let product;
+    if (productType === 'finished') {
+      const { data, error: productError } = await supabase
+        .from('finished_products')
+        .select('id, name, code')
+        .eq('id', validated.finished_product_id)
+        .single();
 
-    if (productError || !product) {
-      return NextResponse.json({ error: 'Finished product not found' }, { status: 404 });
+      if (productError || !data) {
+        return NextResponse.json({ error: 'Finished product not found' }, { status: 404 });
+      }
+      product = data;
+    } else {
+      // Yarı mamul ürün
+      const { data, error: productError } = await supabase
+        .from('semi_finished_products')
+        .select('id, name, code')
+        .eq('id', validated.finished_product_id)
+        .single();
+
+      if (productError || !data) {
+        return NextResponse.json({ error: 'Semi-finished product not found' }, { status: 404 });
+      }
+      product = data;
     }
 
     let material;

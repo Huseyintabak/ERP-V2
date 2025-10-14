@@ -10,14 +10,32 @@ export async function GET(
     const { productId } = await params; // Await params
     const supabase = await createClient();
 
-    // Ürün bilgilerini al
-    const { data: product, error: productError } = await supabase
+    // Ürün bilgilerini al (önce finished, yoksa semi)
+    let product = null;
+    
+    // Önce finished_products'ta ara
+    const { data: finishedProduct } = await supabase
       .from('finished_products')
       .select('id, name, code')
       .eq('id', productId)
       .single();
 
-    if (productError || !product) {
+    if (finishedProduct) {
+      product = finishedProduct;
+    } else {
+      // Yoksa semi_finished_products'ta ara
+      const { data: semiProduct } = await supabase
+        .from('semi_finished_products')
+        .select('id, name, code')
+        .eq('id', productId)
+        .single();
+      
+      if (semiProduct) {
+        product = semiProduct;
+      }
+    }
+
+    if (!product) {
       return NextResponse.json({ error: 'Product not found' }, { status: 404 });
     }
 
