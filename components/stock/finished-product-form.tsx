@@ -87,7 +87,12 @@ export function FinishedProductForm({ open, onClose, onSubmit, initialData, isLo
   }, [open, initialData, reset]);
 
   const handleFormSubmit = async (data: FinishedProductFormData) => {
-    await onSubmit(data);
+    // Satış fiyatı artık BOM maliyeti olarak hesaplanıyor, default 0
+    const submitData = {
+      ...data,
+      sale_price: data.sale_price || 0
+    };
+    await onSubmit(submitData);
     reset();
   };
 
@@ -178,17 +183,6 @@ export function FinishedProductForm({ open, onClose, onSubmit, initialData, isLo
               />
               {errors.critical_level && <p className="text-sm text-red-600">{errors.critical_level.message}</p>}
             </div>
-          </div>
-
-          <div>
-            <Label htmlFor="sale_price">Satış Fiyatı (₺) *</Label>
-            <Input
-              id="sale_price"
-              type="number"
-              step="0.01"
-              {...register('sale_price', { valueAsNumber: true })}
-            />
-            {errors.sale_price && <p className="text-sm text-red-600">{errors.sale_price.message}</p>}
           </div>
 
           <div>

@@ -228,7 +228,7 @@ export const finishedProductSchema = z.object({
   barcode: z.string().optional(),
   quantity: z.number().min(0, 'Miktar 0 veya üzeri olmalı').default(0),
   unit: z.string().min(1, 'Birim gerekli'),
-  sale_price: z.number().min(0, 'Fiyat 0 veya üzeri olmalı'),
+  sale_price: z.number().min(0, 'Fiyat 0 veya üzeri olmalı').default(0),
   critical_level: z.number().min(0).default(5),
   description: z.string().optional(),
 });
