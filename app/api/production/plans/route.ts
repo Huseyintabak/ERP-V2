@@ -64,6 +64,17 @@ export async function GET(request: NextRequest) {
       throw error;
     }
 
+    // Kolon adı dönüşümü: planned_quantity → target_quantity (frontend uyumluluğu için)
+    if (data && data.length > 0) {
+      data.forEach((plan, index) => {
+        plan.target_quantity = plan.planned_quantity;
+        // plan_number yoksa otomatik oluştur
+        if (!plan.plan_number) {
+          plan.plan_number = `PLN-${String(index + 1).padStart(4, '0')}`;
+        }
+      });
+    }
+
     // Operatör bilgilerini ekle (assigned_operator_id üzerinden)
     if (data && data.length > 0) {
       const operatorIds = data
