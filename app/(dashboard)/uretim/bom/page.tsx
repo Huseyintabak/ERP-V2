@@ -449,7 +449,7 @@ export default function BOMPage() {
     if (!editingBOM) return;
 
     try {
-      const response = await fetch(`/api/bom/${editingBOM.id}`, {
+      const response = await fetch(`/api/bom?id=${editingBOM.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

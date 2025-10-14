@@ -116,6 +116,45 @@ export async function POST(request: NextRequest) {
   }
 }
 
+// PUT - Update BOM entry
+export async function PUT(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const bomId = searchParams.get('id');
+
+    if (!bomId) {
+      return NextResponse.json({ error: 'BOM ID is required' }, { status: 400 });
+    }
+
+    const body = await request.json();
+    const { quantity_needed } = body;
+
+    if (!quantity_needed || quantity_needed <= 0) {
+      return NextResponse.json({ error: 'Geçerli bir miktar girin' }, { status: 400 });
+    }
+
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+      .from('bom')
+      .update({
+        quantity_needed,
+      })
+      .eq('id', bomId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('❌ BOM update error:', error);
+      throw error;
+    }
+
+    return NextResponse.json(data);
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 400 });
+  }
+}
+
 // DELETE - Delete BOM entry
 export async function DELETE(request: NextRequest) {
   try {
