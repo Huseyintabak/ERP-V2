@@ -492,7 +492,7 @@ export default function BOMPage() {
     }
 
     try {
-      const response = await fetch(`/api/bom/${bomId}`, {
+      const response = await fetch(`/api/bom?id=${bomId}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
@@ -505,8 +505,23 @@ export default function BOMPage() {
           console.warn('Redirect to login detected');
           return;
         }
-        const error = JSON.parse(errorText);
-        throw new Error(error.error || 'Failed to delete BOM entry');
+        
+        // 405 hatası için özel mesaj
+        if (response.status === 405) {
+          throw new Error('İşlem izni yok veya endpoint hatası');
+        }
+        
+        // Boş response kontrolü
+        if (!errorText || errorText.trim() === '') {
+          throw new Error(`HTTP ${response.status}: Sunucu yanıt vermedi`);
+        }
+        
+        try {
+          const error = JSON.parse(errorText);
+          throw new Error(error.error || 'Failed to delete BOM entry');
+        } catch (parseError) {
+          throw new Error(`Sunucu hatası: ${errorText.substring(0, 100)}`);
+        }
       }
 
       toast.success('BOM kaydı başarıyla silindi');
