@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { verifyJWT } from '@/lib/auth/jwt';
 
 /**
  * PUT /api/stock/count/[id]/approve
@@ -13,24 +14,30 @@ export async function PUT(
     const { id } = await params;
     const { action, autoAdjust = true, reason } = await request.json();
 
-    const supabase = await createClient();
-
-    // Kullanıcı bilgisini al
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) {
-      return NextResponse.json(
-        { error: 'Kimlik doğrulama gerekli' },
-        { status: 401 }
-      );
+    // Authentication check
+    const token = request.cookies.get('thunder_token')?.value;
+    if (!token) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+
+    const payload = await verifyJWT(token);
+    if (!payload) {
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+    }
+
+    // Only yonetici can approve/reject inventory counts
+    if (payload.role !== 'yonetici') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    const supabase = await createClient();
 
     if (action === 'approve') {
       // approve_inventory_count function'ını çağır
       const { data, error } = await supabase
         .rpc('approve_inventory_count', {
           p_count_id: id,
-          p_approved_by: user.id,
+          p_approved_by: payload.userId,
           p_auto_adjust: autoAdjust
         });
 
@@ -56,7 +63,7 @@ export async function PUT(
       const { data, error } = await supabase
         .rpc('reject_inventory_count', {
           p_count_id: id,
-          p_rejected_by: user.id,
+          p_rejected_by: payload.userId,
           p_reason: reason || 'Sebep belirtilmedi'
         });
 
