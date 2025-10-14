@@ -46,6 +46,52 @@ export async function GET(
   }
 }
 
+// PATCH ve PUT - Partial update (operatör atama, status değişikliği vb.)
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const token = request.cookies.get('thunder_token')?.value;
+    if (!token) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const payload = await verifyJWT(token);
+    const { id } = await params;
+    const supabase = await createClient();
+
+    // Only planlama and yonetici can update production plans
+    if (!['planlama', 'yonetici'].includes(payload.role)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    const updateData = await request.json();
+    
+    console.log('📝 Production plan PATCH:', { id, updateData });
+
+    const { data: plan, error } = await supabase
+      .from('production_plans')
+      .update({
+        ...updateData,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('❌ Production plan update error:', error);
+      return NextResponse.json({ error: 'Failed to update production plan' }, { status: 400 });
+    }
+
+    return NextResponse.json(plan);
+  } catch (error) {
+    console.error('Error updating production plan:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
