@@ -18,8 +18,7 @@ const sampleData = [
     'Malzeme Tipi': 'Hammadde',
     'Malzeme Kodu': 'HM001',
     'Malzeme Adı': 'Örnek Hammadde',
-    'Miktar': 5,
-    'Notlar': '5 kg gerekli'
+    'Miktar': 5
   },
   {
     'Ürün Kodu': 'NUP001',
@@ -28,8 +27,7 @@ const sampleData = [
     'Malzeme Tipi': 'Yarı Mamul',
     'Malzeme Kodu': 'YM001',
     'Malzeme Adı': 'Örnek Yarı Mamul',
-    'Miktar': 2,
-    'Notlar': '2 adet yarı mamul gerekli'
+    'Miktar': 2
   },
   {
     'Ürün Kodu': 'YM001',
@@ -38,8 +36,7 @@ const sampleData = [
     'Malzeme Tipi': 'Hammadde',
     'Malzeme Kodu': 'HM002',
     'Malzeme Adı': 'Başka Hammadde',
-    'Miktar': 3,
-    'Notlar': '3 kg gerekli'
+    'Miktar': 3
   },
   {
     'Ürün Kodu': 'YM001',
@@ -48,8 +45,7 @@ const sampleData = [
     'Malzeme Tipi': 'Hammadde',
     'Malzeme Kodu': 'HM003',
     'Malzeme Adı': 'Üçüncü Hammadde',
-    'Miktar': 1.5,
-    'Notlar': '1.5 litre gerekli'
+    'Miktar': 1.5
   }
 ];
 
@@ -66,7 +62,6 @@ const columnWidths = [
   { wch: 15 }, // Malzeme Kodu
   { wch: 30 }, // Malzeme Adı
   { wch: 10 }, // Miktar
-  { wch: 30 }, // Notlar
 ];
 worksheet['!cols'] = columnWidths;
 
@@ -82,9 +77,9 @@ XLSX.writeFile(workbook, rootPath);
 console.log('✅ BOM sample Excel dosyası oluşturuldu:');
 console.log('  - public/bom-sample-data.xlsx');
 console.log('  - bom-sample-data.xlsx');
-console.log('\n📋 Kolonlar:');
+console.log('\n📋 Kolonlar (7 adet):');
 console.log('  - Ürün Kodu, Ürün Adı, Ürün Tipi');
 console.log('  - Malzeme Tipi, Malzeme Kodu, Malzeme Adı');
-console.log('  - Miktar, Notlar');
+console.log('  - Miktar');
 console.log('\n🔧 Örnek satırlar:', sampleData.length);
 

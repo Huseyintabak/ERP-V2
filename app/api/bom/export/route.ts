@@ -40,8 +40,7 @@ export async function GET(request: NextRequest) {
         'Malzeme Tipi': '',
         'Malzeme Kodu': '',
         'Malzeme Adı': '',
-        'Miktar': 0,
-        'Notlar': ''
+        'Miktar': 0
       }];
       
       return createExcelFile(templateData, 'BOM Template');
@@ -108,8 +107,7 @@ export async function GET(request: NextRequest) {
         'Malzeme Tipi': item.material_type === 'raw' ? 'Hammadde' : 'Yarı Mamul',
         'Malzeme Kodu': material?.code || '',
         'Malzeme Adı': material?.name || '',
-        'Miktar': item.quantity_needed || 0,
-        'Notlar': item.notes || ''
+        'Miktar': item.quantity_needed || 0
       };
     });
 
@@ -135,7 +133,6 @@ function createExcelFile(data: any[], sheetName: string) {
     { wch: 15 }, // Malzeme Kodu
     { wch: 30 }, // Malzeme Adı
     { wch: 10 }, // Miktar
-    { wch: 30 }, // Notlar
   ];
   worksheet['!cols'] = columnWidths;
 

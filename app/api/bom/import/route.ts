@@ -160,8 +160,7 @@ export async function POST(request: NextRequest) {
             finished_product_id: productId,
             material_type: materialType,
             material_id: materialId,
-            quantity_needed: parseFloat(row['Miktar']) || 1,
-            notes: row['Notlar'] || null
+            quantity_needed: parseFloat(row['Miktar']) || 1
           }]);
 
         if (insertError) {
