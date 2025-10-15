@@ -160,7 +160,7 @@ export function SearchableSelect({
                 {filteredOptions.map((option) => (
                   <CommandItem
                     key={option.value}
-                    value={option.value}
+                    value={`${option.value}-${option.label}`}
                     onSelect={() => handleSelect(option.value)}
                     disabled={option.disabled}
                     className={cn(
