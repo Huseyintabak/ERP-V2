@@ -103,7 +103,7 @@ export async function GET(request: NextRequest) {
       
       // 11. Total stock value
       Promise.all([
-        supabase.from('raw_materials').select('quantity, unit_cost'),
+        supabase.from('raw_materials').select('quantity, unit_price'),
         supabase.from('semi_finished_products').select('quantity, unit_cost'),
         supabase.from('finished_products').select('quantity, sale_price'),
       ]),
@@ -126,13 +126,14 @@ export async function GET(request: NextRequest) {
     let totalSemiQuantity = 0;
     let totalFinishedQuantity = 0;
     
-    if (stockValue[0].data) {
+    // stockValue is a Promise.all result, so it's an array of 3 elements
+    if (stockValue[0] && stockValue[0].data) {
       totalRawQuantity = stockValue[0].data.reduce((sum, item) => sum + (item.quantity || 0), 0);
     }
-    if (stockValue[1].data) {
+    if (stockValue[1] && stockValue[1].data) {
       totalSemiQuantity = stockValue[1].data.reduce((sum, item) => sum + (item.quantity || 0), 0);
     }
-    if (stockValue[2].data) {
+    if (stockValue[2] && stockValue[2].data) {
       totalFinishedQuantity = stockValue[2].data.reduce((sum, item) => sum + (item.quantity || 0), 0);
     }
 
