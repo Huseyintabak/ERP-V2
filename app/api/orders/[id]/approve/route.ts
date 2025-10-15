@@ -67,9 +67,11 @@ async function handleApprove(
 
     console.log('✅ Order updated successfully:', order.order_number);
 
-    // If status is 'uretimde' (approved), create production plans and BOM snapshot
+    // If status is 'uretimde' (approved), create production plans and reserve materials
     if (status === 'uretimde') {
-      // Fetch order_items from separate table (order_items is a separate table, not JSONB)
+      console.log('🏭 Starting order approval for order:', id);
+      
+      // Fetch order items
       const { data: orderItems, error: itemsError } = await supabase
         .from('order_items')
         .select('*')
@@ -86,9 +88,9 @@ async function handleApprove(
       console.log('📦 Order items:', JSON.stringify(orderItems, null, 2));
 
       if (orderItems && orderItems.length > 0) {
-        // Create production plans for each product
+        // Create production plans and reserve materials for each product
         for (const item of orderItems) {
-          console.log('🏭 Creating production plan for product:', item.product_id, 'quantity:', item.quantity);
+          console.log('🏭 Processing product:', item.product_id, 'quantity:', item.quantity);
           
           // Create production plan
           const { data: plan, error: planError } = await supabase
@@ -107,17 +109,79 @@ async function handleApprove(
 
           if (planError) {
             console.error('❌ Error creating production plan:', planError);
-            console.error('Plan error details:', JSON.stringify(planError, null, 2));
             continue;
           }
 
           console.log('✅ Production plan created:', plan.id);
-          // BOM snapshot will be created automatically by database trigger (create_bom_snapshot)
-          // This is the MIGRATION TEST - snapshot should be created from production_plans INSERT trigger
+
+          // Get BOM for this product
+          const { data: bomItems, error: bomError } = await supabase
+            .from('bom')
+            .select(`
+              material_type,
+              material_id,
+              quantity_needed
+            `)
+            .eq('finished_product_id', item.product_id);
+
+          if (bomError) {
+            console.error('❌ Error fetching BOM:', bomError);
+            continue;
+          }
+
+          console.log('🔧 BOM items:', JSON.stringify(bomItems, null, 2));
+
+          // Reserve materials
+          for (const bomItem of bomItems) {
+            const needed = bomItem.quantity_needed * item.quantity;
+            
+            // Get material details
+            const tableName = bomItem.material_type === 'raw' ? 'raw_materials' : 'semi_finished_products';
+            const { data: material, error: materialError } = await supabase
+              .from(tableName)
+              .select('id, code, name, quantity, reserved_quantity')
+              .eq('id', bomItem.material_id)
+              .single();
+            
+            if (materialError) {
+              console.error('❌ Error fetching material:', materialError);
+              continue;
+            }
+            
+            if (material) {
+              const available = material.quantity - material.reserved_quantity;
+              
+              if (available < needed) {
+                console.error('❌ Insufficient stock for:', material.code, 'needed:', needed, 'available:', available);
+                return NextResponse.json({ 
+                  error: 'Insufficient materials for production',
+                  details: `Not enough ${material.code}: needed ${needed}, available ${available}`
+                }, { status: 400 });
+              }
+
+              // Update reserved quantity
+              const { error: updateError } = await supabase
+                .from(tableName)
+                .update({ 
+                  reserved_quantity: material.reserved_quantity + needed,
+                  updated_at: new Date().toISOString()
+                })
+                .eq('id', bomItem.material_id);
+
+              if (updateError) {
+                console.error('❌ Error updating reserved quantity:', updateError);
+                continue;
+              }
+
+              console.log('✅ Reserved', needed, 'units of', material.code);
+            }
+          }
         }
       } else {
         console.warn('⚠️ No order items found in order!');
       }
+
+      console.log('✅ Order approved successfully with BOM reservations');
     }
 
     return NextResponse.json(order);

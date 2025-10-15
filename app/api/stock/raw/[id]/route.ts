@@ -73,6 +73,50 @@ export async function PUT(
       }, { status: 400 });
     }
 
+    // 🔔 Otomatik Kritik Stok Bildirimi Kontrolü
+    if (updateData.quantity !== undefined && material) {
+      const currentQuantity = updateData.quantity;
+      const criticalLevel = material.critical_level;
+      
+      if (currentQuantity <= criticalLevel) {
+        // Mevcut okunmamış bildirim var mı kontrol et
+        const { data: existingNotification } = await supabase
+          .from('notifications')
+          .select('id')
+          .eq('material_id', id)
+          .eq('type', 'critical_stock')
+          .eq('is_read', false)
+          .limit(1);
+
+        if (!existingNotification || existingNotification.length === 0) {
+          // Yeni kritik stok bildirimi oluştur
+          await supabase
+            .from('notifications')
+            .insert({
+              type: 'critical_stock',
+              title: 'Kritik Stok Seviyesi',
+              message: `Malzeme: ${material.name} (${material.code}) - Mevcut: ${currentQuantity} - Kritik Seviye: ${criticalLevel}`,
+              material_type: 'raw',
+              material_id: id,
+              severity: 'high',
+              user_id: payload.userId
+            });
+          
+          console.log('🔔 Kritik stok bildirimi oluşturuldu:', material.name);
+        }
+      } else {
+        // Stok normal seviyeye çıktıysa, mevcut bildirimleri okundu olarak işaretle
+        await supabase
+          .from('notifications')
+          .update({ is_read: true })
+          .eq('material_id', id)
+          .eq('type', 'critical_stock')
+          .eq('is_read', false);
+          
+        console.log('✅ Kritik stok bildirimleri okundu olarak işaretlendi:', material.name);
+      }
+    }
+
     return NextResponse.json(material);
   } catch (error) {
     console.error('❌ Error updating raw material:', error);

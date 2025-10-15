@@ -1,184 +1,106 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { z } from 'zod';
+import { verifyJWT } from '@/lib/auth/jwt';
 
-const bomSchema = z.object({
-  finished_product_id: z.string().uuid(),
-  product_type: z.enum(['finished', 'semi']).optional().default('finished'), // Ürün tipi
-  material_type: z.enum(['raw', 'semi']),
-  material_id: z.string().uuid(),
-  quantity_needed: z.number().positive(),
-});
-
-// POST - Create BOM entry
-export async function POST(request: NextRequest) {
+// GET - List BOM for a product
+export async function GET(request: NextRequest) {
   try {
-    const body = await request.json();
-    const validated = bomSchema.parse(body);
+    const token = request.cookies.get('thunder_token')?.value;
+    if (!token) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const payload = await verifyJWT(token);
+    const { searchParams } = new URL(request.url);
+    const productId = searchParams.get('product_id');
+
+    if (!productId) {
+      return NextResponse.json({ error: 'Product ID is required' }, { status: 400 });
+    }
 
     const supabase = await createClient();
-
-    // Ürün tipi belirleme (finished veya semi)
-    const productType = validated.product_type || 'finished';
     
-    // Yarı mamul ürünlere sadece hammadde eklenebilir
-    if (productType === 'semi' && validated.material_type !== 'raw') {
-      return NextResponse.json({ 
-        error: 'Yarı mamul ürünlere sadece hammadde eklenebilir' 
-      }, { status: 400 });
-    }
-    
-    // Ürün ve malzeme varlık kontrolü
-    let product;
-    if (productType === 'finished') {
-      const { data, error: productError } = await supabase
-        .from('finished_products')
-        .select('id, name, code')
-        .eq('id', validated.finished_product_id)
-        .single();
-
-      if (productError || !data) {
-        return NextResponse.json({ error: 'Finished product not found' }, { status: 404 });
-      }
-      product = data;
-    } else {
-      // Yarı mamul ürün
-      const { data, error: productError } = await supabase
-        .from('semi_finished_products')
-        .select('id, name, code')
-        .eq('id', validated.finished_product_id)
-        .single();
-
-      if (productError || !data) {
-        return NextResponse.json({ error: 'Semi-finished product not found' }, { status: 404 });
-      }
-      product = data;
-    }
-
-    let material;
-    if (validated.material_type === 'raw') {
-      const { data: rawMaterial, error: rawError } = await supabase
-        .from('raw_materials')
-        .select('id, name, code')
-        .eq('id', validated.material_id)
-        .single();
-
-      if (rawError || !rawMaterial) {
-        return NextResponse.json({ error: 'Raw material not found' }, { status: 404 });
-      }
-      material = rawMaterial;
-    } else {
-      const { data: semiMaterial, error: semiError } = await supabase
-        .from('semi_finished_products')
-        .select('id, name, code')
-        .eq('id', validated.material_id)
-        .single();
-
-      if (semiError || !semiMaterial) {
-        return NextResponse.json({ error: 'Semi-finished product not found' }, { status: 404 });
-      }
-      material = semiMaterial;
-    }
-
-    // BOM kaydı oluştur (sadece gerekli alanlar)
-    const { data: bomRecord, error } = await supabase
+    const { data: bomItems, error } = await supabase
       .from('bom')
-      .insert([{
-        finished_product_id: validated.finished_product_id,
-        material_type: validated.material_type,
-        material_id: validated.material_id,
-        quantity_needed: validated.quantity_needed
-      }])
-      .select('*')
-      .single();
+      .select(`
+        id,
+        material_type,
+        material_id,
+        quantity_needed,
+        raw_materials!bom_material_id_fkey(
+          id,
+          code,
+          name,
+          quantity,
+          reserved_quantity
+        ),
+        semi_finished_products!bom_material_id_fkey(
+          id,
+          code,
+          name,
+          quantity,
+          reserved_quantity
+        )
+      `)
+      .eq('finished_product_id', productId);
 
     if (error) {
-      if (error.code === '23505') {
-        return NextResponse.json({ 
-          error: 'Bu malzeme zaten BOM\'da mevcut' 
-        }, { status: 409 });
-      }
-      throw error;
+      console.error('BOM fetch error:', error);
+      return NextResponse.json({ error: 'Failed to fetch BOM' }, { status: 500 });
     }
 
-    // Oluşturulan BOM kaydını malzeme bilgileriyle birlikte döndür
-    const result = {
-      ...bomRecord,
-      material,
-    };
-
-    return NextResponse.json(result, { status: 201 });
+    return NextResponse.json({ data: bomItems });
   } catch (error: any) {
-    if (error.name === 'ZodError') {
-      return NextResponse.json({ error: 'Validation error', details: error.errors }, { status: 400 });
-    }
-    return NextResponse.json({ error: error.message || 'BOM creation failed' }, { status: 400 });
+    console.error('BOM API error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 
-// PUT - Update BOM entry
-export async function PUT(request: NextRequest) {
+// POST - Create BOM item
+export async function POST(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const bomId = searchParams.get('id');
+    const token = request.cookies.get('thunder_token')?.value;
+    if (!token) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
-    if (!bomId) {
-      return NextResponse.json({ error: 'BOM ID is required' }, { status: 400 });
+    const payload = await verifyJWT(token);
+    
+    // Only managers can create BOM
+    if (payload.role !== 'yonetici') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     const body = await request.json();
-    const { quantity_needed } = body;
+    const { finished_product_id, material_type, material_id, quantity_needed } = body;
 
-    if (!quantity_needed || quantity_needed <= 0) {
-      return NextResponse.json({ error: 'Geçerli bir miktar girin' }, { status: 400 });
+    if (!finished_product_id || !material_type || !material_id || !quantity_needed) {
+      return NextResponse.json({ 
+        error: 'Missing required fields: finished_product_id, material_type, material_id, quantity_needed' 
+      }, { status: 400 });
     }
 
     const supabase = await createClient();
-
-    const { data, error } = await supabase
+    
+    const { data: bomItem, error } = await supabase
       .from('bom')
-      .update({
-        quantity_needed,
+      .insert({
+        finished_product_id,
+        material_type,
+        material_id,
+        quantity_needed
       })
-      .eq('id', bomId)
       .select()
       .single();
 
     if (error) {
-      console.error('❌ BOM update error:', error);
-      throw error;
+      console.error('BOM creation error:', error);
+      return NextResponse.json({ error: 'Failed to create BOM item' }, { status: 500 });
     }
 
-    return NextResponse.json(data);
+    return NextResponse.json({ data: bomItem }, { status: 201 });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
-  }
-}
-
-// DELETE - Delete BOM entry
-export async function DELETE(request: NextRequest) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const bomId = searchParams.get('id');
-
-    if (!bomId) {
-      return NextResponse.json({ error: 'BOM ID is required' }, { status: 400 });
-    }
-
-    const supabase = await createClient();
-
-    // BOM kaydını sil
-    const { error } = await supabase
-      .from('bom')
-      .delete()
-      .eq('id', bomId);
-
-    if (error) throw error;
-
-    return NextResponse.json({
-      message: 'BOM entry deleted',
-    });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    console.error('BOM creation error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

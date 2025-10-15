@@ -51,6 +51,67 @@ export async function GET(
   }
 }
 
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const token = request.cookies.get('thunder_token')?.value;
+    if (!token) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const payload = await verifyJWT(token);
+    const { id } = await params;
+    const supabase = await createClient();
+
+    // Safe JSON parsing
+    let requestBody;
+    try {
+      const text = await request.text();
+      requestBody = text ? JSON.parse(text) : {};
+    } catch (parseError) {
+      console.error('JSON parse error:', parseError);
+      return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
+    }
+
+    const { is_read } = requestBody;
+
+    // Users can only update their own notifications, or admin can update all
+    const { data: existingNotification, error: fetchError } = await supabase
+      .from('notifications')
+      .select('user_id')
+      .eq('id', id)
+      .single();
+
+    if (fetchError || !existingNotification) {
+      return NextResponse.json({ error: 'Notification not found' }, { status: 404 });
+    }
+
+    if (payload.userId !== existingNotification.user_id && payload.role !== 'yonetici') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    const { data: notification, error } = await supabase
+      .from('notifications')
+      .update({
+        is_read
+      })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      return NextResponse.json({ error: 'Failed to update notification' }, { status: 400 });
+    }
+
+    return NextResponse.json(notification);
+  } catch (error) {
+    console.error('Error updating notification:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }

@@ -41,7 +41,7 @@ import {
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { tr } from 'date-fns/locale';
-import { useNotifications } from '@/lib/hooks/use-notifications';
+import { useSmartNotifications } from '@/lib/hooks/use-smart-notifications';
 import { toast } from 'sonner';
 import { useRealtime } from '@/lib/hooks/use-realtime';
 
@@ -93,40 +93,32 @@ export default function BildirimlerPage() {
     notifications,
     unreadCount,
     isLoading,
-    fetchNotifications,
     markNotificationAsRead,
     deleteNotification,
     markAllNotificationsAsRead,
-  } = useNotifications();
+    refreshNotifications,
+  } = useSmartNotifications();
 
+  // Initial fetch when filters change
   useEffect(() => {
-    fetchNotifications({
-      type: typeFilter || undefined,
-      unread_only: statusFilter === 'unread',
-    });
-  }, [typeFilter, statusFilter, fetchNotifications]);
+    refreshNotifications();
+  }, [typeFilter, statusFilter, refreshNotifications]);
 
   // Real-time updates for notifications
   useRealtime(
     'notifications',
     (newNotification) => {
-      fetchNotifications({
-        type: typeFilter || undefined,
-        unread_only: statusFilter === 'unread',
-      });
+      console.log('🔔 New notification received:', newNotification);
+      refreshNotifications();
       toast.success('Yeni bildirim geldi!');
     },
     (updatedNotification) => {
-      fetchNotifications({
-        type: typeFilter || undefined,
-        unread_only: statusFilter === 'unread',
-      });
+      console.log('🔔 Notification updated:', updatedNotification);
+      refreshNotifications();
     },
     (deletedNotification) => {
-      fetchNotifications({
-        type: typeFilter || undefined,
-        unread_only: statusFilter === 'unread',
-      });
+      console.log('🔔 Notification deleted:', deletedNotification);
+      refreshNotifications();
     }
   );
 

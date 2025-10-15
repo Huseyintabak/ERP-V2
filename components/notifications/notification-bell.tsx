@@ -21,7 +21,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useNotifications } from '@/lib/hooks/use-notifications';
+import { useSmartNotifications } from '@/lib/hooks/use-smart-notifications';
 import { formatDistanceToNow } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import { useRealtime } from '@/lib/hooks/use-realtime';
@@ -63,20 +63,23 @@ export default function NotificationBell() {
     markNotificationAsRead,
     deleteNotification,
     markAllNotificationsAsRead,
-    fetchNotifications,
-  } = useNotifications();
+    refreshNotifications,
+  } = useSmartNotifications();
 
   // Real-time updates for notifications
   useRealtime(
     'notifications',
     (newNotification) => {
-      fetchNotifications();
+      console.log('🔔 Bell: New notification received:', newNotification);
+      refreshNotifications();
     },
     (updatedNotification) => {
-      fetchNotifications();
+      console.log('🔔 Bell: Notification updated:', updatedNotification);
+      refreshNotifications();
     },
     (deletedNotification) => {
-      fetchNotifications();
+      console.log('🔔 Bell: Notification deleted:', deletedNotification);
+      refreshNotifications();
     }
   );
 

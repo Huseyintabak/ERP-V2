@@ -56,6 +56,10 @@ export function useNotifications() {
     try {
       const response = await fetch(`/api/notifications/${id}`, {
         method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ is_read: true }),
       });
 
       if (!response.ok) {
@@ -98,6 +102,10 @@ export function useNotifications() {
         unreadNotifications.map(notification => 
           fetch(`/api/notifications/${notification.id}`, {
             method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ is_read: true }),
           })
         )
       );
