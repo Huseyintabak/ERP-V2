@@ -122,8 +122,8 @@ export function TaskDetailPanel({ task, onRefresh }: TaskDetailPanelProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           plan_id: task.id,
-          barcode: barcode.trim(),
-          quantity: 1,
+          barcode_scanned: barcode.trim(),
+          quantity_produced: 1,
         }),
       });
 
