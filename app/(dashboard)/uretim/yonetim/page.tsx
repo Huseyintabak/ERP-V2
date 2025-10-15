@@ -6,10 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Plus, Package, TrendingUp, Users } from 'lucide-react';
+import { Package, TrendingUp, Users } from 'lucide-react';
 import { toast } from 'sonner';
-import { OrderForm } from '@/components/production/order-form';
 import { formatDate, formatCurrency } from '@/lib/utils';
 import { useRealtime } from '@/lib/hooks/use-realtime';
 
@@ -46,7 +44,6 @@ export default function UretimYonetimPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedTab, setSelectedTab] = useState('active');
-  const [isOrderFormOpen, setIsOrderFormOpen] = useState(false);
   // toast from sonner is already imported
 
   const fetchOrders = async () => {
@@ -112,10 +109,6 @@ export default function UretimYonetimPage() {
     }
   };
 
-  const handleOrderCreated = () => {
-    setIsOrderFormOpen(false);
-    fetchOrders();
-  };
 
   const activeOrders = orders.filter(order => order.status === 'uretimde');
   const pendingOrders = orders.filter(order => order.status === 'beklemede');
@@ -186,27 +179,11 @@ export default function UretimYonetimPage() {
       {/* Sipariş Yönetimi */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>Sipariş Yönetimi</CardTitle>
-              <CardDescription>
-                Siparişleri görüntüleyin, onaylayın ve yönetin
-              </CardDescription>
-            </div>
-            <Dialog open={isOrderFormOpen} onOpenChange={setIsOrderFormOpen}>
-              <DialogTrigger asChild>
-                <Button>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Yeni Sipariş
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>Yeni Sipariş</DialogTitle>
-                </DialogHeader>
-                <OrderForm onSuccess={handleOrderCreated} />
-              </DialogContent>
-            </Dialog>
+          <div>
+            <CardTitle>Sipariş Yönetimi</CardTitle>
+            <CardDescription>
+              Siparişleri görüntüleyin, onaylayın ve yönetin
+            </CardDescription>
           </div>
         </CardHeader>
         <CardContent>
