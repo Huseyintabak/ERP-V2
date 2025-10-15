@@ -91,9 +91,47 @@ export default function PlanlamaDashboard() {
 
   useEffect(() => {
     fetchStats();
+    
+    // Smart polling for real-time updates
+    let interval: NodeJS.Timeout;
+    
+    const startPolling = () => {
+      interval = setInterval(() => {
+        fetchStats();
+      }, 30000); // 30 seconds
+    };
+    
+    const stopPolling = () => {
+      if (interval) {
+        clearInterval(interval);
+      }
+    };
+    
+    // Handle visibility changes
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        fetchStats(); // Immediate fetch when page becomes visible
+        startPolling();
+      } else {
+        stopPolling();
+      }
+    };
+    
+    // Initial setup
+    if (document.visibilityState === 'visible') {
+      startPolling();
+    }
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    return () => {
+      stopPolling();
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, []);
 
   async function fetchStats() {
+    console.log('🔄 Planlama Dashboard: Fetching stats...');
     try {
       const [
         raw, 
@@ -219,7 +257,7 @@ export default function PlanlamaDashboard() {
         setOperators(operators);
       }
 
-      setStats({
+      const newStats = {
         pendingOrders: pendingOrders.data?.length || 0,
         activeProduction: activePlans.data?.length || 0,
         completedToday,
@@ -239,7 +277,17 @@ export default function PlanlamaDashboard() {
         totalStockVarieties: totalStock,
         lowStockItems,
         reservedMaterials: totalStockItems,
+      };
+      
+      console.log('📊 Planlama Dashboard: Stats updated:', {
+        pendingOrders: newStats.pendingOrders,
+        activeProduction: newStats.activeProduction,
+        orderPriority: newStats.orderPriority,
+        totalStockVarieties: newStats.totalStockVarieties,
+        lowStockItems: newStats.lowStockItems
       });
+      
+      setStats(newStats);
     } catch (error) {
       console.error('Planlama Dashboard Stats fetch error:', error);
     }
