@@ -22,6 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { SearchableSelect, type SearchableSelectOption } from '@/components/ui/searchable-select';
 import { Badge } from '@/components/ui/badge';
 import { ClipboardList, AlertTriangle, CheckCircle, TrendingUp, TrendingDown } from 'lucide-react';
 import { toast } from 'sonner';
@@ -79,6 +80,14 @@ export function InventoryCountDialog({
   const watchMaterialType = watch('materialType');
   const watchMaterialId = watch('materialId');
   const watchPhysicalQty = watch('physicalQuantity');
+
+  // SearchableSelect için material options'ı hazırla
+  const materialOptions: SearchableSelectOption[] = materials.map((material) => ({
+    value: material.id,
+    label: material.name,
+    description: material.code,
+    badge: `${material.quantity} ${material.unit}`,
+  }));
 
   // Malzeme tipine göre malzemeleri yükle
   useEffect(() => {
@@ -202,22 +211,18 @@ export function InventoryCountDialog({
           {/* Malzeme Seçimi */}
           <div className="space-y-2">
             <Label htmlFor="materialId">Malzeme</Label>
-            <Select
+            <SearchableSelect
+              options={materialOptions}
               value={watchMaterialId}
               onValueChange={(value) => setValue('materialId', value)}
+              placeholder={materialsLoading ? 'Yükleniyor...' : 'Malzeme seçin'}
+              searchPlaceholder="Malzeme adı veya kodu ile ara..."
+              emptyText="Malzeme bulunamadı"
               disabled={materialsLoading}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder={materialsLoading ? 'Yükleniyor...' : 'Malzeme seçin'} />
-              </SelectTrigger>
-              <SelectContent>
-                {materials.map((material) => (
-                  <SelectItem key={material.id} value={material.id}>
-                    {material.code} - {material.name} (Mevcut: {material.quantity} {material.unit})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              loading={materialsLoading}
+              allowClear
+              maxHeight="300px"
+            />
             {errors.materialId && (
               <p className="text-sm text-red-600">{errors.materialId.message}</p>
             )}

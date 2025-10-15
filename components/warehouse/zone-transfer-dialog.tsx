@@ -18,6 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { SearchableSelect, type SearchableSelectOption } from '@/components/ui/searchable-select';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -77,6 +78,14 @@ export function ZoneTransferDialog({
   const [sourceInventory, setSourceInventory] = useState<ZoneInventory[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<FinishedProduct | null>(null);
   const [availableQuantity, setAvailableQuantity] = useState(0);
+
+  // SearchableSelect için product options'ı hazırla
+  const productOptions: SearchableSelectOption[] = sourceInventory.map((inventory) => ({
+    value: inventory.product_id,
+    label: inventory.product.name,
+    description: inventory.product.code,
+    badge: `${inventory.quantity} adet`,
+  }));
 
   // Load source zone inventory when fromZoneId changes
   useEffect(() => {
@@ -276,28 +285,17 @@ export function ZoneTransferDialog({
           {fromZoneId && (
             <div className="space-y-2">
               <Label htmlFor="product">Ürün</Label>
-              <Select value={productId} onValueChange={setProductId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Transfer edilecek ürünü seçin" />
-                </SelectTrigger>
-                <SelectContent>
-                  {sourceInventory.map((inventory) => (
-                    <SelectItem key={inventory.product_id} value={inventory.product_id}>
-                      <div className="flex items-center justify-between w-full">
-                        <div>
-                          <div className="font-medium">{inventory.product.name}</div>
-                          <div className="text-sm text-muted-foreground">
-                            {inventory.product.code}
-                          </div>
-                        </div>
-                        <Badge variant="secondary" className="ml-2">
-                          {inventory.quantity} adet
-                        </Badge>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <SearchableSelect
+                options={productOptions}
+                value={productId}
+                onValueChange={setProductId}
+                placeholder="Transfer edilecek ürünü seçin"
+                searchPlaceholder="Ürün adı veya kodu ile ara..."
+                emptyText="Bu zonda ürün bulunamadı"
+                disabled={isLoading}
+                allowClear
+                maxHeight="300px"
+              />
             </div>
           )}
 

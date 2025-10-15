@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { SearchableSelect, type SearchableSelectOption } from '@/components/ui/searchable-select';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { TrendingUp, TrendingDown } from 'lucide-react';
@@ -23,6 +24,14 @@ export function QuickStockEntryDialog({ open, onClose, type }: Props) {
   const [quantity, setQuantity] = useState('');
   const [description, setDescription] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // SearchableSelect için material options'ı hazırla
+  const materialOptions: SearchableSelectOption[] = materials.map((material) => ({
+    value: material.id,
+    label: material.name,
+    description: material.code,
+    badge: `${material.quantity} ${material.unit}`,
+  }));
 
   useEffect(() => {
     if (open) {
@@ -134,18 +143,16 @@ export function QuickStockEntryDialog({ open, onClose, type }: Props) {
           {/* Malzeme Seçimi */}
           <div className="space-y-2">
             <Label>Malzeme</Label>
-            <Select value={selectedMaterialId} onValueChange={setSelectedMaterialId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Malzeme seçin..." />
-              </SelectTrigger>
-              <SelectContent>
-                {materials.map((material) => (
-                  <SelectItem key={material.id} value={material.id}>
-                    {material.code} - {material.name} (Stok: {material.quantity} {material.unit})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <SearchableSelect
+              options={materialOptions}
+              value={selectedMaterialId}
+              onValueChange={setSelectedMaterialId}
+              placeholder="Malzeme seçin..."
+              searchPlaceholder="Malzeme adı veya kodu ile ara..."
+              emptyText="Malzeme bulunamadı"
+              allowClear
+              maxHeight="300px"
+            />
           </div>
 
           {/* Mevcut Stok Bilgisi */}

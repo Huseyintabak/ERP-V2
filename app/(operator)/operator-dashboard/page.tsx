@@ -208,8 +208,6 @@ export default function OperatorDashboard() {
   // Plan status actions
   const handlePlanAction = async (planId: string, action: 'accept' | 'pause' | 'resume' | 'complete') => {
     try {
-      console.log('🔍 Plan action attempt:', { planId, action });
-      
       const response = await fetch('/api/production/plan-status', {
         method: 'POST',
         headers: {
@@ -221,11 +219,8 @@ export default function OperatorDashboard() {
         }),
       });
 
-      console.log('🔍 Response status:', response.status);
-
       if (!response.ok) {
         const error = await response.json();
-        console.error('❌ Plan action error:', error);
         throw new Error(error.error || `Failed to ${action} plan`);
       }
 

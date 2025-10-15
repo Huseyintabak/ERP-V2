@@ -71,6 +71,23 @@ async function handleApprove(
     if (status === 'uretimde') {
       console.log('🏭 Starting order approval for order:', id);
       
+      // Get order details including assigned operator
+      const { data: orderDetails, error: orderDetailsError } = await supabase
+        .from('orders')
+        .select('assigned_operator_id')
+        .eq('id', id)
+        .single();
+
+      if (orderDetailsError) {
+        console.error('❌ Error fetching order details:', orderDetailsError);
+        return NextResponse.json({ 
+          error: 'Failed to fetch order details', 
+          details: orderDetailsError.message 
+        }, { status: 400 });
+      }
+
+      console.log('👤 Order assigned operator:', orderDetails.assigned_operator_id);
+      
       // Fetch order items
       const { data: orderItems, error: itemsError } = await supabase
         .from('order_items')
@@ -92,18 +109,26 @@ async function handleApprove(
         for (const item of orderItems) {
           console.log('🏭 Processing product:', item.product_id, 'quantity:', item.quantity);
           
-          // Create production plan
+          // Create production plan with operator assignment if available
+          const planData = {
+            order_id: id,
+            product_id: item.product_id,
+            planned_quantity: item.quantity,
+            produced_quantity: 0,
+            status: 'planlandi',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          };
+
+          // If order has assigned operator, assign to production plan
+          if (orderDetails.assigned_operator_id) {
+            planData.assigned_operator_id = orderDetails.assigned_operator_id;
+            console.log('👤 Assigning operator to production plan:', orderDetails.assigned_operator_id);
+          }
+
           const { data: plan, error: planError } = await supabase
             .from('production_plans')
-            .insert({
-              order_id: id,
-              product_id: item.product_id,
-              planned_quantity: item.quantity,
-              produced_quantity: 0,
-              status: 'planlandi',
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString()
-            })
+            .insert(planData)
             .select()
             .single();
 

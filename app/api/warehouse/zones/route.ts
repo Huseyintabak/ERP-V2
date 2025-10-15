@@ -34,15 +34,30 @@ export async function GET(request: NextRequest) {
     // Her zone için ürün sayısını hesapla
     const zonesWithCounts = await Promise.all(
       (zones || []).map(async (zone) => {
-        const { count } = await adminSupabase
-          .from('zone_inventories')
-          .select('*', { count: 'exact', head: true })
-          .eq('zone_id', zone.id);
+        let productCount = 0;
+        
+        if (zone.zone_type === 'center') {
+          // Merkez zone için tüm nihai ürünleri say
+          const { count } = await adminSupabase
+            .from('finished_products')
+            .select('*', { count: 'exact', head: true })
+            .gt('quantity', 0);
+          
+          productCount = count || 0;
+        } else {
+          // Diğer zone'lar için zone_inventories tablosundan say
+          const { count } = await adminSupabase
+            .from('zone_inventories')
+            .select('*', { count: 'exact', head: true })
+            .eq('zone_id', zone.id);
+          
+          productCount = count || 0;
+        }
         
         return {
           ...zone,
-          inventory_count: count || 0,
-          total_products: count || 0
+          inventory_count: productCount,
+          total_products: productCount
         };
       })
     );

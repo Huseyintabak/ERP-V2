@@ -12,6 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { SearchableSelect, type SearchableSelectOption } from '@/components/ui/searchable-select';
 import { orderSchema, orderItemSchema, type OrderFormData, type OrderItemFormData } from '@/types';
 import { CustomerSelect } from '@/components/customers/customer-select';
 import { CustomerDialog } from '@/components/customers/customer-dialog';
@@ -28,6 +29,14 @@ export function OrderForm({ onSuccess }: Props) {
   const [operators, setOperators] = useState<any[]>([]);
   const [customers, setCustomers] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+
+  // SearchableSelect için finished products'ı hazırla
+  const productOptions: SearchableSelectOption[] = finishedProducts.map((product) => ({
+    value: product.id,
+    label: product.name,
+    description: product.code,
+    badge: product.quantity ? `${product.quantity} adet` : undefined,
+  }));
   // toast from sonner is already imported
 
   const {
@@ -199,30 +208,17 @@ export function OrderForm({ onSuccess }: Props) {
             <div key={index} className="grid grid-cols-12 gap-4 items-end">
               <div className="col-span-7">
                 <Label>Ürün</Label>
-                <Select 
-                  value={item.product_id} 
+                <SearchableSelect
+                  options={productOptions}
+                  value={item.product_id}
                   onValueChange={(value) => updateItem(index, 'product_id', value)}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Ürün seçin" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {finishedProducts.length === 0 ? (
-                      <SelectItem value="no-products" disabled>
-                        Ürün bulunamadı
-                      </SelectItem>
-                    ) : (
-                      finishedProducts.map((product) => (
-                        <SelectItem key={product.id} value={product.id}>
-                          <div className="flex flex-col">
-                            <span className="font-medium">{product.name}</span>
-                            <span className="text-sm text-gray-500">({product.code})</span>
-                          </div>
-                        </SelectItem>
-                      ))
-                    )}
-                  </SelectContent>
-                </Select>
+                  placeholder="Ürün seçin"
+                  searchPlaceholder="Ürün adı veya kodu ile ara..."
+                  emptyText="Ürün bulunamadı"
+                  disabled={loading}
+                  allowClear
+                  maxHeight="300px"
+                />
               </div>
               
               <div className="col-span-2">

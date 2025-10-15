@@ -18,6 +18,8 @@ DECLARE
   source_record_exists BOOLEAN;
   rows_updated INTEGER;
   rows_inserted INTEGER;
+  source_zone_type TEXT;
+  dest_zone_type TEXT;
 BEGIN
   -- Log input parameters
   RAISE NOTICE '=== TRANSFER START ===';
@@ -27,11 +29,26 @@ BEGIN
   RAISE NOTICE 'Quantity: %', qty;
   
   -- Check if source zone has enough quantity
-  SELECT quantity, TRUE INTO current_qty, source_record_exists
-  FROM zone_inventories 
-  WHERE zone_id = from_zone 
-    AND material_type = 'finished'
-    AND material_id = product;
+  -- First, check if source zone is center zone
+  SELECT zone_type INTO source_zone_type
+  FROM warehouse_zones 
+  WHERE id = from_zone;
+  
+  RAISE NOTICE 'Source Zone Type: %', source_zone_type;
+  
+  IF source_zone_type = 'center' THEN
+    -- For center zone, check finished_products table
+    SELECT quantity, TRUE INTO current_qty, source_record_exists
+    FROM finished_products 
+    WHERE id = product;
+  ELSE
+    -- For other zones, check zone_inventories table
+    SELECT quantity, TRUE INTO current_qty, source_record_exists
+    FROM zone_inventories 
+    WHERE zone_id = from_zone 
+      AND material_type = 'finished'
+      AND material_id = product;
+  END IF;
   
   RAISE NOTICE 'Current Source Qty: %', COALESCE(current_qty, 0);
   RAISE NOTICE 'Source Record Exists: %', COALESCE(source_record_exists, FALSE);
@@ -47,13 +64,24 @@ BEGIN
 
   -- Update source zone
   RAISE NOTICE 'Updating source zone...';
-  UPDATE zone_inventories
-  SET 
-    quantity = quantity - qty,
-    updated_at = NOW()
-  WHERE zone_id = from_zone 
-    AND material_type = 'finished'
-    AND material_id = product;
+  
+  IF source_zone_type = 'center' THEN
+    -- For center zone, update finished_products table
+    UPDATE finished_products
+    SET 
+      quantity = quantity - qty,
+      updated_at = NOW()
+    WHERE id = product;
+  ELSE
+    -- For other zones, update zone_inventories table
+    UPDATE zone_inventories
+    SET 
+      quantity = quantity - qty,
+      updated_at = NOW()
+    WHERE zone_id = from_zone 
+      AND material_type = 'finished'
+      AND material_id = product;
+  END IF;
   
   GET DIAGNOSTICS rows_updated = ROW_COUNT;
   RAISE NOTICE 'Source zone rows updated: %', rows_updated;
@@ -68,29 +96,50 @@ BEGIN
 
   -- Insert or update destination zone
   RAISE NOTICE 'Upserting destination zone...';
-  INSERT INTO zone_inventories (
-    zone_id, 
-    material_type,
-    material_id, 
-    quantity,
-    created_at,
-    updated_at
-  )
-  VALUES (
-    to_zone, 
-    'finished',
-    product, 
-    qty,
-    NOW(),
-    NOW()
-  )
-  ON CONFLICT (zone_id, material_type, material_id)
-  DO UPDATE SET 
-    quantity = zone_inventories.quantity + EXCLUDED.quantity,
-    updated_at = NOW();
   
-  GET DIAGNOSTICS rows_inserted = ROW_COUNT;
-  RAISE NOTICE 'Destination zone rows affected: %', rows_inserted;
+  -- Check if destination zone is center zone
+  SELECT zone_type INTO dest_zone_type
+  FROM warehouse_zones 
+  WHERE id = to_zone;
+  
+  RAISE NOTICE 'Destination Zone Type: %', dest_zone_type;
+  
+  IF dest_zone_type = 'center' THEN
+    -- For center zone, update finished_products table
+    UPDATE finished_products
+    SET 
+      quantity = quantity + qty,
+      updated_at = NOW()
+    WHERE id = product;
+    
+    GET DIAGNOSTICS rows_inserted = ROW_COUNT;
+    RAISE NOTICE 'Destination center zone rows updated: %', rows_inserted;
+  ELSE
+    -- For other zones, insert/update zone_inventories table
+    INSERT INTO zone_inventories (
+      zone_id, 
+      material_type,
+      material_id, 
+      quantity,
+      created_at,
+      updated_at
+    )
+    VALUES (
+      to_zone, 
+      'finished',
+      product, 
+      qty,
+      NOW(),
+      NOW()
+    )
+    ON CONFLICT (zone_id, material_type, material_id)
+    DO UPDATE SET 
+      quantity = zone_inventories.quantity + EXCLUDED.quantity,
+      updated_at = NOW();
+    
+    GET DIAGNOSTICS rows_inserted = ROW_COUNT;
+    RAISE NOTICE 'Destination zone rows affected: %', rows_inserted;
+  END IF;
   
   IF rows_inserted = 0 THEN
     RAISE NOTICE '❌ DESTINATION UPSERT FAILED - NO ROWS AFFECTED';

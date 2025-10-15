@@ -44,21 +44,53 @@ export async function POST(request: NextRequest) {
     const supabase = await createClient();
     const adminSupabase = await createAdminClient();
 
-    // Check if source zone has enough inventory (use admin for RLS bypass)
-    const { data: sourceInventory, error: sourceError } = await adminSupabase
-      .from('zone_inventories')
-      .select('quantity')
-      .eq('zone_id', fromZoneId)
-      .eq('material_type', 'finished')
-      .eq('material_id', productId)
+    // Check if source zone has enough inventory
+    let availableQuantity = 0;
+    
+    // Get source zone info to determine if it's center zone
+    const { data: sourceZone, error: zoneError } = await adminSupabase
+      .from('warehouse_zones')
+      .select('zone_type')
+      .eq('id', fromZoneId)
       .single();
+    
+    if (zoneError) {
+      console.error('Error fetching source zone:', zoneError);
+      return NextResponse.json({ error: zoneError.message }, { status: 500 });
+    }
+    
+    if (sourceZone.zone_type === 'center') {
+      // For center zone, check finished_products table
+      const { data: productInventory, error: productError } = await adminSupabase
+        .from('finished_products')
+        .select('quantity')
+        .eq('id', productId)
+        .single();
+      
+      if (productError) {
+        console.error('Error checking product inventory:', productError);
+        return NextResponse.json({ error: productError.message }, { status: 500 });
+      }
+      
+      availableQuantity = productInventory?.quantity || 0;
+    } else {
+      // For other zones, check zone_inventories table
+      const { data: sourceInventory, error: sourceError } = await adminSupabase
+        .from('zone_inventories')
+        .select('quantity')
+        .eq('zone_id', fromZoneId)
+        .eq('material_type', 'finished')
+        .eq('material_id', productId)
+        .single();
 
-    if (sourceError && sourceError.code !== 'PGRST116') {
-      console.error('Error checking source inventory:', sourceError);
-      return NextResponse.json({ error: sourceError.message }, { status: 500 });
+      if (sourceError && sourceError.code !== 'PGRST116') {
+        console.error('Error checking source inventory:', sourceError);
+        return NextResponse.json({ error: sourceError.message }, { status: 500 });
+      }
+
+      availableQuantity = sourceInventory?.quantity || 0;
     }
 
-    const availableQuantity = sourceInventory?.quantity || 0;
     if (availableQuantity < quantity) {
       return NextResponse.json({ 
         error: `Insufficient inventory. Available: ${availableQuantity}, Requested: ${quantity}` 

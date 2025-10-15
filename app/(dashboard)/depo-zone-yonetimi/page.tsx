@@ -77,9 +77,11 @@ export default function DepoZoneYonetimiPage() {
   // Dialog states
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isInventoryDialogOpen, setIsInventoryDialogOpen] = useState(false);
+  const [isCenterInventoryDialogOpen, setIsCenterInventoryDialogOpen] = useState(false);
   const [selectedZoneId, setSelectedZoneId] = useState<string>('');
   const [selectedZoneInventory, setSelectedZoneInventory] = useState<ZoneInventory[]>([]);
   const [selectedZone, setSelectedZone] = useState<WarehouseZone | null>(null);
+  const [centerInventory, setCenterInventory] = useState<ZoneInventory[]>([]);
   
   // Create zone form
   const [newZoneName, setNewZoneName] = useState('');
@@ -191,6 +193,32 @@ export default function DepoZoneYonetimiPage() {
     }
   };
 
+  const fetchCenterInventory = async () => {
+    try {
+      const response = await fetch('/api/warehouse/zones/center/inventory', {
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const text = await response.text();
+      if (!text || text.includes('/login')) {
+        console.warn('Redirect to login detected');
+        return;
+      }
+      
+      const result = JSON.parse(text);
+      setCenterInventory(result.data || []);
+    } catch (error) {
+      console.error('Error fetching center inventory:', error);
+      toast.error('Merkez depo stok bilgileri yüklenirken hata oluştu');
+    }
+  };
+
   const handleCreateZone = async () => {
     if (!newZoneName.trim()) {
       toast.error('Zone adı gerekli');
@@ -284,13 +312,20 @@ export default function DepoZoneYonetimiPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card 
+          className="cursor-pointer hover:bg-gray-50 transition-colors"
+          onClick={() => {
+            fetchCenterInventory();
+            setIsCenterInventoryDialogOpen(true);
+          }}
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Merkez Zone</CardTitle>
+            <CardTitle className="text-sm font-medium">Nihai Stoklar Merkez</CardTitle>
             <Building2 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{kpiData.centerZones}</div>
+            <p className="text-xs text-muted-foreground">Tüm üretilen ürünler</p>
           </CardContent>
         </Card>
 
@@ -475,6 +510,97 @@ export default function DepoZoneYonetimiPage() {
                               style: 'currency',
                               currency: 'TRY'
                             })}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Merkez Zone Inventory Dialog */}
+      <Dialog open={isCenterInventoryDialogOpen} onOpenChange={setIsCenterInventoryDialogOpen}>
+        <DialogContent className="max-w-6xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Building2 className="h-5 w-5" />
+              Nihai Stoklar Merkez
+            </DialogTitle>
+            <DialogDescription>
+              Tüm üretilen ürünler merkez depoda - İlgi zone'a sevk edilecek
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="flex items-center gap-4 p-4 bg-blue-50 rounded-lg">
+              <Building2 className="h-8 w-8 text-blue-600" />
+              <div>
+                <h3 className="font-semibold text-lg">Merkez Depo</h3>
+                <p className="text-sm text-gray-600">
+                  Tüm üretilen ürünler burada toplanır ve ilgi zone'lara sevk edilir
+                </p>
+              </div>
+            </div>
+            
+            {centerInventory.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                Merkez depoda henüz ürün bulunmuyor
+              </div>
+            ) : (
+              <div className="rounded-md border">
+                <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
+                  <table className="w-full">
+                    <thead className="bg-gray-50 sticky top-0 z-10">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">Ürün</th>
+                        <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">Kod</th>
+                        <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">Miktar</th>
+                        <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">Birim Fiyat</th>
+                        <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">Toplam Değer</th>
+                        <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">İşlemler</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {centerInventory.map((inventory) => (
+                        <tr key={inventory.id} className="hover:bg-gray-50">
+                          <td className="px-4 py-3">
+                            <div className="font-medium">{inventory.product?.name || 'Ürün Yok'}</div>
+                          </td>
+                          <td className="px-4 py-3 text-sm text-gray-500">
+                            {inventory.product?.code || 'N/A'}
+                          </td>
+                          <td className="px-4 py-3">
+                            <Badge variant="secondary">{inventory.quantity} adet</Badge>
+                          </td>
+                          <td className="px-4 py-3">
+                            {(inventory.product?.unit_price || 0).toLocaleString('tr-TR', {
+                              style: 'currency',
+                              currency: 'TRY'
+                            })}
+                          </td>
+                          <td className="px-4 py-3 font-medium">
+                            {(inventory.quantity * (inventory.product?.unit_price || 0)).toLocaleString('tr-TR', {
+                              style: 'currency',
+                              currency: 'TRY'
+                            })}
+                          </td>
+                          <td className="px-4 py-3">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                // Transfer dialog'unu aç
+                                setSelectedZoneId('center');
+                                // Transfer işlemi için gerekli state'leri ayarla
+                              }}
+                            >
+                              <ArrowRightLeft className="h-4 w-4 mr-1" />
+                              Sevk Et
+                            </Button>
                           </td>
                         </tr>
                       ))}

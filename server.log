@@ -8,190 +8,840 @@
    - Environments: .env.local
 
  ✓ Starting...
- ✓ Compiled middleware in 95ms
- ✓ Ready in 945ms
- ○ Compiling /depo-zone-yonetimi ...
- ✓ Compiled /depo-zone-yonetimi in 2.6s
- GET /depo-zone-yonetimi 200 in 2905ms
- ✓ Compiled /api/auth/me in 286ms
- GET /favicon.ico?favicon.0b3bf435.ico 200 in 477ms
- GET /api/auth/me 200 in 1046ms
- ✓ Compiled /api/notifications in 175ms
- GET /api/notifications? 200 in 792ms
- GET /api/customers 200 in 794ms
- GET /api/warehouse/zones 200 in 937ms
- GET /api/customers 200 in 405ms
- GET /api/notifications? 200 in 586ms
- GET /api/warehouse/zones 200 in 553ms
- GET /api/warehouse/zones 200 in 950ms
- GET /depo-zone-yonetimi 200 in 114ms
- GET /favicon.ico?favicon.0b3bf435.ico 200 in 238ms
- GET /api/auth/me 200 in 558ms
- GET /api/notifications? 200 in 458ms
- GET /api/customers 200 in 679ms
- GET /api/warehouse/zones 200 in 808ms
- GET /api/notifications? 200 in 425ms
- GET /api/customers 200 in 562ms
- GET /api/warehouse/zones 200 in 868ms
+ ✓ Compiled middleware in 108ms
+ ✓ Ready in 1265ms
+ ○ Compiling /stok/hammaddeler ...
+ ✓ Compiled /stok/hammaddeler in 3.4s
+ GET /uretim/siparisler 200 in 1721ms
+ GET /stok/hammaddeler 200 in 3670ms
+ GET /stok/yari-mamuller 200 in 3238ms
+ ✓ Compiled /api/orders in 283ms
+ GET /api/orders?page=1&limit=50&sortBy=created_at&sortOrder=desc 200 in 1005ms
+ GET /api/orders?page=1&limit=50&sortBy=created_at&sortOrder=desc 200 in 1010ms
+ GET /uretim/siparisler 200 in 336ms
+ ✓ Compiled /api/auth/me in 142ms
+ GET /api/auth/me 200 in 586ms
+ ✓ Compiled /api/notifications in 141ms
+ GET /api/orders?page=1&limit=50&sortBy=created_at&sortOrder=desc 200 in 458ms
+ GET /api/orders?page=1&limit=50&sortBy=created_at&sortOrder=desc 200 in 637ms
+ GET /api/notifications? 200 in 778ms
+ GET /api/notifications? 200 in 794ms
+ GET /api/notifications? 200 in 800ms
+ GET /api/notifications? 200 in 807ms
+ GET /stok/hammaddeler 200 in 55ms
+ ✓ Compiled /api/stock/raw in 106ms
+ GET /api/stock/raw?sort=code&order=asc&page=1&limit=50 200 in 550ms
+ GET /api/stock/raw?sort=code&order=asc&page=1&limit=50 200 in 558ms
+ ✓ Compiled /stok/nihai-urunler in 322ms
+ GET /stok/nihai-urunler 200 in 365ms
+ ✓ Compiled /api/stock/finished in 91ms
+ GET /api/stock/finished?sort=code&order=asc&page=1&limit=50 200 in 529ms
+ GET /api/stock/finished?sort=code&order=asc&page=1&limit=50 200 in 538ms
+ GET /uretim/siparisler 200 in 58ms
+ GET /api/orders?page=1&limit=50&sortBy=created_at&sortOrder=desc 200 in 412ms
+ GET /api/orders?page=1&limit=50&sortBy=created_at&sortOrder=desc 200 in 422ms
+ ✓ Compiled /api/customers in 190ms
+ GET /api/stock/finished?limit=1000 200 in 556ms
+ GET /api/stock/finished?limit=1000 200 in 538ms
+ GET /api/customers?limit=1000 200 in 838ms
+✅ Operators data: [
+  {
+    id: '11111111-1111-1111-1111-111111111111',
+    series: 'thunder',
+    experience_years: 5,
+    daily_capacity: 46,
+    location: 'Üretim Salonu A',
+    hourly_rate: 25,
+    active_productions_count: 0,
+    current_status: 'active',
+    user: {
+      id: '11111111-1111-1111-1111-111111111111',
+      name: 'Thunder Operatör',
+      email: 'operator1@thunder.com',
+      is_active: true
+    }
+  },
+  {
+    id: '22222222-2222-2222-2222-222222222222',
+    series: 'thunder_pro',
+    experience_years: 5,
+    daily_capacity: 46,
+    location: 'Üretim Salonu B',
+    hourly_rate: 25,
+    active_productions_count: 0,
+    current_status: 'idle',
+    user: {
+      id: '22222222-2222-2222-2222-222222222222',
+      name: 'ThunderPro Operatör',
+      email: 'operator2@thunder.com',
+      is_active: true
+    }
+  }
+]
+ GET /api/operators 200 in 841ms
+ GET /api/customers?limit=1000 200 in 850ms
+ GET /api/customers?limit=1000 200 in 843ms
+✅ Operators data: [
+  {
+    id: '11111111-1111-1111-1111-111111111111',
+    series: 'thunder',
+    experience_years: 5,
+    daily_capacity: 46,
+    location: 'Üretim Salonu A',
+    hourly_rate: 25,
+    active_productions_count: 0,
+    current_status: 'active',
+    user: {
+      id: '11111111-1111-1111-1111-111111111111',
+      name: 'Thunder Operatör',
+      email: 'operator1@thunder.com',
+      is_active: true
+    }
+  },
+  {
+    id: '22222222-2222-2222-2222-222222222222',
+    series: 'thunder_pro',
+    experience_years: 5,
+    daily_capacity: 46,
+    location: 'Üretim Salonu B',
+    hourly_rate: 25,
+    active_productions_count: 0,
+    current_status: 'idle',
+    user: {
+      id: '22222222-2222-2222-2222-222222222222',
+      name: 'ThunderPro Operatör',
+      email: 'operator2@thunder.com',
+      is_active: true
+    }
+  }
+]
+ GET /api/operators 200 in 407ms
+ GET /api/customers?limit=1000 200 in 425ms
+ GET /api/notifications? 200 in 602ms
+ ✓ Compiled middleware in 1ms
+ ✓ Compiled in 258ms
+ GET /uretim/siparisler 200 in 112ms
+ GET /uretim/siparisler 200 in 90ms
+ ✓ Compiled /api/auth/login in 438ms
+ GET /uretim/operatorler 200 in 429ms
+ POST /api/auth/login 200 in 883ms
+ ✓ Compiled /depo-zone-yonetimi in 427ms
+ GET /depo-zone-yonetimi 200 in 499ms
+ ✓ Compiled /api/warehouse/zones in 120ms
+ GET /api/customers 200 in 453ms
+ GET /api/customers 200 in 613ms
+ GET /api/warehouse/zones 200 in 1004ms
+ GET /api/warehouse/zones 200 in 1036ms
  ✓ Compiled /api/warehouse/zones/[id]/inventory in 94ms
-Error: Route "/api/warehouse/zones/[id]/inventory" used `params.id`. `params` should be awaited before using its properties. Learn more: https://nextjs.org/docs/messages/sync-dynamic-apis
-    at GET (app/api/warehouse/zones/[id]/inventory/route.ts:26:27)
-  24 |     }
-  25 |
-> 26 |     const zoneId = params.id;
-     |                           ^
-  27 |     const supabase = await createClient();
-  28 |
-  29 |     // Fetch zone inventory with product details
-Error fetching zone inventory: {
-  code: 'PGRST205',
-  details: null,
-  hint: "Perhaps you meant the table 'public.zone_inventories'",
-  message: "Could not find the table 'public.zone_inventory' in the schema cache"
-}
- GET /api/warehouse/zones/41b496ba-0e3f-4a08-89ae-6119e3cfd0e3/inventory 500 in 1761ms
- GET /favicon.ico 200 in 275ms
- ✓ Compiled /login in 347ms
- GET /login 200 in 538ms
- GET /login 200 in 535ms
- GET /login 200 in 552ms
- GET /favicon.ico?favicon.0b3bf435.ico 200 in 231ms
-Error: Route "/api/warehouse/zones/[id]/inventory" used `params.id`. `params` should be awaited before using its properties. Learn more: https://nextjs.org/docs/messages/sync-dynamic-apis
-    at GET (app/api/warehouse/zones/[id]/inventory/route.ts:26:27)
-  24 |     }
-  25 |
-> 26 |     const zoneId = params.id;
-     |                           ^
-  27 |     const supabase = await createClient();
-  28 |
-  29 |     // Fetch zone inventory with product details
-Error fetching zone inventory: {
-  code: 'PGRST200',
-  details: "Searched for a foreign key relationship between 'zone_inventories' and 'finished_products' in the schema 'public', but no matches were found.",
-  hint: null,
-  message: "Could not find a relationship between 'zone_inventories' and 'finished_products' in the schema cache"
-}
- GET /api/warehouse/zones/41b496ba-0e3f-4a08-89ae-6119e3cfd0e3/inventory 500 in 956ms
- ✓ Compiled /uretim/siparisler in 466ms
- GET /uretim/siparisler 200 in 536ms
- GET /api/auth/me 200 in 785ms
- ✓ Compiled /api/orders in 106ms
- GET /api/notifications? 200 in 465ms
- GET /api/notifications? 200 in 653ms
- GET /api/orders?page=1&limit=50&sortBy=created_at&sortOrder=desc 200 in 763ms
- GET /api/orders?page=1&limit=50&sortBy=created_at&sortOrder=desc 200 in 784ms
- GET /depo-zone-yonetimi 200 in 81ms
- GET /favicon.ico?favicon.0b3bf435.ico 200 in 255ms
- GET /api/auth/me 200 in 804ms
- GET /api/notifications? 200 in 473ms
- GET /api/customers 200 in 651ms
- GET /api/warehouse/zones 200 in 841ms
- GET /api/notifications? 200 in 421ms
- GET /api/customers 200 in 597ms
- GET /api/warehouse/zones 200 in 748ms
-Error: Route "/api/warehouse/zones/[id]/inventory" used `params.id`. `params` should be awaited before using its properties. Learn more: https://nextjs.org/docs/messages/sync-dynamic-apis
-    at GET (app/api/warehouse/zones/[id]/inventory/route.ts:26:27)
-  24 |     }
-  25 |
-> 26 |     const zoneId = params.id;
-     |                           ^
-  27 |     const supabase = await createClient();
-  28 |
-  29 |     // Fetch zone inventory with product details
-Error fetching zone inventory: {
-  code: 'PGRST200',
-  details: "Searched for a foreign key relationship between 'zone_inventories' and 'finished_products' in the schema 'public', but no matches were found.",
-  hint: null,
-  message: "Could not find a relationship between 'zone_inventories' and 'finished_products' in the schema cache"
-}
- GET /api/warehouse/zones/41b496ba-0e3f-4a08-89ae-6119e3cfd0e3/inventory 500 in 661ms
- GET /api/warehouse/zones/41b496ba-0e3f-4a08-89ae-6119e3cfd0e3/inventory 200 in 1417ms
- GET /api/warehouse/zones/41b496ba-0e3f-4a08-89ae-6119e3cfd0e3/inventory 200 in 830ms
-Zone inventory API error: ReferenceError: createAdminClient is not defined
-    at GET (app/api/warehouse/zones/[id]/inventory/route.ts:27:27)
-  25 |
-  26 |     const { id: zoneId } = await params;
-> 27 |     const adminSupabase = await createAdminClient();
-     |                           ^
-  28 |
-  29 |     // Fetch zone inventory (polymorphic - cannot join directly, use admin client for RLS bypass)
-  30 |     const { data: inventoryRecords, error: invError } = await adminSupabase
- GET /api/warehouse/zones/41b496ba-0e3f-4a08-89ae-6119e3cfd0e3/inventory 500 in 389ms
-Zone inventory API error: ReferenceError: createAdminClient is not defined
-    at GET (app/api/warehouse/zones/[id]/inventory/route.ts:27:27)
-  25 |
-  26 |     const { id: zoneId } = await params;
-> 27 |     const adminSupabase = await createAdminClient();
-     |                           ^
-  28 |
-  29 |     // Fetch zone inventory (polymorphic - cannot join directly, use admin client for RLS bypass)
-  30 |     const { data: inventoryRecords, error: invError } = await adminSupabase
- GET /api/warehouse/zones/41b496ba-0e3f-4a08-89ae-6119e3cfd0e3/inventory 500 in 466ms
- GET /api/warehouse/zones/41b496ba-0e3f-4a08-89ae-6119e3cfd0e3/inventory 200 in 1488ms
- GET /api/warehouse/zones/41b496ba-0e3f-4a08-89ae-6119e3cfd0e3/inventory 200 in 1028ms
- ✓ Compiled in 203ms
- ✓ Compiled in 196ms
- ✓ Compiled in 49ms
- GET /api/customers 200 in 734ms
+ GET /api/warehouse/zones/41b496ba-0e3f-4a08-89ae-6119e3cfd0e3/inventory 200 in 1231ms
+ GET /api/warehouse/zones/41b496ba-0e3f-4a08-89ae-6119e3cfd0e3/inventory 200 in 393ms
+ ✓ Compiled /test-searchable in 241ms
+ GET /test-searchable 200 in 417ms
+ GET /api/notifications? 200 in 427ms
+ ✓ Compiled middleware in 1ms
+ GET /depo-zone-yonetimi 200 in 87ms
+ GET /depo-zone-yonetimi 200 in 80ms
+ GET /uretim/siparisler 200 in 227ms
+ GET /api/warehouse/zones/79107edb-2635-4f91-b3c6-d66c8db19fe1/inventory 200 in 692ms
+ GET /api/warehouse/zones/79107edb-2635-4f91-b3c6-d66c8db19fe1/inventory 200 in 412ms
+ GET /api/notifications? 200 in 451ms
+ GET /depo-zone-yonetimi 200 in 62ms
+ GET /uretim/siparisler 200 in 68ms
+ GET /api/orders?page=1&limit=50&sortBy=created_at&sortOrder=desc 200 in 651ms
+ GET /api/orders?page=1&limit=50&sortBy=created_at&sortOrder=desc 200 in 654ms
+ GET /depo-zone-yonetimi 200 in 64ms
+ GET /api/customers 200 in 735ms
+ GET /api/customers 200 in 882ms
+ GET /api/warehouse/zones 200 in 911ms
+ GET /api/warehouse/zones 200 in 1034ms
+ GET /api/notifications? 200 in 596ms
+ ✓ Compiled /favicon.ico in 167ms
+ GET /apple-touch-icon-precomposed.png 404 in 259ms
+ GET /apple-touch-icon.png 404 in 318ms
+ GET /favicon.ico 200 in 378ms
+ GET /favicon.ico?favicon.0b3bf435.ico 200 in 378ms
+ GET /api/notifications? 200 in 682ms
+ GET /api/notifications? 200 in 662ms
+ GET /depo-zone-yonetimi 200 in 111ms
+ GET /api/auth/me 200 in 531ms
+ GET /api/notifications? 200 in 498ms
  GET /api/notifications? 200 in 779ms
- GET /api/warehouse/zones 200 in 1078ms
- ✓ Compiled in 120ms
- ✓ Compiled in 91ms
- ✓ Compiled in 71ms
- GET /api/warehouse/zones/41b496ba-0e3f-4a08-89ae-6119e3cfd0e3/inventory 200 in 1014ms
- ✓ Compiled /api/warehouse/transfer in 234ms
- POST /api/warehouse/transfer 400 in 1373ms
- GET /api/warehouse/zones/41b496ba-0e3f-4a08-89ae-6119e3cfd0e3/inventory 200 in 1448ms
-Transfer function error: {
-  code: '42P01',
+ GET /api/customers 200 in 783ms
+ GET /api/notifications? 200 in 800ms
+ GET /api/notifications? 200 in 791ms
+ GET /api/warehouse/zones 200 in 1120ms
+ GET /api/warehouse/zones 200 in 980ms
+ GET /api/customers 200 in 712ms
+ GET /api/warehouse/zones/41b496ba-0e3f-4a08-89ae-6119e3cfd0e3/inventory 200 in 632ms
+ GET /api/notifications? 200 in 594ms
+ GET /api/notifications? 200 in 601ms
+ GET /api/notifications? 200 in 602ms
+ GET /api/notifications? 200 in 740ms
+ GET /api/notifications? 200 in 1117ms
+ GET /api/notifications? 200 in 594ms
+ ✓ Compiled /musteriler in 350ms
+ GET /musteriler 200 in 398ms
+ GET /api/customers 200 in 471ms
+ GET /api/customers 200 in 651ms
+ ✓ Compiled middleware in 1ms
+ GET /musteriler 200 in 129ms
+ GET /musteriler 200 in 80ms
+ ✓ Compiled in 187ms
+ GET /api/notifications? 200 in 653ms
+ ✓ Compiled in 189ms
+ GET /api/notifications? 200 in 788ms
+ GET /api/notifications? 200 in 575ms
+ ✓ Compiled in 167ms
+ GET /api/notifications? 200 in 670ms
+ ✓ Compiled in 92ms
+ GET /depo-zone-yonetimi 200 in 323ms
+ GET /api/notifications? 200 in 886ms
+ POST /api/customers 201 in 1032ms
+ GET /api/customers 200 in 494ms
+ ✓ Compiled /api/warehouse/zones/center/inventory in 88ms
+ GET /api/warehouse/zones/center/inventory 200 in 885ms
+ GET /depo-zone-yonetimi 200 in 67ms
+ GET /api/customers 200 in 674ms
+ GET /api/customers 200 in 683ms
+ GET /api/warehouse/zones 200 in 926ms
+ GET /api/warehouse/zones 200 in 956ms
+ GET /api/notifications? 200 in 616ms
+ GET /depo-zone-yonetimi 200 in 105ms
+ GET /api/auth/me 200 in 462ms
+ GET /api/notifications? 200 in 489ms
+ GET /api/customers 200 in 650ms
+ GET /api/notifications? 200 in 657ms
+ GET /api/notifications? 200 in 663ms
+ GET /api/notifications? 200 in 675ms
+ GET /api/warehouse/zones 200 in 1010ms
+ GET /api/warehouse/zones 200 in 766ms
+ GET /api/customers 200 in 618ms
+ GET /api/notifications? 200 in 721ms
+ GET /api/notifications? 200 in 576ms
+ GET /api/notifications? 200 in 564ms
+ GET /api/notifications? 200 in 596ms
+ GET /api/notifications? 200 in 865ms
+ GET /depo-zone-yonetimi 200 in 84ms
+ GET /api/notifications? 200 in 593ms
+ GET /depo-zone-yonetimi 200 in 84ms
+ GET /api/auth/me 200 in 612ms
+ GET /api/notifications? 200 in 502ms
+ GET /api/notifications? 200 in 680ms
+ GET /api/notifications? 200 in 693ms
+ GET /api/notifications? 200 in 702ms
+ GET /api/customers 200 in 703ms
+ GET /api/warehouse/zones 200 in 1033ms
+ GET /api/customers 200 in 583ms
+ GET /api/warehouse/zones 200 in 888ms
+ GET /api/warehouse/zones/41b496ba-0e3f-4a08-89ae-6119e3cfd0e3/inventory 200 in 436ms
+ GET /api/warehouse/zones/41b496ba-0e3f-4a08-89ae-6119e3cfd0e3/inventory 200 in 572ms
+ GET /depo-zone-yonetimi 200 in 88ms
+ GET /api/auth/me 200 in 615ms
+ GET /api/notifications? 200 in 528ms
+ GET /api/notifications? 200 in 681ms
+ GET /api/customers 200 in 701ms
+ GET /api/notifications? 200 in 703ms
+ GET /api/notifications? 200 in 723ms
+ GET /api/warehouse/zones 200 in 991ms
+ GET /api/customers 200 in 590ms
+ GET /api/warehouse/zones 200 in 740ms
+ GET /api/warehouse/zones/center/inventory 200 in 897ms
+ GET /api/warehouse/zones/41b496ba-0e3f-4a08-89ae-6119e3cfd0e3/inventory 200 in 571ms
+ GET /api/notifications? 200 in 596ms
+ GET /api/warehouse/zones/41b496ba-0e3f-4a08-89ae-6119e3cfd0e3/inventory 200 in 612ms
+ GET /api/notifications? 200 in 576ms
+ GET /api/notifications? 200 in 576ms
+ GET /api/notifications? 200 in 715ms
+ GET /api/notifications? 200 in 592ms
+ GET /api/notifications? 200 in 560ms
+ GET /api/warehouse/zones 200 in 852ms
+ GET /api/warehouse/zones/41b496ba-0e3f-4a08-89ae-6119e3cfd0e3/inventory 200 in 567ms
+ ✓ Compiled in 165ms
+ GET /api/notifications? 200 in 604ms
+ GET /depo-zone-yonetimi 200 in 302ms
+ GET /api/notifications? 200 in 574ms
+ GET /api/notifications? 200 in 647ms
+ GET /depo-zone-yonetimi 200 in 83ms
+ GET /api/auth/me 200 in 393ms
+ GET /api/notifications? 200 in 548ms
+ GET /api/notifications? 200 in 733ms
+ GET /api/notifications? 200 in 740ms
+ GET /api/customers 200 in 743ms
+ GET /api/notifications? 200 in 756ms
+ GET /api/warehouse/zones 200 in 1056ms
+ GET /api/warehouse/zones 200 in 736ms
+ GET /api/customers 200 in 551ms
+ GET /api/warehouse/zones/center/inventory 200 in 1041ms
+ GET /api/notifications? 200 in 592ms
+ GET /api/notifications? 200 in 636ms
+ GET /api/warehouse/zones/center/inventory 200 in 903ms
+ GET /api/warehouse/zones/center/inventory 200 in 1487ms
+ GET /api/notifications? 200 in 588ms
+ GET /api/notifications? 200 in 579ms
+ GET /api/notifications? 200 in 620ms
+ ✓ Compiled /dashboard in 344ms
+ GET /dashboard 200 in 426ms
+ GET /api/auth/me 200 in 582ms
+ ✓ Compiled /yonetici-dashboard in 325ms
+ GET /yonetici-dashboard 200 in 384ms
+ GET /yonetici-dashboard 200 in 397ms
+ GET /api/notifications? 200 in 476ms
+ ✓ Compiled /api/stock/count in 93ms
+ GET /api/notifications? 200 in 662ms
+ GET /api/notifications? 200 in 660ms
+ GET /api/notifications? 200 in 687ms
+ ✓ Compiled /api/stock/semi in 162ms
+ GET /api/orders?limit=1000 200 in 486ms
+ GET /api/stock/raw?limit=1000 200 in 488ms
+ GET /api/stock/count?status=pending&limit=100 200 in 551ms
+ ✓ Compiled /api/production/plans in 124ms
+ GET /api/stock/finished?limit=1000 200 in 513ms
+ GET /api/stock/semi?limit=1000 200 in 594ms
+ GET /api/stock/movements?limit=100 200 in 576ms
+ GET /api/stock/count?status=pending&limit=100 200 in 760ms
+ GET /api/stock/raw?limit=1000 200 in 540ms
+ GET /api/orders?limit=1000 200 in 709ms
+ GET /api/stock/semi?limit=1000 200 in 582ms
+ GET /api/production/plans?limit=1000 200 in 910ms
+ GET /api/stock/finished?limit=1000 200 in 656ms
+ ✓ Compiled /uretim/yonetim in 273ms
+ GET /uretim/yonetim 200 in 326ms
+ GET /api/stock/movements?limit=100 200 in 489ms
+✅ Operators data: [
+  {
+    id: '11111111-1111-1111-1111-111111111111',
+    series: 'thunder',
+    experience_years: 5,
+    daily_capacity: 46,
+    location: 'Üretim Salonu A',
+    hourly_rate: 25,
+    active_productions_count: 0,
+    current_status: 'active',
+    user: {
+      id: '11111111-1111-1111-1111-111111111111',
+      name: 'Thunder Operatör',
+      email: 'operator1@thunder.com',
+      is_active: true
+    }
+  },
+  {
+    id: '22222222-2222-2222-2222-222222222222',
+    series: 'thunder_pro',
+    experience_years: 5,
+    daily_capacity: 46,
+    location: 'Üretim Salonu B',
+    hourly_rate: 25,
+    active_productions_count: 0,
+    current_status: 'idle',
+    user: {
+      id: '22222222-2222-2222-2222-222222222222',
+      name: 'ThunderPro Operatör',
+      email: 'operator2@thunder.com',
+      is_active: true
+    }
+  }
+]
+ GET /api/operators 200 in 461ms
+ GET /api/production/plans?limit=1000 200 in 625ms
+ GET /api/orders 200 in 513ms
+ GET /api/orders 200 in 514ms
+✅ Operators data: [
+  {
+    id: '11111111-1111-1111-1111-111111111111',
+    series: 'thunder',
+    experience_years: 5,
+    daily_capacity: 46,
+    location: 'Üretim Salonu A',
+    hourly_rate: 25,
+    active_productions_count: 0,
+    current_status: 'active',
+    user: {
+      id: '11111111-1111-1111-1111-111111111111',
+      name: 'Thunder Operatör',
+      email: 'operator1@thunder.com',
+      is_active: true
+    }
+  },
+  {
+    id: '22222222-2222-2222-2222-222222222222',
+    series: 'thunder_pro',
+    experience_years: 5,
+    daily_capacity: 46,
+    location: 'Üretim Salonu B',
+    hourly_rate: 25,
+    active_productions_count: 0,
+    current_status: 'idle',
+    user: {
+      id: '22222222-2222-2222-2222-222222222222',
+      name: 'ThunderPro Operatör',
+      email: 'operator2@thunder.com',
+      is_active: true
+    }
+  }
+]
+ GET /api/operators 200 in 410ms
+ ✓ Compiled /uretim/planlar in 292ms
+ GET /uretim/planlar 200 in 334ms
+✅ Operators data: [
+  {
+    id: '11111111-1111-1111-1111-111111111111',
+    series: 'thunder',
+    experience_years: 5,
+    daily_capacity: 46,
+    location: 'Üretim Salonu A',
+    hourly_rate: 25,
+    active_productions_count: 0,
+    current_status: 'active',
+    user: {
+      id: '11111111-1111-1111-1111-111111111111',
+      name: 'Thunder Operatör',
+      email: 'operator1@thunder.com',
+      is_active: true
+    }
+  },
+  {
+    id: '22222222-2222-2222-2222-222222222222',
+    series: 'thunder_pro',
+    experience_years: 5,
+    daily_capacity: 46,
+    location: 'Üretim Salonu B',
+    hourly_rate: 25,
+    active_productions_count: 0,
+    current_status: 'idle',
+    user: {
+      id: '22222222-2222-2222-2222-222222222222',
+      name: 'ThunderPro Operatör',
+      email: 'operator2@thunder.com',
+      is_active: true
+    }
+  }
+]
+ GET /api/operators 200 in 476ms
+✅ Operators data: [
+  {
+    id: '11111111-1111-1111-1111-111111111111',
+    series: 'thunder',
+    experience_years: 5,
+    daily_capacity: 46,
+    location: 'Üretim Salonu A',
+    hourly_rate: 25,
+    active_productions_count: 0,
+    current_status: 'active',
+    user: {
+      id: '11111111-1111-1111-1111-111111111111',
+      name: 'Thunder Operatör',
+      email: 'operator1@thunder.com',
+      is_active: true
+    }
+  },
+  {
+    id: '22222222-2222-2222-2222-222222222222',
+    series: 'thunder_pro',
+    experience_years: 5,
+    daily_capacity: 46,
+    location: 'Üretim Salonu B',
+    hourly_rate: 25,
+    active_productions_count: 0,
+    current_status: 'idle',
+    user: {
+      id: '22222222-2222-2222-2222-222222222222',
+      name: 'ThunderPro Operatör',
+      email: 'operator2@thunder.com',
+      is_active: true
+    }
+  }
+]
+ GET /api/operators 200 in 477ms
+ GET /api/production/plans?page=1&limit=50&sortBy=created_at&sortOrder=desc 200 in 623ms
+ GET /api/production/plans?page=1&limit=50&sortBy=created_at&sortOrder=desc 200 in 624ms
+ ✓ Compiled /api/production/plans/[id] in 76ms
+📝 Production plan PATCH: {
+  id: '0095a40f-881f-45f4-acad-e63941d6c787',
+  updateData: { assigned_operator_id: '11111111-1111-1111-1111-111111111111' }
+}
+📝 Production plan PATCH: {
+  id: '8b325b84-c28e-4ff3-b929-ef84c8e9de7f',
+  updateData: { assigned_operator_id: '11111111-1111-1111-1111-111111111111' }
+}
+ PATCH /api/production/plans/0095a40f-881f-45f4-acad-e63941d6c787 200 in 1194ms
+ PATCH /api/production/plans/8b325b84-c28e-4ff3-b929-ef84c8e9de7f 200 in 396ms
+ GET /api/production/plans?page=1&limit=50&sortBy=created_at&sortOrder=desc 200 in 529ms
+ GET /api/production/plans?page=1&limit=50&sortBy=created_at&sortOrder=desc 200 in 537ms
+📝 Production plan PATCH: {
+  id: '252c3554-52c5-4c86-bb51-7c63ce1b8025',
+  updateData: { assigned_operator_id: '11111111-1111-1111-1111-111111111111' }
+}
+ PATCH /api/production/plans/252c3554-52c5-4c86-bb51-7c63ce1b8025 200 in 396ms
+ GET /api/production/plans?page=1&limit=50&sortBy=created_at&sortOrder=desc 200 in 571ms
+ GET /uretim/planlar 200 in 93ms
+ GET /api/auth/me 200 in 627ms
+✅ Operators data: [
+  {
+    id: '11111111-1111-1111-1111-111111111111',
+    series: 'thunder',
+    experience_years: 5,
+    daily_capacity: 46,
+    location: 'Üretim Salonu A',
+    hourly_rate: 25,
+    active_productions_count: 0,
+    current_status: 'active',
+    user: {
+      id: '11111111-1111-1111-1111-111111111111',
+      name: 'Thunder Operatör',
+      email: 'operator1@thunder.com',
+      is_active: true
+    }
+  },
+  {
+    id: '22222222-2222-2222-2222-222222222222',
+    series: 'thunder_pro',
+    experience_years: 5,
+    daily_capacity: 46,
+    location: 'Üretim Salonu B',
+    hourly_rate: 25,
+    active_productions_count: 0,
+    current_status: 'idle',
+    user: {
+      id: '22222222-2222-2222-2222-222222222222',
+      name: 'ThunderPro Operatör',
+      email: 'operator2@thunder.com',
+      is_active: true
+    }
+  }
+]
+ GET /api/operators 200 in 496ms
+ GET /api/notifications? 200 in 681ms
+ GET /api/notifications? 200 in 685ms
+ GET /api/notifications? 200 in 681ms
+ GET /api/notifications? 200 in 696ms
+ GET /api/production/plans?page=1&limit=50&sortBy=created_at&sortOrder=desc 200 in 845ms
+ GET /api/production/plans?page=1&limit=50&sortBy=created_at&sortOrder=desc 200 in 558ms
+✅ Operators data: [
+  {
+    id: '11111111-1111-1111-1111-111111111111',
+    series: 'thunder',
+    experience_years: 5,
+    daily_capacity: 46,
+    location: 'Üretim Salonu A',
+    hourly_rate: 25,
+    active_productions_count: 0,
+    current_status: 'active',
+    user: {
+      id: '11111111-1111-1111-1111-111111111111',
+      name: 'Thunder Operatör',
+      email: 'operator1@thunder.com',
+      is_active: true
+    }
+  },
+  {
+    id: '22222222-2222-2222-2222-222222222222',
+    series: 'thunder_pro',
+    experience_years: 5,
+    daily_capacity: 46,
+    location: 'Üretim Salonu B',
+    hourly_rate: 25,
+    active_productions_count: 0,
+    current_status: 'idle',
+    user: {
+      id: '22222222-2222-2222-2222-222222222222',
+      name: 'ThunderPro Operatör',
+      email: 'operator2@thunder.com',
+      is_active: true
+    }
+  }
+]
+ GET /api/operators 200 in 398ms
+ GET /api/notifications? 200 in 603ms
+ GET /api/notifications? 200 in 420ms
+ GET /api/notifications? 200 in 578ms
+ GET /api/notifications? 200 in 592ms
+ GET /api/notifications? 200 in 598ms
+ GET /api/notifications? 200 in 606ms
+ GET /api/notifications? 200 in 612ms
+ GET /api/notifications? 200 in 610ms
+ GET /api/notifications? 200 in 642ms
+ GET /api/notifications? 200 in 1007ms
+ GET /api/notifications? 200 in 800ms
+ GET /api/notifications? 200 in 636ms
+ GET /api/notifications? 200 in 682ms
+ GET /api/notifications? 200 in 624ms
+ ✓ Compiled in 78ms
+ ✓ Compiled in 66ms
+ ✓ Compiled in 194ms
+ GET /api/notifications? 200 in 606ms
+ GET /api/warehouse/zones 200 in 884ms
+ GET /api/warehouse/zones 200 in 954ms
+ GET /depo-zone-yonetimi 200 in 320ms
+ GET /api/notifications? 200 in 596ms
+ GET /depo-zone-yonetimi 200 in 74ms
+ GET /depo-zone-yonetimi 200 in 97ms
+ GET /api/auth/me 200 in 414ms
+ GET /api/notifications? 200 in 494ms
+ GET /api/customers 200 in 679ms
+ GET /api/notifications? 200 in 702ms
+ GET /api/notifications? 200 in 703ms
+ GET /api/notifications? 200 in 713ms
+ GET /api/warehouse/zones 200 in 1059ms
+ GET /api/warehouse/zones 200 in 804ms
+ GET /api/customers 200 in 626ms
+ GET /depo-zone-yonetimi 200 in 139ms
+ GET /api/warehouse/zones/41b496ba-0e3f-4a08-89ae-6119e3cfd0e3/inventory 200 in 666ms
+ GET /depo-zone-yonetimi 200 in 81ms
+ GET /api/warehouse/zones/center/inventory 200 in 786ms
+ GET /depo-zone-yonetimi 200 in 78ms
+ GET /depo-zone-yonetimi 200 in 93ms
+ GET /api/warehouse/zones/79107edb-2635-4f91-b3c6-d66c8db19fe1/inventory 200 in 647ms
+ GET /api/warehouse/zones/41b496ba-0e3f-4a08-89ae-6119e3cfd0e3/inventory 200 in 411ms
+ GET /api/warehouse/zones 200 in 729ms
+ GET /api/notifications? 200 in 570ms
+ GET /api/warehouse/zones/center/inventory 200 in 807ms
+ GET /depo-zone-yonetimi 200 in 89ms
+ GET /api/auth/me 200 in 400ms
+ GET /api/notifications? 200 in 509ms
+ GET /api/customers 200 in 673ms
+ GET /api/notifications? 200 in 690ms
+ GET /api/notifications? 200 in 697ms
+ GET /api/notifications? 200 in 699ms
+ GET /api/warehouse/zones 200 in 826ms
+ GET /api/warehouse/zones 200 in 748ms
+ GET /api/customers 200 in 602ms
+ GET /api/warehouse/zones/center/inventory 200 in 919ms
+ GET /depo-zone-yonetimi 200 in 91ms
+ GET /api/auth/me 200 in 420ms
+ GET /api/notifications? 200 in 600ms
+ GET /api/notifications? 200 in 668ms
+ GET /api/notifications? 200 in 734ms
+ GET /api/notifications? 200 in 748ms
+ GET /api/customers 200 in 756ms
+ GET /api/warehouse/zones 200 in 1063ms
+ GET /api/customers 200 in 587ms
+ GET /api/warehouse/zones 200 in 740ms
+ GET /api/notifications? 200 in 634ms
+ GET /api/notifications? 200 in 569ms
+ GET /api/notifications? 200 in 605ms
+ GET /api/warehouse/zones 200 in 981ms
+ GET /api/notifications? 200 in 598ms
+ ✓ Compiled /api/warehouse/transfer in 97ms
+Error checking source inventory: {
+  code: '22P02',
   details: null,
   hint: null,
-  message: 'relation "zone_inventory" does not exist'
+  message: 'invalid input syntax for type uuid: "test-product-id"'
 }
- POST /api/warehouse/transfer 500 in 1501ms
- GET /api/warehouse/zones/41b496ba-0e3f-4a08-89ae-6119e3cfd0e3/inventory 200 in 1219ms
-Transfer function error: {
-  code: '42P01',
-  details: null,
-  hint: null,
-  message: 'relation "zone_inventory" does not exist'
+ POST /api/warehouse/transfer 500 in 515ms
+ GET /api/warehouse/zones/center/inventory 200 in 756ms
+ POST /api/warehouse/transfer 400 in 568ms
+ GET /api/notifications? 200 in 606ms
+ GET /api/notifications? 200 in 645ms
+ GET /api/notifications? 200 in 655ms
+ GET /api/notifications? 200 in 697ms
+ GET /api/warehouse/zones/center/inventory 200 in 917ms
+🔄 Calling transfer_between_zones with: {
+  from_zone: '41b496ba-0e3f-4a08-89ae-6119e3cfd0e3',
+  to_zone: '79107edb-2635-4f91-b3c6-d66c8db19fe1',
+  product: 'a8b40901-9b77-4d5b-a90e-e8d1ea313993',
+  qty: 1,
+  user_id: '228e0137-818f-4235-9f66-fcb694998267'
 }
- POST /api/warehouse/transfer 500 in 952ms
- POST /api/warehouse/transfer 400 in 1656ms
- POST /api/warehouse/transfer 400 in 1096ms
- POST /api/warehouse/transfer 200 in 1214ms
- GET /api/warehouse/zones 200 in 565ms
- GET /api/warehouse/zones/41b496ba-0e3f-4a08-89ae-6119e3cfd0e3/inventory 200 in 1116ms
- POST /api/warehouse/transfer 200 in 1154ms
- GET /api/warehouse/zones 200 in 692ms
- GET /api/warehouse/zones/c6ef3be6-3854-4df6-a458-f4f01a29cfb7/inventory 200 in 1263ms
- GET /api/warehouse/zones/c6ef3be6-3854-4df6-a458-f4f01a29cfb7/inventory 200 in 720ms
- POST /api/warehouse/transfer 200 in 1108ms
- GET /api/warehouse/zones 200 in 675ms
- GET /depo-zone-yonetimi 200 in 271ms
- GET /favicon.ico?favicon.0b3bf435.ico 200 in 238ms
- GET /api/auth/me 200 in 616ms
- GET /api/notifications? 200 in 495ms
- GET /api/customers 200 in 661ms
- GET /api/warehouse/zones 200 in 849ms
- GET /api/notifications? 200 in 493ms
- GET /api/customers 200 in 880ms
- GET /api/warehouse/zones 200 in 896ms
- GET /api/warehouse/zones/41b496ba-0e3f-4a08-89ae-6119e3cfd0e3/inventory 200 in 958ms
- POST /api/warehouse/transfer 200 in 1156ms
- GET /api/warehouse/zones 200 in 557ms
- GET /api/warehouse/zones/41b496ba-0e3f-4a08-89ae-6119e3cfd0e3/inventory 200 in 1787ms
-
-> thunder-erp@0.1.0 dev
-> next dev --turbopack
-
- ⚠ Port 3000 is in use by process 75265, using available port 3001 instead.
-   ▲ Next.js 15.5.4 (Turbopack)
-   - Local:        http://localhost:3001
-   - Network:      http://192.168.1.121:3001
-   - Environments: .env.local
-
- ✓ Starting...
- ✓ Compiled middleware in 100ms
-[Error: You cannot use different slug names for the same dynamic path ('id' !== 'productId').]
-[?25h
+📊 Transfer function result: {
+  data: {
+    success: false,
+    error: 'Insufficient inventory. Available: 0, Requested: 1'
+  },
+  error: null
+}
+❌ Transfer failed: {
+  success: false,
+  error: 'Insufficient inventory. Available: 0, Requested: 1'
+}
+ POST /api/warehouse/transfer 400 in 1170ms
+ GET /api/notifications? 200 in 593ms
+🔄 Calling transfer_between_zones with: {
+  from_zone: '41b496ba-0e3f-4a08-89ae-6119e3cfd0e3',
+  to_zone: '79107edb-2635-4f91-b3c6-d66c8db19fe1',
+  product: 'a8b40901-9b77-4d5b-a90e-e8d1ea313993',
+  qty: 1,
+  user_id: '228e0137-818f-4235-9f66-fcb694998267'
+}
+📊 Transfer function result: {
+  data: {
+    success: false,
+    error: 'Insufficient inventory. Available: 0, Requested: 1'
+  },
+  error: null
+}
+❌ Transfer failed: {
+  success: false,
+  error: 'Insufficient inventory. Available: 0, Requested: 1'
+}
+ POST /api/warehouse/transfer 400 in 1229ms
+🔄 Calling transfer_between_zones with: {
+  from_zone: '41b496ba-0e3f-4a08-89ae-6119e3cfd0e3',
+  to_zone: '79107edb-2635-4f91-b3c6-d66c8db19fe1',
+  product: 'a8b40901-9b77-4d5b-a90e-e8d1ea313993',
+  qty: 1,
+  user_id: '228e0137-818f-4235-9f66-fcb694998267'
+}
+📊 Transfer function result: {
+  data: {
+    success: false,
+    error: 'Insufficient inventory. Available: 0, Requested: 1'
+  },
+  error: null
+}
+❌ Transfer failed: {
+  success: false,
+  error: 'Insufficient inventory. Available: 0, Requested: 1'
+}
+ POST /api/warehouse/transfer 400 in 2212ms
+🔄 Calling transfer_between_zones with: {
+  from_zone: '41b496ba-0e3f-4a08-89ae-6119e3cfd0e3',
+  to_zone: '79107edb-2635-4f91-b3c6-d66c8db19fe1',
+  product: 'a8b40901-9b77-4d5b-a90e-e8d1ea313993',
+  qty: 1,
+  user_id: '228e0137-818f-4235-9f66-fcb694998267'
+}
+📊 Transfer function result: {
+  data: {
+    success: false,
+    error: 'Insufficient inventory. Available: 0, Requested: 1'
+  },
+  error: null
+}
+❌ Transfer failed: {
+  success: false,
+  error: 'Insufficient inventory. Available: 0, Requested: 1'
+}
+ POST /api/warehouse/transfer 400 in 1045ms
+🔄 Calling transfer_between_zones with: {
+  from_zone: '41b496ba-0e3f-4a08-89ae-6119e3cfd0e3',
+  to_zone: '79107edb-2635-4f91-b3c6-d66c8db19fe1',
+  product: 'a8b40901-9b77-4d5b-a90e-e8d1ea313993',
+  qty: 1,
+  user_id: '228e0137-818f-4235-9f66-fcb694998267'
+}
+📊 Transfer function result: {
+  data: {
+    success: false,
+    error: 'Insufficient inventory. Available: 0, Requested: 1'
+  },
+  error: null
+}
+❌ Transfer failed: {
+  success: false,
+  error: 'Insufficient inventory. Available: 0, Requested: 1'
+}
+ POST /api/warehouse/transfer 400 in 1181ms
+🔄 Calling transfer_between_zones with: {
+  from_zone: '41b496ba-0e3f-4a08-89ae-6119e3cfd0e3',
+  to_zone: '79107edb-2635-4f91-b3c6-d66c8db19fe1',
+  product: 'a8b40901-9b77-4d5b-a90e-e8d1ea313993',
+  qty: 1,
+  user_id: '228e0137-818f-4235-9f66-fcb694998267'
+}
+📊 Transfer function result: {
+  data: {
+    success: false,
+    error: 'Insufficient inventory. Available: 0, Requested: 1'
+  },
+  error: null
+}
+❌ Transfer failed: {
+  success: false,
+  error: 'Insufficient inventory. Available: 0, Requested: 1'
+}
+ POST /api/warehouse/transfer 400 in 1155ms
+🔄 Calling transfer_between_zones with: {
+  from_zone: '41b496ba-0e3f-4a08-89ae-6119e3cfd0e3',
+  to_zone: '79107edb-2635-4f91-b3c6-d66c8db19fe1',
+  product: 'a8b40901-9b77-4d5b-a90e-e8d1ea313993',
+  qty: 1,
+  user_id: '228e0137-818f-4235-9f66-fcb694998267'
+}
+📊 Transfer function result: {
+  data: {
+    success: false,
+    error: 'Insufficient inventory. Available: 0, Requested: 1'
+  },
+  error: null
+}
+❌ Transfer failed: {
+  success: false,
+  error: 'Insufficient inventory. Available: 0, Requested: 1'
+}
+ POST /api/warehouse/transfer 400 in 1084ms
+🔄 Calling transfer_between_zones with: {
+  from_zone: '41b496ba-0e3f-4a08-89ae-6119e3cfd0e3',
+  to_zone: '79107edb-2635-4f91-b3c6-d66c8db19fe1',
+  product: 'a8b40901-9b77-4d5b-a90e-e8d1ea313993',
+  qty: 1,
+  user_id: '228e0137-818f-4235-9f66-fcb694998267'
+}
+📊 Transfer function result: {
+  data: {
+    success: false,
+    error: 'Insufficient inventory. Available: 0, Requested: 1'
+  },
+  error: null
+}
+❌ Transfer failed: {
+  success: false,
+  error: 'Insufficient inventory. Available: 0, Requested: 1'
+}
+ POST /api/warehouse/transfer 400 in 1070ms
+🔄 Calling transfer_between_zones with: {
+  from_zone: '41b496ba-0e3f-4a08-89ae-6119e3cfd0e3',
+  to_zone: '79107edb-2635-4f91-b3c6-d66c8db19fe1',
+  product: 'a8b40901-9b77-4d5b-a90e-e8d1ea313993',
+  qty: 1,
+  user_id: '228e0137-818f-4235-9f66-fcb694998267'
+}
+📊 Transfer function result: {
+  data: {
+    success: false,
+    error: 'Insufficient inventory. Available: 0, Requested: 1'
+  },
+  error: null
+}
+❌ Transfer failed: {
+  success: false,
+  error: 'Insufficient inventory. Available: 0, Requested: 1'
+}
+ POST /api/warehouse/transfer 400 in 1074ms
+🔄 Calling transfer_between_zones with: {
+  from_zone: '41b496ba-0e3f-4a08-89ae-6119e3cfd0e3',
+  to_zone: '79107edb-2635-4f91-b3c6-d66c8db19fe1',
+  product: 'a8b40901-9b77-4d5b-a90e-e8d1ea313993',
+  qty: 1,
+  user_id: '228e0137-818f-4235-9f66-fcb694998267'
+}
+📊 Transfer function result: {
+  data: {
+    success: false,
+    error: 'Insufficient inventory. Available: 0, Requested: 1'
+  },
+  error: null
+}
+❌ Transfer failed: {
+  success: false,
+  error: 'Insufficient inventory. Available: 0, Requested: 1'
+}
+ POST /api/warehouse/transfer 400 in 1039ms
+🔄 Calling transfer_between_zones with: {
+  from_zone: '41b496ba-0e3f-4a08-89ae-6119e3cfd0e3',
+  to_zone: '79107edb-2635-4f91-b3c6-d66c8db19fe1',
+  product: 'a8b40901-9b77-4d5b-a90e-e8d1ea313993',
+  qty: 1,
+  user_id: '228e0137-818f-4235-9f66-fcb694998267'
+}
+📊 Transfer function result: {
+  data: { success: true, message: 'Transfer completed successfully' },
+  error: null
+}
+✅ Transfer completed successfully
+📦 Updated inventories: { source: null, destination: null }
+ POST /api/warehouse/transfer 200 in 1308ms
+ GET /api/notifications? 200 in 405ms
+ GET /api/warehouse/zones/center/inventory 200 in 893ms
+ GET /api/warehouse/zones/79107edb-2635-4f91-b3c6-d66c8db19fe1/inventory 200 in 909ms
+ GET /api/warehouse/zones 200 in 960ms

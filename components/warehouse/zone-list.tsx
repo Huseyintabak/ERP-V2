@@ -29,6 +29,7 @@ import {
 } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { SearchableSelect, type SearchableSelectOption } from '@/components/ui/searchable-select';
 import { 
   Building2, 
   Users, 
@@ -79,6 +80,14 @@ export function ZoneList({
   const [zoneInventory, setZoneInventory] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
+  // SearchableSelect için product options'ı hazırla
+  const productOptions: SearchableSelectOption[] = zoneInventory.map((inventory) => ({
+    value: inventory.material_id || inventory.product_id,
+    label: inventory.product?.name || inventory.product?.id || inventory.material_id,
+    description: inventory.product?.code || inventory.product?.id,
+    badge: `${inventory.quantity} adet`,
+  }));
+
   const handleTransferClick = async (zoneId: string) => {
     setSourceZoneId(zoneId);
     setTargetZoneId('');
@@ -88,7 +97,15 @@ export function ZoneList({
     
     // Fetch zone inventory
     try {
-      const response = await fetch(`/api/warehouse/zones/${zoneId}/inventory`);
+      // Check if this is center zone
+      const sourceZone = allZones.find(z => z.id === zoneId);
+      const isCenterZone = sourceZone?.zone_type === 'center';
+      
+      const apiUrl = isCenterZone 
+        ? '/api/warehouse/zones/center/inventory'
+        : `/api/warehouse/zones/${zoneId}/inventory`;
+        
+      const response = await fetch(apiUrl);
       if (response.ok) {
         const data = await response.json();
         setZoneInventory(data.data || []);
@@ -290,18 +307,17 @@ export function ZoneList({
 
             <div className="space-y-2">
               <Label>Ürün</Label>
-              <Select value={selectedProductId} onValueChange={setSelectedProductId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Transfer edilecek ürünü seçin" />
-                </SelectTrigger>
-                <SelectContent>
-                  {zoneInventory.map(inv => (
-                    <SelectItem key={inv.id} value={inv.material_id}>
-                      {inv.product?.name || inv.material_id} (Stok: {inv.quantity})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <SearchableSelect
+                options={productOptions}
+                value={selectedProductId}
+                onValueChange={setSelectedProductId}
+                placeholder="Transfer edilecek ürünü seçin"
+                searchPlaceholder="Ürün adı veya kodu ile ara..."
+                emptyText="Bu zonda ürün bulunamadı"
+                disabled={loading}
+                allowClear
+                maxHeight="300px"
+              />
             </div>
 
             <div className="space-y-2">
