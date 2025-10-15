@@ -88,8 +88,12 @@ export async function GET(request: NextRequest) {
         .eq('movement_type', 'cikis')
         .gte('created_at', weekAgo.toISOString()),
       
-      // 8. Critical stock (quantity <= reorder_level)
-      supabase.rpc('get_critical_stock_count'),
+      // 8. Critical stock (quantity <= critical_level) - All stock types
+      Promise.all([
+        supabase.from('raw_materials').select('quantity, critical_level'),
+        supabase.from('semi_finished_products').select('quantity, critical_level'),
+        supabase.from('finished_products').select('quantity, critical_level')
+      ]),
       
       // 9. Low stock items (quantity <= minimum_stock)
       supabase.rpc('get_low_stock_count'),
@@ -235,7 +239,22 @@ export async function GET(request: NextRequest) {
         stockTurnover,
         
         // Critical alerts
-        criticalStock: criticalStock.data || 0,
+        criticalStock: (() => {
+          let totalCritical = 0;
+          
+          // Calculate critical stock from all stock types
+          if (criticalStock[0] && criticalStock[0].data) {
+            totalCritical += criticalStock[0].data.filter(item => item.quantity <= item.critical_level).length;
+          }
+          if (criticalStock[1] && criticalStock[1].data) {
+            totalCritical += criticalStock[1].data.filter(item => item.quantity <= item.critical_level).length;
+          }
+          if (criticalStock[2] && criticalStock[2].data) {
+            totalCritical += criticalStock[2].data.filter(item => item.quantity <= item.critical_level).length;
+          }
+          
+          return totalCritical;
+        })(),
         lowStockItems: lowStockItems.data || 0,
         expiredStock: 0, // TODO: Implement expiry tracking
         reservedStock: Math.round(totalReserved),
