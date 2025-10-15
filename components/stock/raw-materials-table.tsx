@@ -12,10 +12,11 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Pencil, Trash2, Search, Plus } from 'lucide-react';
+import { Pencil, Trash2, Search, Plus, DollarSign } from 'lucide-react';
 import type { RawMaterial } from '@/types';
 import { ExcelImportDialog } from './excel-import-dialog';
 import { ExcelExportDialog } from './excel-export-dialog';
+import { PriceHistoryDialog } from '@/components/price-history/price-history-dialog';
 
 interface Props {
   materials: RawMaterial[];
@@ -39,10 +40,17 @@ export function RawMaterialsTable({
   onAdd,
 }: Props) {
   const [searchTerm, setSearchTerm] = useState('');
+  const [priceHistoryOpen, setPriceHistoryOpen] = useState(false);
+  const [selectedMaterial, setSelectedMaterial] = useState<RawMaterial | null>(null);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     onSearch(searchTerm);
+  };
+
+  const handlePriceHistory = (material: RawMaterial) => {
+    setSelectedMaterial(material);
+    setPriceHistoryOpen(true);
   };
 
   return (
@@ -133,6 +141,14 @@ export function RawMaterialsTable({
                         <Button
                           variant="ghost"
                           size="icon"
+                          onClick={() => handlePriceHistory(material)}
+                          title="Fiyat Geçmişi"
+                        >
+                          <DollarSign className="h-4 w-4 text-blue-600" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           onClick={() => onEdit(material)}
                         >
                           <Pencil className="h-4 w-4" />
@@ -179,6 +195,20 @@ export function RawMaterialsTable({
             </Button>
           </div>
         </div>
+      )}
+
+      {/* Price History Dialog */}
+      {selectedMaterial && (
+        <PriceHistoryDialog
+          isOpen={priceHistoryOpen}
+          onClose={() => {
+            setPriceHistoryOpen(false);
+            setSelectedMaterial(null);
+          }}
+          materialType="raw"
+          materialId={selectedMaterial.id}
+          materialName={selectedMaterial.name}
+        />
       )}
     </div>
   );

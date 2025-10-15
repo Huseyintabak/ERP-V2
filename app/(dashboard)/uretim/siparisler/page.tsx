@@ -13,11 +13,12 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Plus, CheckCircle, Clock, Factory, Edit, Trash2, Users } from 'lucide-react';
+import { Plus, CheckCircle, Clock, Factory, Edit, Trash2, Users, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatDate } from '@/lib/utils';
 import { OrderForm } from '@/components/production/order-form';
 import { CustomerDialog } from '@/components/customers/customer-dialog';
+import { OrderCancelDialog } from '@/components/orders/order-cancel-dialog';
 import { useOrders, useOrderActions, useOrderLoading } from '@/stores/order-store';
 import { useRoleBasedRealtime } from '@/lib/hooks/use-realtime-store';
 import { useAuthStore } from '@/stores/auth-store';
@@ -49,6 +50,8 @@ export default function SiparislerPage() {
   const actions = useOrderActions();
   
   const [isOrderFormOpen, setIsOrderFormOpen] = useState(false);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   
   // Real-time updates for orders
   useRoleBasedRealtime('planlama');
@@ -64,6 +67,15 @@ export default function SiparislerPage() {
     } catch (error: any) {
       toast.error(error.message || 'Onaylama hatası');
     }
+  };
+
+  const handleCancel = (order: Order) => {
+    setSelectedOrder(order);
+    setCancelDialogOpen(true);
+  };
+
+  const handleCancelSuccess = () => {
+    actions.fetchOrders();
   };
 
   const handleDelete = async (orderId: string) => {
@@ -246,6 +258,16 @@ export default function SiparislerPage() {
                         <Button size="sm" variant="outline">
                           <Edit className="h-4 w-4" />
                         </Button>
+                        {order.status !== 'iptal' && order.status !== 'tamamlandi' && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleCancel(order)}
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          >
+                            <XCircle className="h-4 w-4" />
+                          </Button>
+                        )}
                         <Button
                           size="sm"
                           variant="outline"
@@ -279,6 +301,17 @@ export default function SiparislerPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Cancel Dialog */}
+      <OrderCancelDialog
+        isOpen={cancelDialogOpen}
+        onClose={() => {
+          setCancelDialogOpen(false);
+          setSelectedOrder(null);
+        }}
+        order={selectedOrder}
+        onCancelSuccess={handleCancelSuccess}
+      />
     </div>
   );
 }

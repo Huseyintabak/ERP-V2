@@ -543,7 +543,7 @@ export default function SistemBakimPage() {
                   onValueChange={(value) => setOperationParams(prev => ({ ...prev, retentionDays: parseInt(value) }))}
                 >
                   <SelectTrigger>
-                    <SelectValue />
+                    <SelectValue placeholder="Saklama süresi seçin" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="7">7 gün</SelectItem>
@@ -564,7 +564,7 @@ export default function SistemBakimPage() {
                   onValueChange={(value: any) => setOperationParams(prev => ({ ...prev, backupType: value }))}
                 >
                   <SelectTrigger>
-                    <SelectValue />
+                    <SelectValue placeholder="Yedekleme tipi seçin" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="full">Tam Yedek</SelectItem>
@@ -582,7 +582,7 @@ export default function SistemBakimPage() {
                   onValueChange={(value: any) => setOperationParams(prev => ({ ...prev, optimizeMode: value }))}
                 >
                   <SelectTrigger>
-                    <SelectValue />
+                    <SelectValue placeholder="Optimizasyon modu seçin" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="quick">Hızlı</SelectItem>

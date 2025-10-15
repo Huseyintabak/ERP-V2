@@ -22,7 +22,11 @@ import {
   UserCheck,
   Building2,
   ShoppingCart,
-  ArrowUpDown
+  ArrowUpDown,
+  BarChart3,
+  FileText,
+  Radio,
+  ScrollText
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth-store';
 import { Button } from '@/components/ui/button';
@@ -75,6 +79,7 @@ const navItems: NavItem[] = [
       { title: 'Yarı Mamuller', href: '/stok/yari-mamuller', icon: PackageOpen },
       { title: 'Nihai Ürünler', href: '/stok/nihai-urunler', icon: PackagePlus },
       { title: 'Stok Hareketleri', href: '/stok/hareketler', icon: ArrowUpDown },
+      { title: 'Envanter Sayım', href: '/stok/envanter-sayim', icon: ClipboardList },
     ],
   },
   {
@@ -87,6 +92,7 @@ const navItems: NavItem[] = [
       { title: 'Üretim Planları', href: '/uretim/planlar', icon: CalendarClock },
       { title: 'BOM Yönetimi', href: '/uretim/bom', icon: Boxes },
       { title: 'Operatörler', href: '/uretim/operatorler', icon: Users },
+      { title: 'Çoklu Operatör', href: '/uretim/multi-operator', icon: UserCheck },
     ],
   },
   {
@@ -109,9 +115,12 @@ const navItems: NavItem[] = [
   },
   {
     title: 'Raporlar',
-    href: '/raporlar',
     icon: FileBarChart,
     roles: ['yonetici'],
+    children: [
+      { title: 'Gelişmiş Raporlar', href: '/raporlar/gelismis', icon: BarChart3 },
+      { title: 'Standart Raporlar', href: '/raporlar', icon: FileText },
+    ],
   },
   {
     title: 'Bildirimler',
@@ -126,10 +135,23 @@ const navItems: NavItem[] = [
     roles: ['yonetici'],
   },
   {
-    title: 'Ayarlar',
-    href: '/ayarlar',
+    title: 'Sistem Bakım',
     icon: Settings,
     roles: ['yonetici'],
+    children: [
+      { title: 'Bakım Araçları', href: '/sistem-bakim/maintenance', icon: Settings },
+      { title: 'Excel Hataları', href: '/sistem-bakim/excel-errors', icon: FileText },
+      { title: 'Audit Logları', href: '/sistem-bakim/audit-logs', icon: ScrollText },
+    ],
+  },
+  {
+    title: 'Ayarlar',
+    icon: Settings,
+    roles: ['yonetici'],
+    children: [
+      { title: 'Sistem Ayarları', href: '/ayarlar', icon: Settings },
+      { title: 'Real-time Broadcast', href: '/ayarlar/realtime-broadcast', icon: Radio },
+    ],
   },
 ];
 

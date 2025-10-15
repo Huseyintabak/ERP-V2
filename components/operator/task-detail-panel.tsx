@@ -19,6 +19,7 @@ import {
   CheckCircle,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { ProductionLogRollbackDialog } from '@/components/production/production-log-rollback-dialog';
 
 interface ProductionTask {
   id: string;
@@ -44,9 +45,22 @@ interface ProductionTask {
 
 interface ProductionLog {
   id: string;
+  plan_id: string;
   barcode_scanned: string;
   quantity_produced: number;
-  timestamp: string;
+  created_at: string;
+  operator_id: string;
+  operator?: {
+    name: string;
+    email: string;
+  };
+  production_plans?: {
+    id: string;
+    product_name: string;
+    target_quantity: number;
+    produced_quantity: number;
+    status: string;
+  };
 }
 
 interface BomMaterial {
@@ -71,6 +85,8 @@ export function TaskDetailPanel({ task, onRefresh }: TaskDetailPanelProps) {
   const [logs, setLogs] = useState<ProductionLog[]>([]);
   const [bomMaterials, setBomMaterials] = useState<BomMaterial[]>([]);
   const [fetchingLogs, setFetchingLogs] = useState(false);
+  const [rollbackDialogOpen, setRollbackDialogOpen] = useState(false);
+  const [selectedLog, setSelectedLog] = useState<ProductionLog | null>(null);
 
   useEffect(() => {
     if (task) {
@@ -154,6 +170,16 @@ export function TaskDetailPanel({ task, onRefresh }: TaskDetailPanelProps) {
     if (e.key === 'Enter' && !loading && barcode.trim()) {
       handleBarcodeSubmit();
     }
+  };
+
+  const handleRollback = (log: ProductionLog) => {
+    setSelectedLog(log);
+    setRollbackDialogOpen(true);
+  };
+
+  const handleRollbackSuccess = () => {
+    fetchLogs();
+    onRefresh?.();
   };
 
   if (!task) {
@@ -428,17 +454,28 @@ export function TaskDetailPanel({ task, onRefresh }: TaskDetailPanelProps) {
               ) : (
                 <div className="grid grid-cols-3 gap-4 p-6">
                   {logs.map((log) => (
-                    <div key={log.id} className="p-4 bg-blue-50 border border-blue-200 rounded-xl text-center space-y-2">
+                    <div key={log.id} className="p-4 bg-blue-50 border border-blue-200 rounded-xl text-center space-y-2 relative group">
                       <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center mx-auto">
                         <Package className="h-6 w-6 text-white" />
                       </div>
                       <div className="font-bold text-base">{log.barcode_scanned}</div>
                       <div className="text-sm text-muted-foreground">
-                        {new Date(log.timestamp).toLocaleTimeString('tr-TR')}
+                        {new Date(log.created_at).toLocaleTimeString('tr-TR')}
                       </div>
                       <Badge variant="secondary" className="text-lg px-4 py-2 font-bold">
                         +{log.quantity_produced}
                       </Badge>
+                      
+                      {/* Rollback Button */}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleRollback(log)}
+                        className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                        title="Geri Al"
+                      >
+                        <History className="h-4 w-4" />
+                      </Button>
                     </div>
                   ))}
                 </div>
@@ -447,6 +484,17 @@ export function TaskDetailPanel({ task, onRefresh }: TaskDetailPanelProps) {
           </CardContent>
         </Card>
       </div>
+
+      {/* Rollback Dialog */}
+      <ProductionLogRollbackDialog
+        isOpen={rollbackDialogOpen}
+        onClose={() => {
+          setRollbackDialogOpen(false);
+          setSelectedLog(null);
+        }}
+        log={selectedLog}
+        onRollbackSuccess={handleRollbackSuccess}
+      />
     </div>
   );
 }

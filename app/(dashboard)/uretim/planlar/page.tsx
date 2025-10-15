@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { CompleteProductionDialog } from '@/components/production/complete-production-dialog';
+import { ProductionPlanCancelDialog } from '@/components/production/production-plan-cancel-dialog';
 import { useProductionPlans, useOrderActions, useOrderLoading } from '@/stores/order-store';
 import { useRoleBasedRealtime } from '@/lib/hooks/use-realtime-store';
 import { useAuthStore } from '@/stores/auth-store';
@@ -84,6 +85,8 @@ export default function UretimPlanlariPage() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
   const [operatorFilter, setOperatorFilter] = useState('all');
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState<ProductionPlan | null>(null);
   
   // Real-time updates for production plans
   useRoleBasedRealtime('planlama');
@@ -147,6 +150,15 @@ export default function UretimPlanlariPage() {
     } catch (error: any) {
       toast.error(error.message || 'Üretim duraklatma hatası');
     }
+  };
+
+  const handleCancel = (plan: ProductionPlan) => {
+    setSelectedPlan(plan);
+    setCancelDialogOpen(true);
+  };
+
+  const handleCancelSuccess = () => {
+    actions.fetchProductionPlans();
   };
 
   const handleAssignOperator = async (planId: string, operatorId: string) => {
@@ -415,6 +427,17 @@ export default function UretimPlanlariPage() {
                             </SelectContent>
                           </Select>
                         )}
+                        
+                        {plan.status !== 'iptal' && plan.status !== 'tamamlandi' && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleCancel(plan)}
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          >
+                            <XCircle className="h-4 w-4" />
+                          </Button>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -434,6 +457,17 @@ export default function UretimPlanlariPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Cancel Dialog */}
+      <ProductionPlanCancelDialog
+        isOpen={cancelDialogOpen}
+        onClose={() => {
+          setCancelDialogOpen(false);
+          setSelectedPlan(null);
+        }}
+        plan={selectedPlan}
+        onCancelSuccess={handleCancelSuccess}
+      />
     </div>
   );
 }

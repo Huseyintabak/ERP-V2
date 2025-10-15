@@ -10,34 +10,34 @@ export async function GET(request: NextRequest) {
     }
 
     const payload = await verifyJWT(token);
-    
-    // Only admin can access audit logs
-    if (payload.role !== 'yonetici') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    if (!payload) {
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+    }
+
+    // Check if user has permission to view audit logs
+    if (!['yonetici', 'planlama'].includes(payload.role)) {
+      return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
     }
 
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '50');
-    const table_name = searchParams.get('table_name');
-    const action = searchParams.get('action');
-    const user_id = searchParams.get('user_id');
-    const start_date = searchParams.get('start_date');
-    const end_date = searchParams.get('end_date');
+    const search = searchParams.get('search') || '';
+    const action = searchParams.get('action') || '';
+    const table = searchParams.get('table') || '';
+    const severity = searchParams.get('severity') || '';
+    const user = searchParams.get('user') || '';
+    const dateFrom = searchParams.get('dateFrom') || '';
+    const dateTo = searchParams.get('dateTo') || '';
 
     const supabase = await createClient();
 
+    // Build query
     let query = supabase
       .from('audit_logs')
       .select(`
-        id,
-        table_name,
-        action,
-        old_values,
-        new_values,
-        user_id,
-        created_at,
-        users!audit_logs_user_id_fkey (
+        *,
+        users!inner(
           name,
           email
         )
@@ -45,68 +45,141 @@ export async function GET(request: NextRequest) {
       .order('created_at', { ascending: false });
 
     // Apply filters
-    if (table_name) {
-      query = query.eq('table_name', table_name);
+    if (search) {
+      query = query.or(`description.ilike.%${search}%,table_name.ilike.%${search}%,users.name.ilike.%${search}%,users.email.ilike.%${search}%`);
     }
 
-    if (action) {
+    if (action && action !== 'all') {
       query = query.eq('action', action);
     }
 
-    if (user_id) {
-      query = query.eq('user_id', user_id);
+    if (table && table !== 'all') {
+      query = query.eq('table_name', table);
     }
 
-    if (start_date) {
-      query = query.gte('created_at', start_date);
+    if (severity && severity !== 'all') {
+      query = query.eq('severity', severity);
     }
 
-    if (end_date) {
-      query = query.lte('created_at', end_date);
+    if (user && user !== 'all') {
+      query = query.eq('user_id', user);
+    }
+
+    if (dateFrom) {
+      query = query.gte('created_at', dateFrom);
+    }
+
+    if (dateTo) {
+      query = query.lte('created_at', dateTo);
     }
 
     // Get total count for pagination
-    const { count } = await query;
+    const { count } = await query.select('*', { count: 'exact', head: true });
+    const totalPages = Math.ceil((count || 0) / limit);
 
     // Apply pagination
-    const { data: auditLogs, error } = await query
-      .range((page - 1) * limit, page * limit - 1);
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
+    query = query.range(from, to);
+
+    const { data: logs, error } = await query;
 
     if (error) {
       console.error('Error fetching audit logs:', error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    // Get unique tables and actions for filter options
-    const { data: tables } = await supabase
-      .from('audit_logs')
-      .select('table_name')
-      .order('table_name');
-
-    const { data: actions } = await supabase
-      .from('audit_logs')
-      .select('action')
-      .order('action');
-
-    const uniqueTables = [...new Set(tables?.map(t => t.table_name) || [])];
-    const uniqueActions = [...new Set(actions?.map(a => a.action) || [])];
+    // Format the response
+    const formattedLogs = (logs || []).map(log => ({
+      id: log.id,
+      user_id: log.user_id,
+      user_name: log.users?.name,
+      user_email: log.users?.email,
+      action: log.action,
+      table_name: log.table_name,
+      record_id: log.record_id,
+      old_values: log.old_values,
+      new_values: log.new_values,
+      description: log.description,
+      ip_address: log.ip_address,
+      user_agent: log.user_agent,
+      created_at: log.created_at,
+      severity: log.severity || 'medium',
+      category: log.category || 'general'
+    }));
 
     return NextResponse.json({
-      data: auditLogs || [],
-      pagination: {
-        page,
-        limit,
-        total: count || 0,
-        pages: Math.ceil((count || 0) / limit),
-      },
-      filters: {
-        tables: uniqueTables,
-        actions: uniqueActions,
-      },
+      logs: formattedLogs,
+      totalPages,
+      currentPage: page,
+      totalCount: count || 0
     });
+
   } catch (error: any) {
-    console.error('Unexpected error fetching audit logs:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error('Error in audit logs:', error);
+    return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 });
   }
 }
 
+export async function POST(request: NextRequest) {
+  try {
+    const token = request.cookies.get('thunder_token')?.value;
+    if (!token) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const payload = await verifyJWT(token);
+    if (!payload) {
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+    }
+
+    const { 
+      action, 
+      table_name, 
+      record_id, 
+      old_values, 
+      new_values, 
+      description, 
+      severity = 'medium',
+      category = 'general',
+      ip_address,
+      user_agent
+    } = await request.json();
+
+    if (!action || !table_name || !description) {
+      return NextResponse.json({ error: 'Action, table_name, and description are required' }, { status: 400 });
+    }
+
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+      .from('audit_logs')
+      .insert({
+        user_id: payload.userId,
+        action,
+        table_name,
+        record_id: record_id || null,
+        old_values: old_values || null,
+        new_values: new_values || null,
+        description,
+        severity,
+        category,
+        ip_address: ip_address || null,
+        user_agent: user_agent || null,
+        created_at: new Date().toISOString()
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error creating audit log:', error);
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true, log: data });
+
+  } catch (error: any) {
+    console.error('Error in audit log creation:', error);
+    return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 });
+  }
+}

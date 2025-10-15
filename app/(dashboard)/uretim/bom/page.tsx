@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { CostCalculationDialog } from '@/components/pricing/cost-calculation-dialog';
+import { BomVisualTree } from '@/components/bom/bom-visual-tree';
 
 interface Product {
   id: string;
@@ -90,6 +91,7 @@ export default function BOMPage() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingBOM, setEditingBOM] = useState<BOMEntry | null>(null);
+  const [showVisualTree, setShowVisualTree] = useState(true);
 
   // Yeni BOM entry form state - array olarak değiştir
   const [newBOMEntries, setNewBOMEntries] = useState<Array<{
@@ -564,6 +566,31 @@ export default function BOMPage() {
     }
   };
 
+  const handleVisualTreeSave = async (bomData: any) => {
+    try {
+      const response = await fetch(`/api/bom/${selectedProduct?.id}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          product_id: selectedProduct?.id,
+          entries: bomData.materials
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('BOM kaydedilemedi');
+      }
+
+      toast.success('BOM başarıyla kaydedildi');
+      fetchBOMData(selectedProduct?.id || '');
+    } catch (error: any) {
+      console.error('Error saving BOM:', error);
+      toast.error(error.message || 'BOM kaydedilirken hata oluştu');
+    }
+  };
+
   const handleImportBOM = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     
@@ -788,6 +815,14 @@ export default function BOMPage() {
               </CardTitle>
               {selectedProduct && (
                 <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowVisualTree(!showVisualTree)}
+                  >
+                    <TreePine className="h-4 w-4 mr-2" />
+                    {showVisualTree ? 'Tablo Görünümü' : 'Ağaç Görünümü'}
+                  </Button>
                   <CostCalculationDialog
                     productId={selectedProduct.id}
                     productCode={selectedProduct.code}
@@ -822,6 +857,13 @@ export default function BOMPage() {
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
                 <p className="mt-2 text-muted-foreground">Yükleniyor...</p>
               </div>
+            ) : showVisualTree ? (
+              <BomVisualTree
+                productId={selectedProduct.id}
+                productName={selectedProduct.name}
+                onSave={handleVisualTreeSave}
+                initialData={bomData}
+              />
             ) : !bomData || bomData.materials.length === 0 ? (
               <div className="text-center py-12 text-muted-foreground">
                 <TreePine className="h-12 w-12 mx-auto mb-4 opacity-50" />
