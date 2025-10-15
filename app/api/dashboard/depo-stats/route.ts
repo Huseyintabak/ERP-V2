@@ -94,10 +94,12 @@ export async function GET(request: NextRequest) {
       // 9. Low stock items (quantity <= minimum_stock)
       supabase.rpc('get_low_stock_count'),
       
-      // 10. Reserved stock (from material_reservations)
-      supabase
-        .from('material_reservations')
-        .select('reserved_quantity'),
+      // 10. Reserved stock (from actual stock tables)
+      Promise.all([
+        supabase.from('raw_materials').select('reserved_quantity'),
+        supabase.from('semi_finished_products').select('reserved_quantity'),
+        supabase.from('finished_products').select('reserved_quantity')
+      ]),
       
       // 11. Total stock value
       Promise.all([
@@ -159,8 +161,17 @@ export async function GET(request: NextRequest) {
       averageStockAge = Math.floor(totalAge / stockAge.data.length);
     }
 
-    // Calculate reserved stock total
-    const totalReserved = reservedStock.data?.reduce((sum, item) => sum + (item.reserved_quantity || 0), 0) || 0;
+    // Calculate reserved stock total from all stock tables
+    let totalReserved = 0;
+    if (reservedStock[0].data) {
+      totalReserved += reservedStock[0].data.reduce((sum, item) => sum + (item.reserved_quantity || 0), 0);
+    }
+    if (reservedStock[1].data) {
+      totalReserved += reservedStock[1].data.reduce((sum, item) => sum + (item.reserved_quantity || 0), 0);
+    }
+    if (reservedStock[2].data) {
+      totalReserved += reservedStock[2].data.reduce((sum, item) => sum + (item.reserved_quantity || 0), 0);
+    }
 
     // Get real stock turnover analysis from database function
     const stockTurnover = stockTurnoverResult.data || {
