@@ -282,6 +282,11 @@ export function TaskDetailPanel({ task, onRefresh }: TaskDetailPanelProps) {
           <CardContent className="space-y-4">
             <div className="space-y-3">
               <Label htmlFor="barcode" className="text-base font-medium">Barkod veya Ürün Kodu</Label>
+              {task.product?.barcode && (
+                <div className="text-sm text-blue-600 bg-blue-100 px-3 py-2 rounded-lg font-mono">
+                  <strong>Ürün Barkodu:</strong> {task.product.barcode}
+                </div>
+              )}
               <div className="relative">
                 <Input
                   id="barcode"
