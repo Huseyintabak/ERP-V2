@@ -22,7 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { SearchableSelect, type SearchableSelectOption } from '@/components/ui/searchable-select';
+import { SimpleSearchableSelect, type SearchableSelectOption } from '@/components/ui/simple-searchable-select';
 import { Badge } from '@/components/ui/badge';
 import { ClipboardList, AlertTriangle, CheckCircle, TrendingUp, TrendingDown } from 'lucide-react';
 import { toast } from 'sonner';
@@ -211,7 +211,7 @@ export function InventoryCountDialog({
           {/* Malzeme Seçimi */}
           <div className="space-y-2">
             <Label htmlFor="materialId">Malzeme</Label>
-            <SearchableSelect
+            <SimpleSearchableSelect
               options={materialOptions}
               value={watchMaterialId}
               onValueChange={(value) => setValue('materialId', value)}

@@ -18,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { SearchableSelect, type SearchableSelectOption } from '@/components/ui/searchable-select';
+import { SimpleSearchableSelect, type SearchableSelectOption } from '@/components/ui/simple-searchable-select';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -285,17 +285,17 @@ export function ZoneTransferDialog({
           {fromZoneId && (
             <div className="space-y-2">
               <Label htmlFor="product">Ürün</Label>
-              <SearchableSelect
-                options={productOptions}
-                value={productId}
-                onValueChange={setProductId}
-                placeholder="Transfer edilecek ürünü seçin"
-                searchPlaceholder="Ürün adı veya kodu ile ara..."
-                emptyText="Bu zonda ürün bulunamadı"
-                disabled={isLoading}
-                allowClear
-                maxHeight="300px"
-              />
+        <SimpleSearchableSelect
+          options={productOptions}
+          value={productId}
+          onValueChange={setProductId}
+          placeholder="Transfer edilecek ürünü seçin"
+          searchPlaceholder="Ürün adı veya kodu ile ara..."
+          emptyText="Bu zonda ürün bulunamadı"
+          disabled={isLoading}
+          allowClear
+          maxHeight="300px"
+        />
             </div>
           )}
 

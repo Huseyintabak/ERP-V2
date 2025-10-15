@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { SearchableSelect, type SearchableSelectOption } from '@/components/ui/searchable-select';
+import { SimpleSearchableSelect, type SearchableSelectOption } from '@/components/ui/simple-searchable-select';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { TrendingUp, TrendingDown } from 'lucide-react';
@@ -143,16 +143,16 @@ export function QuickStockEntryDialog({ open, onClose, type }: Props) {
           {/* Malzeme Seçimi */}
           <div className="space-y-2">
             <Label>Malzeme</Label>
-            <SearchableSelect
-              options={materialOptions}
-              value={selectedMaterialId}
-              onValueChange={setSelectedMaterialId}
-              placeholder="Malzeme seçin..."
-              searchPlaceholder="Malzeme adı veya kodu ile ara..."
-              emptyText="Malzeme bulunamadı"
-              allowClear
-              maxHeight="300px"
-            />
+        <SimpleSearchableSelect
+          options={materialOptions}
+          value={selectedMaterialId}
+          onValueChange={setSelectedMaterialId}
+          placeholder="Malzeme seçin..."
+          searchPlaceholder="Malzeme adı veya kodu ile ara..."
+          emptyText="Malzeme bulunamadı"
+          allowClear
+          maxHeight="300px"
+        />
           </div>
 
           {/* Mevcut Stok Bilgisi */}

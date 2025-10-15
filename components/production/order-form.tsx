@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { SearchableSelect, type SearchableSelectOption } from '@/components/ui/searchable-select';
+import { SimpleSearchableSelect, type SearchableSelectOption } from '@/components/ui/simple-searchable-select';
 import { orderSchema, orderItemSchema, type OrderFormData, type OrderItemFormData } from '@/types';
 import { CustomerSelect } from '@/components/customers/customer-select';
 import { CustomerDialog } from '@/components/customers/customer-dialog';
@@ -208,7 +208,7 @@ export function OrderForm({ onSuccess }: Props) {
             <div key={index} className="grid grid-cols-12 gap-4 items-end">
               <div className="col-span-7">
                 <Label>Ürün</Label>
-                <SearchableSelect
+                <SimpleSearchableSelect
                   options={productOptions}
                   value={item.product_id}
                   onValueChange={(value) => updateItem(index, 'product_id', value)}

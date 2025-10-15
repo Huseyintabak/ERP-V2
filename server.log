@@ -845,3 +845,96 @@ Error checking source inventory: {
  GET /api/warehouse/zones/center/inventory 200 in 893ms
  GET /api/warehouse/zones/79107edb-2635-4f91-b3c6-d66c8db19fe1/inventory 200 in 909ms
  GET /api/warehouse/zones 200 in 960ms
+ ⨯ [Error: ENOENT: no such file or directory, open '/Users/huseyintabak/Downloads/ThunderV2/.next/static/development/_buildManifest.js.tmp.y0vo5sevh09'] {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: '/Users/huseyintabak/Downloads/ThunderV2/.next/static/development/_buildManifest.js.tmp.y0vo5sevh09'
+}
+ ○ Compiling /_error ...
+ ✓ Compiled /_error in 1081ms
+ ⨯ [Error: ENOENT: no such file or directory, open '/Users/huseyintabak/Downloads/ThunderV2/.next/static/development/_buildManifest.js.tmp.m4pjkbgi1x'] {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: '/Users/huseyintabak/Downloads/ThunderV2/.next/static/development/_buildManifest.js.tmp.m4pjkbgi1x'
+}
+[Error: ENOENT: no such file or directory, open '/Users/huseyintabak/Downloads/ThunderV2/.next/static/development/_buildManifest.js.tmp.y0vo5sevh09'] {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: '/Users/huseyintabak/Downloads/ThunderV2/.next/static/development/_buildManifest.js.tmp.y0vo5sevh09'
+}
+ ⨯ [Error: ENOENT: no such file or directory, open '/Users/huseyintabak/Downloads/ThunderV2/.next/static/development/_buildManifest.js.tmp.4el1njweham'] {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: '/Users/huseyintabak/Downloads/ThunderV2/.next/static/development/_buildManifest.js.tmp.4el1njweham'
+}
+[Error: ENOENT: no such file or directory, open '/Users/huseyintabak/Downloads/ThunderV2/.next/static/development/_buildManifest.js.tmp.pm79wfnkkg8'] {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: '/Users/huseyintabak/Downloads/ThunderV2/.next/static/development/_buildManifest.js.tmp.pm79wfnkkg8'
+}
+ ⨯ [Error: ENOENT: no such file or directory, open '/Users/huseyintabak/Downloads/ThunderV2/.next/static/development/_buildManifest.js.tmp.8gg8mlot4yt'] {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: '/Users/huseyintabak/Downloads/ThunderV2/.next/static/development/_buildManifest.js.tmp.8gg8mlot4yt'
+}
+ ⨯ [Error: ENOENT: no such file or directory, open '/Users/huseyintabak/Downloads/ThunderV2/.next/static/development/_buildManifest.js.tmp.w1yqkxpvwxe'] {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: '/Users/huseyintabak/Downloads/ThunderV2/.next/static/development/_buildManifest.js.tmp.w1yqkxpvwxe'
+}
+[Error: ENOENT: no such file or directory, open '/Users/huseyintabak/Downloads/ThunderV2/.next/static/development/_buildManifest.js.tmp.8gg8mlot4yt'] {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: '/Users/huseyintabak/Downloads/ThunderV2/.next/static/development/_buildManifest.js.tmp.8gg8mlot4yt'
+}
+ ⨯ [Error: ENOENT: no such file or directory, open '/Users/huseyintabak/Downloads/ThunderV2/.next/static/development/_buildManifest.js.tmp.yddgh9ewfi'] {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: '/Users/huseyintabak/Downloads/ThunderV2/.next/static/development/_buildManifest.js.tmp.yddgh9ewfi'
+}
+[Error: ENOENT: no such file or directory, open '/Users/huseyintabak/Downloads/ThunderV2/.next/static/development/_buildManifest.js.tmp.5ahatv1d61e'] {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: '/Users/huseyintabak/Downloads/ThunderV2/.next/static/development/_buildManifest.js.tmp.5ahatv1d61e'
+}
+ ⨯ [Error: ENOENT: no such file or directory, open '/Users/huseyintabak/Downloads/ThunderV2/.next/static/development/_buildManifest.js.tmp.qa2vc57wwei'] {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: '/Users/huseyintabak/Downloads/ThunderV2/.next/static/development/_buildManifest.js.tmp.qa2vc57wwei'
+}
+ ⨯ [Error: ENOENT: no such file or directory, open '/Users/huseyintabak/Downloads/ThunderV2/.next/static/development/_buildManifest.js.tmp.vjm7x48tkq'] {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: '/Users/huseyintabak/Downloads/ThunderV2/.next/static/development/_buildManifest.js.tmp.vjm7x48tkq'
+}
+[Error: ENOENT: no such file or directory, open '/Users/huseyintabak/Downloads/ThunderV2/.next/static/development/_buildManifest.js.tmp.qa2vc57wwei'] {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: '/Users/huseyintabak/Downloads/ThunderV2/.next/static/development/_buildManifest.js.tmp.qa2vc57wwei'
+}
+ ⨯ [Error: ENOENT: no such file or directory, open '/Users/huseyintabak/Downloads/ThunderV2/.next/static/development/_buildManifest.js.tmp.v5tvtiff78'] {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: '/Users/huseyintabak/Downloads/ThunderV2/.next/static/development/_buildManifest.js.tmp.v5tvtiff78'
+}
+[Error: ENOENT: no such file or directory, open '/Users/huseyintabak/Downloads/ThunderV2/.next/static/development/_buildManifest.js.tmp.rpovz08ri1'] {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: '/Users/huseyintabak/Downloads/ThunderV2/.next/static/development/_buildManifest.js.tmp.rpovz08ri1'
+}
+[?25h

@@ -29,7 +29,7 @@ import {
 } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { SearchableSelect, type SearchableSelectOption } from '@/components/ui/searchable-select';
+import { SimpleSearchableSelect, type SearchableSelectOption } from '@/components/ui/simple-searchable-select';
 import { 
   Building2, 
   Users, 
@@ -307,17 +307,17 @@ export function ZoneList({
 
             <div className="space-y-2">
               <Label>Ürün</Label>
-              <SearchableSelect
-                options={productOptions}
-                value={selectedProductId}
-                onValueChange={setSelectedProductId}
-                placeholder="Transfer edilecek ürünü seçin"
-                searchPlaceholder="Ürün adı veya kodu ile ara..."
-                emptyText="Bu zonda ürün bulunamadı"
-                disabled={loading}
-                allowClear
-                maxHeight="300px"
-              />
+                <SimpleSearchableSelect
+                  options={productOptions}
+                  value={selectedProductId}
+                  onValueChange={setSelectedProductId}
+                  placeholder="Transfer edilecek ürünü seçin"
+                  searchPlaceholder="Ürün adı veya kodu ile ara..."
+                  emptyText="Bu zonda ürün bulunamadı"
+                  disabled={loading}
+                  allowClear
+                  maxHeight="300px"
+                />
             </div>
 
             <div className="space-y-2">
