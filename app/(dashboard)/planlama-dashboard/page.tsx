@@ -244,18 +244,24 @@ export default function PlanlamaDashboard() {
         ? (delayedPlans / activePlans.data.length) * 100 
         : 0;
 
-      // Düşük stok (gerçek)
-      const lowStockItems = (raw.data?.filter((m: any) => 
-        m.quantity <= m.min_level && m.quantity > m.critical_level
+      // Kritik stok (gerçek) - tüm stok türlerinden
+      const criticalStockItems = (raw.data?.filter((m: any) => 
+        m.quantity <= m.critical_level
+      ).length || 0) + 
+      (semi.data?.filter((m: any) => 
+        m.quantity <= m.critical_level
+      ).length || 0) + 
+      (finished.data?.filter((m: any) => 
+        m.quantity <= m.critical_level
       ).length || 0);
 
       // Toplam stok çeşidi
       const totalStock = (raw.pagination?.total || 0) + (semi.pagination?.total || 0) + (finished.pagination?.total || 0);
       
-      // Rezerve malzemeler sayısı (gerçek)
-      const reservedMaterialsCount = (raw.data?.filter((m: any) => m.reserved_quantity > 0).length || 0) +
-                                   (semi.data?.filter((m: any) => m.reserved_quantity > 0).length || 0) +
-                                   (finished.data?.filter((m: any) => m.reserved_quantity > 0).length || 0);
+      // Rezerve malzemeler toplam miktarı (depo stats ile aynı mantık)
+      const reservedMaterialsCount = (raw.data?.reduce((sum: number, m: any) => sum + (m.reserved_quantity || 0), 0) || 0) +
+                                   (semi.data?.reduce((sum: number, m: any) => sum + (m.reserved_quantity || 0), 0) || 0) +
+                                   (finished.data?.reduce((sum: number, m: any) => sum + (m.reserved_quantity || 0), 0) || 0);
 
       // Operators state'e kaydet
       if (Array.isArray(operators)) {
@@ -280,7 +286,7 @@ export default function PlanlamaDashboard() {
         efficiencyRate: Math.round(efficiencyRate * 10) / 10,
         delayRate: Math.round(delayRate * 10) / 10,
         totalStockVarieties: totalStock,
-        lowStockItems,
+        lowStockItems: criticalStockItems, // Kritik stok olarak göster
         reservedMaterials: reservedMaterialsCount,
       };
       
@@ -484,7 +490,7 @@ export default function PlanlamaDashboard() {
                 <Badge variant="outline">{stats.totalStockVarieties}</Badge>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Düşük Stok</span>
+                <span className="text-sm font-medium">Kritik Stok</span>
                 <Badge variant="destructive">{stats.lowStockItems}</Badge>
               </div>
               <div className="flex items-center justify-between">
