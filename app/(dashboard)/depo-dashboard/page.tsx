@@ -33,6 +33,11 @@ interface DepoStats {
   finished: number;
   totalStock: number;
   
+  // Total Stock Quantities
+  totalRawQuantity: number;
+  totalSemiQuantity: number;
+  totalFinishedQuantity: number;
+  
   // Stock Movement KPIs
   dailyInbound: number;
   dailyOutbound: number;
@@ -40,8 +45,6 @@ interface DepoStats {
   
   // Critical Stock KPIs
   criticalStock: number;
-  lowStockItems: number;
-  expiredStock: number;
   reservedStock: number;
   
   // Value & Age KPIs
@@ -74,12 +77,13 @@ export default function DepoDashboard() {
     semiFinished: 0,
     finished: 0,
     totalStock: 0,
+    totalRawQuantity: 0,
+    totalSemiQuantity: 0,
+    totalFinishedQuantity: 0,
     dailyInbound: 0,
     dailyOutbound: 0,
     stockTurnover: { high: 0, medium: 0, low: 0 },
     criticalStock: 0,
-    lowStockItems: 0,
-    expiredStock: 0,
     reservedStock: 0,
     totalStockValue: 0,
     averageStockAge: 0,
@@ -232,48 +236,48 @@ export default function DepoDashboard() {
         </Card>
       </div>
 
-      {/* Critical Stock Alerts */}
+      {/* Total Stock Quantities */}
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-        <Card className="border-l-4 border-l-red-500">
+        <Card className="border-l-4 border-l-blue-500">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Kritik Stok</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-red-600" />
+            <CardTitle className="text-sm font-medium">Hammade Toplam Stok</CardTitle>
+            <Package className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.criticalStock}</div>
-            <p className="text-xs text-muted-foreground">Minimum altında</p>
+            <div className="text-2xl font-bold">{stats.totalRawQuantity.toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground">Toplam miktar</p>
           </CardContent>
         </Card>
 
         <Card className="border-l-4 border-l-orange-500">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Düşük Stok</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-orange-600" />
+            <CardTitle className="text-sm font-medium">Yarı Mamuller Toplam Stok</CardTitle>
+            <Package className="h-4 w-4 text-orange-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.lowStockItems}</div>
-            <p className="text-xs text-muted-foreground">Yenileme gerekli</p>
+            <div className="text-2xl font-bold">{stats.totalSemiQuantity.toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground">Toplam miktar</p>
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-yellow-500">
+        <Card className="border-l-4 border-l-green-500">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Süresi Dolmuş</CardTitle>
-            <Clock className="h-4 w-4 text-yellow-600" />
+            <CardTitle className="text-sm font-medium">Nihai Ürün Toplam Stok</CardTitle>
+            <TrendingUp className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.expiredStock}</div>
-            <p className="text-xs text-muted-foreground">Kontrol gerekli</p>
+            <div className="text-2xl font-bold">{stats.totalFinishedQuantity.toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground">Toplam miktar</p>
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-blue-500">
+        <Card className="border-l-4 border-l-purple-500">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Rezerve Stok</CardTitle>
-            <CheckCircle className="h-4 w-4 text-blue-600" />
+            <CheckCircle className="h-4 w-4 text-purple-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.reservedStock}</div>
+            <div className="text-2xl font-bold">{stats.reservedStock.toLocaleString()}</div>
             <p className="text-xs text-muted-foreground">Üretim için ayrılmış</p>
           </CardContent>
         </Card>

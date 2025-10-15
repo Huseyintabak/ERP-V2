@@ -121,6 +121,21 @@ export async function GET(request: NextRequest) {
     const finishedCount = finishedProductsCount.count || 0;
     const totalCount = rawCount + semiCount + finishedCount;
 
+    // Calculate total stock quantities
+    let totalRawQuantity = 0;
+    let totalSemiQuantity = 0;
+    let totalFinishedQuantity = 0;
+    
+    if (stockValue[0].data) {
+      totalRawQuantity = stockValue[0].data.reduce((sum, item) => sum + (item.quantity || 0), 0);
+    }
+    if (stockValue[1].data) {
+      totalSemiQuantity = stockValue[1].data.reduce((sum, item) => sum + (item.quantity || 0), 0);
+    }
+    if (stockValue[2].data) {
+      totalFinishedQuantity = stockValue[2].data.reduce((sum, item) => sum + (item.quantity || 0), 0);
+    }
+
     // Calculate stock value
     let totalStockValue = 0;
     
@@ -201,6 +216,11 @@ export async function GET(request: NextRequest) {
         semiFinished: semiCount,
         finished: finishedCount,
         totalStock: totalCount,
+        
+        // Total stock quantities
+        totalRawQuantity: Math.round(totalRawQuantity),
+        totalSemiQuantity: Math.round(totalSemiQuantity),
+        totalFinishedQuantity: Math.round(totalFinishedQuantity),
         
         // Daily movements
         dailyInbound: dailyInbound.count || 0,
