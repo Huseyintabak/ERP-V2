@@ -145,10 +145,10 @@ export default function PlanlamaDashboard() {
         reservations,
         movements
       ] = await Promise.all([
-        // Stok sayıları
-        fetch('/api/stock/raw?limit=1').then(r => r.ok ? r.json() : { pagination: { total: 0 }, data: [] }),
-        fetch('/api/stock/semi?limit=1').then(r => r.ok ? r.json() : { pagination: { total: 0 }, data: [] }),
-        fetch('/api/stock/finished?limit=1').then(r => r.ok ? r.json() : { pagination: { total: 0 }, data: [] }),
+        // Stok sayıları ve rezerve miktarları için tüm veriler
+        fetch('/api/stock/raw?limit=1000').then(r => r.ok ? r.json() : { pagination: { total: 0 }, data: [] }),
+        fetch('/api/stock/semi?limit=1000').then(r => r.ok ? r.json() : { pagination: { total: 0 }, data: [] }),
+        fetch('/api/stock/finished?limit=1000').then(r => r.ok ? r.json() : { pagination: { total: 0 }, data: [] }),
         
         // Aktif üretim planları
         fetch('/api/production/plans?status=planlandi,devam_ediyor&limit=1000').then(r => r.ok ? r.json() : { data: [] }),
@@ -259,9 +259,20 @@ export default function PlanlamaDashboard() {
       const totalStock = (raw.pagination?.total || 0) + (semi.pagination?.total || 0) + (finished.pagination?.total || 0);
       
       // Rezerve malzemeler toplam miktarı (depo stats ile aynı mantık)
-      const reservedMaterialsCount = (raw.data?.reduce((sum: number, m: any) => sum + (m.reserved_quantity || 0), 0) || 0) +
-                                   (semi.data?.reduce((sum: number, m: any) => sum + (m.reserved_quantity || 0), 0) || 0) +
-                                   (finished.data?.reduce((sum: number, m: any) => sum + (m.reserved_quantity || 0), 0) || 0);
+      const rawReserved = raw.data?.reduce((sum: number, m: any) => sum + (m.reserved_quantity || 0), 0) || 0;
+      const semiReserved = semi.data?.reduce((sum: number, m: any) => sum + (m.reserved_quantity || 0), 0) || 0;
+      const finishedReserved = finished.data?.reduce((sum: number, m: any) => sum + (m.reserved_quantity || 0), 0) || 0;
+      const reservedMaterialsCount = rawReserved + semiReserved + finishedReserved;
+      
+      console.log('🔍 Rezerve malzemeler debug:', {
+        rawReserved,
+        semiReserved,
+        finishedReserved,
+        totalReserved: reservedMaterialsCount,
+        rawDataLength: raw.data?.length || 0,
+        semiDataLength: semi.data?.length || 0,
+        finishedDataLength: finished.data?.length || 0
+      });
 
       // Operators state'e kaydet
       if (Array.isArray(operators)) {
