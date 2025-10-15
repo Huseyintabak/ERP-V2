@@ -251,6 +251,11 @@ export default function PlanlamaDashboard() {
 
       // Toplam stok çeşidi
       const totalStock = (raw.pagination?.total || 0) + (semi.pagination?.total || 0) + (finished.pagination?.total || 0);
+      
+      // Rezerve malzemeler sayısı (gerçek)
+      const reservedMaterialsCount = (raw.data?.filter((m: any) => m.reserved_quantity > 0).length || 0) +
+                                   (semi.data?.filter((m: any) => m.reserved_quantity > 0).length || 0) +
+                                   (finished.data?.filter((m: any) => m.reserved_quantity > 0).length || 0);
 
       // Operators state'e kaydet
       if (Array.isArray(operators)) {
@@ -276,7 +281,7 @@ export default function PlanlamaDashboard() {
         delayRate: Math.round(delayRate * 10) / 10,
         totalStockVarieties: totalStock,
         lowStockItems,
-        reservedMaterials: totalStockItems,
+        reservedMaterials: reservedMaterialsCount,
       };
       
       console.log('📊 Planlama Dashboard: Stats updated:', {
@@ -284,7 +289,8 @@ export default function PlanlamaDashboard() {
         activeProduction: newStats.activeProduction,
         orderPriority: newStats.orderPriority,
         totalStockVarieties: newStats.totalStockVarieties,
-        lowStockItems: newStats.lowStockItems
+        lowStockItems: newStats.lowStockItems,
+        reservedMaterials: newStats.reservedMaterials
       });
       
       setStats(newStats);
