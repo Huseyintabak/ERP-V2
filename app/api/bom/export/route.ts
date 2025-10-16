@@ -17,8 +17,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'User context required' }, { status: 401 });
     }
 
-    // Only yonetici can export BOM
-    if (payload.role !== 'yonetici') {
+    // Only yonetici and planlama can export BOM
+    if (payload.role !== 'yonetici' && payload.role !== 'planlama') {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
     }
 

@@ -66,8 +66,8 @@ export async function POST(request: NextRequest) {
 
     const payload = await verifyJWT(token);
     
-    // Only managers can create BOM
-    if (payload.role !== 'yonetici') {
+    // Only managers and planlama can create BOM
+    if (payload.role !== 'yonetici' && payload.role !== 'planlama') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 

@@ -35,8 +35,8 @@ export async function PATCH(
       .eq('id', id)
       .single();
 
-    // Only assigned operator or manager can update status
-    if (payload.userId !== existingPlan?.assigned_operator && payload.role !== 'yonetici') {
+    // Only assigned operator, manager or planlama can update status
+    if (payload.userId !== existingPlan?.assigned_operator && payload.role !== 'yonetici' && payload.role !== 'planlama') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 

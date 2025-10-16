@@ -142,8 +142,8 @@ export async function DELETE(
       return NextResponse.json({ error: 'User context required' }, { status: 401 });
     }
 
-    // Sadece yönetici müşteri silebilir
-    if (payload.role !== 'yonetici') {
+    // Sadece yönetici ve planlama müşteri silebilir
+    if (payload.role !== 'yonetici' && payload.role !== 'planlama') {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
     }
 

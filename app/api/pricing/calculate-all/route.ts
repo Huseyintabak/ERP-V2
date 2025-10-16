@@ -15,8 +15,8 @@ export async function POST(request: NextRequest) {
 
     const payload = await verifyJWT(token);
     
-    // Only yonetici can run bulk calculations
-    if (payload.role !== 'yonetici') {
+    // Only yonetici and planlama can run bulk calculations
+    if (payload.role !== 'yonetici' && payload.role !== 'planlama') {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
     }
 

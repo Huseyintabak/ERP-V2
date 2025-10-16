@@ -71,8 +71,8 @@ export async function PUT(
     const { id } = await params;
     const supabase = await createClient();
 
-    // Only managers can update orders
-    if (payload.role !== 'yonetici') {
+    // Only managers and planlama can update orders
+    if (payload.role !== 'yonetici' && payload.role !== 'planlama') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -113,8 +113,8 @@ export async function DELETE(
     const { id } = await params;
     const supabase = await createClient();
 
-    // Only managers can delete orders
-    if (payload.role !== 'yonetici') {
+    // Only managers and planlama can delete orders
+    if (payload.role !== 'yonetici' && payload.role !== 'planlama') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 

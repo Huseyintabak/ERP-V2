@@ -25,8 +25,8 @@ export async function PUT(
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
 
-    // Only yonetici can approve/reject inventory counts
-    if (payload.role !== 'yonetici') {
+    // Only yonetici and planlama can approve/reject inventory counts
+    if (payload.role !== 'yonetici' && payload.role !== 'planlama') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 

@@ -16,8 +16,8 @@ export async function PATCH(
     const { id } = await params;
     const supabase = await createClient();
 
-    // Only managers can assign operators
-    if (payload.role !== 'yonetici') {
+    // Only managers and planlama can assign operators
+    if (payload.role !== 'yonetici' && payload.role !== 'planlama') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
