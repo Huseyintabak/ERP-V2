@@ -98,10 +98,19 @@ export default function UretimYonetimPage() {
         toast.success('Sipariş onaylandı ve üretim planı oluşturuldu');
         fetchOrders();
       } else {
-        if (data.missing_materials) {
+        // Show detailed error message for insufficient materials
+        if (data.error) {
+          toast.error(data.error, {
+            duration: 15000, // Show for 15 seconds
+            style: {
+              whiteSpace: 'pre-line', // Allow line breaks
+              maxWidth: '600px'
+            }
+          });
+        } else if (data.missing_materials) {
           toast.error(`${data.missing_materials.length} malzeme eksik`);
         } else {
-          throw new Error(data.error);
+          throw new Error(data.error || 'Bilinmeyen hata');
         }
       }
     } catch (error: any) {

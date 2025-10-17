@@ -411,8 +411,7 @@ BEGIN
   LOOP
     IF v_bom_record.material_type = 'raw' THEN
       UPDATE raw_materials
-      SET quantity = quantity - (v_bom_record.quantity_needed * NEW.quantity_produced / 
-        (SELECT planned_quantity FROM production_plans WHERE id = NEW.plan_id))
+      SET quantity = quantity - (v_bom_record.quantity_needed * NEW.quantity_produced)
       WHERE id = v_bom_record.material_id;
       
       INSERT INTO stock_movements (material_type, material_id, movement_type, quantity, user_id, description)
@@ -420,8 +419,7 @@ BEGIN
         'raw',
         v_bom_record.material_id,
         'uretim',
-        -(v_bom_record.quantity_needed * NEW.quantity_produced / 
-          (SELECT planned_quantity FROM production_plans WHERE id = NEW.plan_id)),
+        -(v_bom_record.quantity_needed * NEW.quantity_produced),
         NEW.operator_id,
         format('Üretim tüketimi: %s adet %s için', NEW.quantity_produced, 
           (SELECT fp.name FROM production_plans pp 
@@ -430,8 +428,7 @@ BEGIN
       );
     ELSIF v_bom_record.material_type = 'semi' THEN
       UPDATE semi_finished_products
-      SET quantity = quantity - (v_bom_record.quantity_needed * NEW.quantity_produced / 
-        (SELECT planned_quantity FROM production_plans WHERE id = NEW.plan_id))
+      SET quantity = quantity - (v_bom_record.quantity_needed * NEW.quantity_produced)
       WHERE id = v_bom_record.material_id;
       
       INSERT INTO stock_movements (material_type, material_id, movement_type, quantity, user_id, description)
@@ -439,8 +436,7 @@ BEGIN
         'semi',
         v_bom_record.material_id,
         'uretim',
-        -(v_bom_record.quantity_needed * NEW.quantity_produced / 
-          (SELECT planned_quantity FROM production_plans WHERE id = NEW.plan_id)),
+        -(v_bom_record.quantity_needed * NEW.quantity_produced),
         NEW.operator_id,
         format('Üretim tüketimi: %s adet için', NEW.quantity_produced)
       );

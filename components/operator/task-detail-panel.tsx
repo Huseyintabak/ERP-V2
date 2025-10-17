@@ -296,7 +296,7 @@ export function TaskDetailPanel({ task, onRefresh }: TaskDetailPanelProps) {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Kayıt eklenemedi');
+        throw new Error(data.error || '❌ Üretim kaydı oluşturulamadı!\n\n🔍 Problem: Bilinmeyen hata\n💡 Çözüm: Lütfen sistem yöneticisi ile iletişime geçin.');
       }
 
       toast.success('Üretim kaydı başarıyla eklendi');
@@ -309,7 +309,7 @@ export function TaskDetailPanel({ task, onRefresh }: TaskDetailPanelProps) {
       
     } catch (error) {
       console.error('Production log error:', error);
-      toast.error(error instanceof Error ? error.message : 'Kayıt eklenemedi');
+      toast.error(error instanceof Error ? error.message : '❌ Üretim kaydı oluşturulamadı!\n\n🔍 Problem: Bilinmeyen hata\n💡 Çözüm: Lütfen sistem yöneticisi ile iletişime geçin.');
     } finally {
       setLoading(false);
       setScanning(false);

@@ -118,6 +118,74 @@ export async function DELETE(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
+    // First, release reserved materials before deleting the order
+    console.log('🔄 Releasing reserved materials for order:', id);
+    
+    // Get order items to release reservations
+    const { data: orderItems } = await supabase
+      .from('order_items')
+      .select('*')
+      .eq('order_id', id);
+
+    if (orderItems && orderItems.length > 0) {
+      for (const item of orderItems) {
+        console.log(`🔍 Releasing reservations for: ${item.product_name} (${item.quantity} units)`);
+
+        // Get BOM for this product
+        const { data: bomItems, error: bomError } = await supabase
+          .from('bom')
+          .select(`
+            material_type,
+            material_id,
+            quantity_needed
+          `)
+          .eq('finished_product_id', item.product_id);
+
+        if (bomError) {
+          console.error('❌ Error fetching BOM:', bomError);
+          continue;
+        }
+
+        if (bomItems && bomItems.length > 0) {
+          for (const bomItem of bomItems) {
+            const needed = bomItem.quantity_needed * item.quantity;
+            
+            // Get material details
+            const tableName = bomItem.material_type === 'raw' ? 'raw_materials' : 'semi_finished_products';
+            const { data: material, error: materialError } = await supabase
+              .from(tableName)
+              .select('id, code, name, quantity, reserved_quantity')
+              .eq('id', bomItem.material_id)
+              .single();
+            
+            if (materialError) {
+              console.error('❌ Error fetching material:', materialError);
+              continue;
+            }
+            
+            if (material) {
+              // Release reserved quantity
+              const newReservedQuantity = Math.max(0, material.reserved_quantity - needed);
+              const { error: updateError } = await supabase
+                .from(tableName)
+                .update({ 
+                  reserved_quantity: newReservedQuantity,
+                  updated_at: new Date().toISOString()
+                })
+                .eq('id', bomItem.material_id);
+
+              if (updateError) {
+                console.error('❌ Error releasing reserved quantity:', updateError);
+                continue;
+              }
+
+              console.log('✅ Released', needed, 'units of', material.code, '(was reserved:', material.reserved_quantity, 'now:', newReservedQuantity, ')');
+            }
+          }
+        }
+      }
+    }
+
     // Check if order has production plans and delete them
     const { data: productionPlans } = await supabase
       .from('production_plans')
@@ -133,6 +201,20 @@ export async function DELETE(
       if (inProgressPlans.length > 0) {
         return NextResponse.json({ 
           error: 'Bu siparişin devam eden üretim planları var. Önce üretim planlarını durdurun.' 
+        }, { status: 400 });
+      }
+
+      // Delete BOM snapshots first
+      const { error: snapshotsError } = await supabase
+        .from('production_plan_bom_snapshot')
+        .delete()
+        .in('plan_id', productionPlans.map(plan => plan.id));
+
+      if (snapshotsError) {
+        console.error('Error deleting BOM snapshots:', snapshotsError);
+        return NextResponse.json({ 
+          error: 'Failed to delete BOM snapshots', 
+          details: snapshotsError.message 
         }, { status: 400 });
       }
 

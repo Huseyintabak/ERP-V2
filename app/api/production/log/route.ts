@@ -42,21 +42,23 @@ export async function POST(request: NextRequest) {
 
     if (planError || !plan) {
       return NextResponse.json({ 
-        error: 'Plan bulunamadı veya size atanmamış' 
+        error: '❌ Üretim yapılamadı!\n\n🔍 Problem: Plan bulunamadı veya size atanmamış\n💡 Çözüm: Planlama departmanından size bir görev atanmasını isteyin.' 
       }, { status: 404 });
     }
 
     // Plan status kontrolü
     if (plan.status !== 'devam_ediyor') {
       return NextResponse.json({ 
-        error: `Plan ${plan.status} durumunda, sadece 'devam_ediyor' durumundaki planlar için üretim kaydı yapılabilir` 
+        error: `❌ Üretim yapılamadı!\n\n🔍 Problem: Bu plan aktif değil (Durum: ${plan.status})\n💡 Çözüm: Planlama departmanından planın aktif hale getirilmesini isteyin.` 
       }, { status: 400 });
     }
 
     // 3. Barkod/Code Validasyonu
     const product = plan.product;
     if (!product) {
-      return NextResponse.json({ error: 'Ürün bilgisi bulunamadı' }, { status: 404 });
+      return NextResponse.json({ 
+        error: '❌ Üretim yapılamadı!\n\n🔍 Problem: Ürün bilgisi bulunamadı\n💡 Çözüm: Lütfen sistem yöneticisi ile iletişime geçin.' 
+      }, { status: 404 });
     }
 
     // Barkod varsa kontrol et, yoksa code ile devam et
@@ -64,7 +66,7 @@ export async function POST(request: NextRequest) {
     if (barcode_scanned !== expectedIdentifier) {
       const identifierType = product.barcode ? 'barkod' : 'ürün kodu';
       return NextResponse.json({ 
-        error: `Yanlış ${identifierType}. Beklenen: ${expectedIdentifier}, Girilen: ${barcode_scanned}` 
+        error: `❌ Üretim yapılamadı!\n\n🔍 Problem: Yanlış ${identifierType}\n• Beklenen: ${expectedIdentifier}\n• Girilen: ${barcode_scanned}\n\n💡 Çözüm: Doğru ${identifierType} ile tekrar deneyin.` 
       }, { status: 400 });
     }
 
@@ -73,7 +75,7 @@ export async function POST(request: NextRequest) {
     if (totalProduced > plan.planned_quantity) {
       const remaining = plan.planned_quantity - plan.produced_quantity;
       return NextResponse.json({ 
-        error: `Hedef miktar aşılamaz. Planlanan: ${plan.planned_quantity}, Üretilen: ${plan.produced_quantity}, Kalan: ${remaining}, Girilen: ${quantity_produced}` 
+        error: `❌ Üretim yapılamadı!\n\n🔍 Problem: Hedef miktar aşılamaz\n• Planlanan: ${plan.planned_quantity} adet\n• Üretilen: ${plan.produced_quantity} adet\n• Kalan: ${remaining} adet\n• Girilen: ${quantity_produced} adet\n\n💡 Çözüm: Maksimum ${remaining} adet üretim yapabilirsiniz.` 
       }, { status: 400 });
     }
 
@@ -86,13 +88,13 @@ export async function POST(request: NextRequest) {
     if (bomError) {
       console.error('BOM snapshot fetch error:', bomError);
       return NextResponse.json({ 
-        error: 'BOM bilgileri alınamadı' 
+        error: '❌ Üretim yapılamadı!\n\n🔍 Problem: BOM bilgileri alınamadı\n💡 Çözüm: Lütfen sistem yöneticisi ile iletişime geçin.' 
       }, { status: 500 });
     }
 
     if (!bomSnapshot || bomSnapshot.length === 0) {
       return NextResponse.json({ 
-        error: 'Bu plan için BOM snapshot bulunamadı' 
+        error: '❌ Üretim yapılamadı!\n\n🔍 Problem: Bu plan için BOM snapshot bulunamadı\n💡 Çözüm: Siparişi yeniden onaylayın veya sistem yöneticisi ile iletişime geçin.' 
       }, { status: 404 });
     }
 
@@ -124,7 +126,7 @@ export async function POST(request: NextRequest) {
 
       if (material && material.quantity < consumption) {
         return NextResponse.json({ 
-          error: `Yetersiz stok: ${item.material_name} (${item.material_code}). Mevcut: ${material.quantity}, İhtiyaç: ${consumption.toFixed(2)}` 
+          error: `❌ Üretim yapılamadı! Stok yetersizliği nedeniyle üretim durduruldu.\n\n🔍 Problemli Malzeme:\n• ${item.material_name} (${item.material_code})\n• Mevcut Stok: ${material.quantity} ${item.material_type === 'raw' ? 'kg' : 'adet'}\n• Gerekli Miktar: ${consumption.toFixed(2)} ${item.material_type === 'raw' ? 'kg' : 'adet'}\n• Eksik Miktar: ${(consumption - material.quantity).toFixed(2)} ${item.material_type === 'raw' ? 'kg' : 'adet'}\n\n💡 Çözüm: Stok yönetimi sayfasından ${item.material_name} malzemesinin stok miktarını artırın.` 
         }, { status: 400 });
       }
 
@@ -152,8 +154,16 @@ export async function POST(request: NextRequest) {
 
     if (logError) {
       console.error('Production log insert error:', logError);
+      
+      // Constraint hatası kontrolü
+      if (logError.code === '23514' && logError.message.includes('quantity_check')) {
+        return NextResponse.json({ 
+          error: '❌ Üretim yapılamadı! Stok yetersizliği nedeniyle üretim durduruldu.\n\n🔍 Problem: Veritabanı seviyesinde stok constraint hatası\n💡 Çözüm: Stok yönetimi sayfasından malzeme stoklarını kontrol edin ve gerekli miktarları artırın.' 
+        }, { status: 400 });
+      }
+      
       return NextResponse.json({ 
-        error: 'Üretim kaydı oluşturulamadı' 
+        error: '❌ Üretim kaydı oluşturulamadı!\n\n🔍 Problem: Veritabanı hatası\n💡 Çözüm: Lütfen sistem yöneticisi ile iletişime geçin.' 
       }, { status: 500 });
     }
 

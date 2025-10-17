@@ -43,6 +43,105 @@ async function handleApprove(
     // Approval always sets status to 'uretimde' (in production)
     const status = 'uretimde';
 
+    // First, check stock availability before approving the order
+    console.log('🔍 Checking stock availability before approval...');
+    
+    const { data: orderItems, error: itemsError } = await supabase
+      .from('order_items')
+      .select('*')
+      .eq('order_id', id);
+
+    if (itemsError) {
+      console.error('❌ Error fetching order items:', itemsError);
+      return NextResponse.json({ 
+        error: 'Failed to fetch order items', 
+        details: itemsError.message 
+      }, { status: 400 });
+    }
+
+    if (!orderItems || orderItems.length === 0) {
+      console.warn('⚠️ No order items found in order!');
+      return NextResponse.json({ error: 'Siparişte ürün bulunamadı' }, { status: 400 });
+    }
+
+    // Check stock availability for all items
+    const insufficientMaterials = [];
+    
+    for (const item of orderItems) {
+      console.log(`🔍 Checking stock for: ${item.product_name} (${item.quantity} units)`);
+
+      // Get BOM for this product
+      const { data: bomItems, error: bomError } = await supabase
+        .from('bom')
+        .select(`
+          material_type,
+          material_id,
+          quantity_needed
+        `)
+        .eq('finished_product_id', item.product_id);
+
+      if (bomError) {
+        console.error('❌ Error fetching BOM:', bomError);
+        continue;
+      }
+
+      if (bomItems && bomItems.length > 0) {
+        for (const bomItem of bomItems) {
+          const needed = bomItem.quantity_needed * item.quantity;
+          
+          // Get material details
+          const tableName = bomItem.material_type === 'raw' ? 'raw_materials' : 'semi_finished_products';
+          const { data: material, error: materialError } = await supabase
+            .from(tableName)
+            .select('id, code, name, quantity, reserved_quantity')
+            .eq('id', bomItem.material_id)
+            .single();
+          
+          if (materialError) {
+            console.error('❌ Error fetching material:', materialError);
+            continue;
+          }
+          
+          if (material) {
+            const available = material.quantity - material.reserved_quantity;
+            
+            if (available < needed) {
+              insufficientMaterials.push({
+                product_id: item.product_id,
+                product_name: item.product_name || 'Bilinmeyen Ürün',
+                material_code: material.code,
+                material_name: material.name,
+                needed: needed,
+                available: available,
+                shortfall: needed - available
+              });
+              console.warn(`⚠️ Insufficient stock for ${material.code}: needed ${needed}, available ${available}`);
+            }
+          }
+        }
+      }
+    }
+
+    // If there are insufficient materials, don't approve the order
+    if (insufficientMaterials.length > 0) {
+      const errorMessage = `❌ Sipariş onaylanamadı! Stok yetersizliği nedeniyle üretim yapılamıyor.\n\n🔍 Eksik Stoklar:\n\n` +
+        insufficientMaterials.map(item => 
+          `• ${item.product_name} için ${item.material_name} (${item.material_code}):\n` +
+          `  - Gerekli: ${item.needed} adet\n` +
+          `  - Mevcut: ${item.available} adet\n` +
+          `  - Eksik: ${item.shortfall} adet`
+        ).join('\n\n') +
+        `\n\n💡 Bu malzemelerin stokları artırıldıktan sonra siparişi tekrar onaylayabilirsiniz.`;
+
+      return NextResponse.json({
+        error: errorMessage,
+        insufficient_materials: insufficientMaterials
+      }, { status: 400 });
+    }
+
+    // If stock is sufficient, proceed with approval
+    console.log('✅ Stock check passed, proceeding with approval...');
+    
     // Update order status
     console.log('🔍 Updating order:', id, 'to status:', status);
     const { data: order, error: orderError } = await supabase
@@ -195,7 +294,7 @@ async function handleApprove(
             }
           }
 
-          // Reserve materials
+          // Reserve materials (stock already checked above)
           for (const bomItem of bomItems) {
             const needed = bomItem.quantity_needed * item.quantity;
             
@@ -213,16 +312,6 @@ async function handleApprove(
             }
             
             if (material) {
-              const available = material.quantity - material.reserved_quantity;
-              
-              if (available < needed) {
-                console.error('❌ Insufficient stock for:', material.code, 'needed:', needed, 'available:', available);
-                return NextResponse.json({ 
-                  error: 'Insufficient materials for production',
-                  details: `Not enough ${material.code}: needed ${needed}, available ${available}`
-                }, { status: 400 });
-              }
-
               // Update reserved quantity
               const { error: updateError } = await supabase
                 .from(tableName)
