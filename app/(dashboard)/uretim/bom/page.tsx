@@ -216,6 +216,7 @@ export default function BOMPage() {
   };
 
   const fetchBOMData = async (productId: string) => {
+    console.log('fetchBOMData called for product:', productId);
     try {
       setLoading(true);
       const response = await fetch(`/api/bom/${productId}`, {
@@ -224,11 +225,14 @@ export default function BOMPage() {
         }
       });
       
+      console.log('BOM API response:', response.status, response.ok);
+      
       if (!response.ok) {
         if (response.status === 404) {
           // BOM yoksa boş data döndür
           const product = allProducts.find(p => p.id === productId);
           if (product) {
+            console.log('BOM not found, returning empty data for product:', product.name);
             setBomData({
               product: {
                 id: product.id,
@@ -257,6 +261,7 @@ export default function BOMPage() {
       }
       
       const result = await response.json();
+      console.log('BOM data received:', { materialsCount: result.materials?.length || 0, result });
       
       // Güncel fiyatları allProducts'tan al ve merge et
       const currentProduct = allProducts.find(p => p.id === productId);
@@ -276,11 +281,13 @@ export default function BOMPage() {
   const handleProductSelect = (productId: string) => {
     const product = allProducts.find(p => p.id === productId);
     if (product) {
+      console.log('Product selected:', { productId, productName: product.name, productType: product.product_type });
       setSelectedProduct(product);
       fetchBOMData(productId);
       
       // Yarı mamul seçiliyse, newBOMEntries'i sadece hammadde olarak resetle
       if (product.product_type === 'semi') {
+        console.log('Semi product selected, resetting BOM entries');
         setNewBOMEntries([{
           material_type: 'raw',
           material_id: '',

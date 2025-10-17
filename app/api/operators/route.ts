@@ -23,6 +23,7 @@ export async function GET(request: NextRequest) {
     }
 
     console.log('✅ Operators data:', data);
+    console.log('✅ Operators count:', data?.length || 0);
     return NextResponse.json(data);
   } catch (error: any) {
     console.error('❌ Operators API error:', error);

@@ -34,17 +34,24 @@ const roleAccess: Record<string, string[]> = {
   '/api/production/actions': ['operator'],
   '/api/production/log': ['operator'],
   '/api/production/logs': ['operator', 'planlama', 'yonetici'],
+  '/api/production/semi-logs': ['operator', 'planlama', 'yonetici'],
+  '/api/production/semi-log': ['operator'],
   '/api/production/plan-status': ['operator', 'planlama', 'yonetici'],
   '/api/production/plans': ['planlama', 'yonetici'],
   '/api/bom/snapshot': ['operator', 'planlama', 'yonetici'],
+  '/api/bom/semi-snapshot': ['operator', 'planlama', 'yonetici'],
+  '/api/bom/semi-snapshot/': ['operator', 'planlama', 'yonetici'],
+  '/api/semi-bom': ['operator', 'planlama', 'yonetici'],
   '/api/users': ['yonetici'],
   '/api/settings': ['yonetici'],
   '/api/audit-logs': ['yonetici'],
   '/api/notifications': ['yonetici', 'planlama', 'depo'],
-  '/api/stock': ['depo', 'yonetici', 'planlama'],
+  '/api/stock': ['depo', 'yonetici', 'planlama', 'operator'],
   '/api/orders': ['planlama', 'yonetici'],
   '/api/customers': ['yonetici', 'planlama', 'depo'],
-  '/api/bom': ['planlama', 'yonetici'],
+  '/api/bom': ['planlama', 'yonetici', 'operator'],
+  '/api/reservations': ['planlama', 'yonetici', 'operator'],
+  '/api/production/complete': ['operator', 'planlama', 'yonetici'],
 };
 
 export async function middleware(request: NextRequest) {
@@ -90,11 +97,17 @@ export async function middleware(request: NextRequest) {
         .filter(([path]) => pathname.startsWith(path))
         .sort(([a], [b]) => b.length - a.length); // En uzun path önce
       
+      console.log('🔍 Middleware check:', { pathname, matchingPaths, userRole: payload.role });
+      
       if (matchingPaths.length > 0) {
         const [, allowedRoles] = matchingPaths[0];
+        console.log('🔍 Allowed roles for path:', allowedRoles);
         if (!allowedRoles.includes(payload.role)) {
+          console.log('❌ Access denied for role:', payload.role);
           return NextResponse.redirect(new URL('/403', request.url));
         }
+      } else {
+        console.log('⚠️ No matching path found for:', pathname);
       }
     }
 
@@ -125,8 +138,9 @@ export const config = {
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
+     * - api/semi-bom (test için bypass)
      */
-    '/((?!_next/static|_next/image|favicon.ico).*)',
+    '/((?!_next/static|_next/image|favicon.ico|api/semi-bom).*)',
   ],
 };
 

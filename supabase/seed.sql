@@ -121,6 +121,73 @@ FROM finished_products fp, semi_finished_products sfp
 WHERE fp.code = 'NU-002' AND sfp.code = 'YM-002';
 
 -- ============================================
+-- 8. ÖRNEK YARI MAMUL BOM (Semi-BOM)
+-- ============================================
+
+-- YM-001 (Plaka A) için BOM: 5 kg HM-001 (Çelik Sac) + 10 adet HM-003 (Vida)
+INSERT INTO semi_bom (semi_product_id, material_id, material_type, quantity, unit)
+SELECT 
+  sfp.id,
+  rm.id,
+  'raw',
+  5.0,
+  'kg'
+FROM semi_finished_products sfp, raw_materials rm
+WHERE sfp.code = 'YM-001' AND rm.code = 'HM-001';
+
+INSERT INTO semi_bom (semi_product_id, material_id, material_type, quantity, unit)
+SELECT 
+  sfp.id,
+  rm.id,
+  'raw',
+  10.0,
+  'adet'
+FROM semi_finished_products sfp, raw_materials rm
+WHERE sfp.code = 'YM-001' AND rm.code = 'HM-003';
+
+-- YM-002 (Gövde B) için BOM: 3 metre HM-002 (Alüminyum) + 1 adet YM-001 (Plaka A)
+INSERT INTO semi_bom (semi_product_id, material_id, material_type, quantity, unit)
+SELECT 
+  sfp.id,
+  rm.id,
+  'raw',
+  3.0,
+  'metre'
+FROM semi_finished_products sfp, raw_materials rm
+WHERE sfp.code = 'YM-002' AND rm.code = 'HM-002';
+
+INSERT INTO semi_bom (semi_product_id, material_id, material_type, quantity, unit)
+SELECT 
+  sfp1.id,
+  sfp2.id,
+  'semi',
+  1.0,
+  'adet'
+FROM semi_finished_products sfp1, semi_finished_products sfp2
+WHERE sfp1.code = 'YM-002' AND sfp2.code = 'YM-001';
+
+-- YM-003 (Kapak C) için BOM: 2 litre HM-004 (Boya) + 0.5 metre HM-005 (Elektrik Kablosu)
+INSERT INTO semi_bom (semi_product_id, material_id, material_type, quantity, unit)
+SELECT 
+  sfp.id,
+  rm.id,
+  'raw',
+  2.0,
+  'litre'
+FROM semi_finished_products sfp, raw_materials rm
+WHERE sfp.code = 'YM-003' AND rm.code = 'HM-004';
+
+INSERT INTO semi_bom (semi_product_id, material_id, material_type, quantity, unit)
+SELECT 
+  sfp.id,
+  rm.id,
+  'raw',
+  0.5,
+  'metre'
+FROM semi_finished_products sfp, raw_materials rm
+WHERE sfp.code = 'YM-003' AND rm.code = 'HM-005';
+
+-- ============================================
 -- Seed Data Complete!
 -- ============================================
 -- Varsayılan kullanıcılar:

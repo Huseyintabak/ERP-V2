@@ -52,6 +52,74 @@ export async function GET(
     }
 
     if (!bomSnapshot || bomSnapshot.length === 0) {
+      console.log('No BOM snapshot found for plan:', planId);
+      // BOM snapshot yoksa, plan'dan ürün bilgisini al ve BOM'u direkt çek
+      const { data: plan } = await supabase
+        .from('production_plans')
+        .select('product_id, product_type, planned_quantity')
+        .eq('id', planId)
+        .single();
+      
+      if (plan) {
+        console.log('Plan found, fetching BOM directly for product:', plan.product_id);
+        // BOM'u direkt çek
+        try {
+          const bomResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/bom/${plan.product_id}`);
+          if (bomResponse.ok) {
+            const bomData = await bomResponse.json();
+            console.log('BOM data fetched directly:', bomData);
+            
+            // Malzeme stok bilgilerini ekle
+            const materials = await Promise.all(
+              (bomData.materials || []).map(async (material: any) => {
+                let currentStock = 0;
+                
+                if (material.material_type === 'raw') {
+                  const { data: rawMaterial } = await supabase
+                    .from('raw_materials')
+                    .select('quantity')
+                    .eq('id', material.material_id)
+                    .single();
+                  currentStock = rawMaterial?.quantity || 0;
+                } else if (material.material_type === 'semi') {
+                  const { data: semiMaterial } = await supabase
+                    .from('semi_finished_products')
+                    .select('quantity')
+                    .eq('id', material.material_id)
+                    .single();
+                  currentStock = semiMaterial?.quantity || 0;
+                } else if (material.material_type === 'finished') {
+                  const { data: finishedMaterial } = await supabase
+                    .from('finished_products')
+                    .select('quantity')
+                    .eq('id', material.material_id)
+                    .single();
+                  currentStock = finishedMaterial?.quantity || 0;
+                }
+
+                return {
+                  material_type: material.material_type,
+                  material_code: material.material_code || 'N/A',
+                  material_name: material.material_name || 'N/A',
+                  quantity_needed: material.quantity_needed || 0,
+                  current_stock: currentStock,
+                  consumption_per_unit: material.quantity_needed || 0,
+                  material_id: material.material_id
+                };
+              })
+            );
+            
+            return NextResponse.json({
+              materials,
+              planId,
+              totalMaterials: materials.length
+            });
+          }
+        } catch (error) {
+          console.error('Error fetching BOM directly:', error);
+        }
+      }
+      
       return NextResponse.json({ 
         error: 'Bu plan için BOM snapshot bulunamadı' 
       }, { status: 404 });

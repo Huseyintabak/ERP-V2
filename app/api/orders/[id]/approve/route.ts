@@ -156,6 +156,45 @@ async function handleApprove(
 
           console.log('🔧 BOM items:', JSON.stringify(bomItems, null, 2));
 
+          // Create BOM snapshot for this production plan
+          if (bomItems && bomItems.length > 0) {
+            console.log('📸 Creating BOM snapshot for plan:', plan.id);
+            
+            for (const bomItem of bomItems) {
+              // Get material details for snapshot
+              const tableName = bomItem.material_type === 'raw' ? 'raw_materials' : 'semi_finished_products';
+              const { data: material, error: materialError } = await supabase
+                .from(tableName)
+                .select('id, code, name')
+                .eq('id', bomItem.material_id)
+                .single();
+              
+              if (materialError || !material) {
+                console.error('❌ Error fetching material for snapshot:', materialError);
+                continue;
+              }
+
+              // Create BOM snapshot record
+              const { error: snapshotError } = await supabase
+                .from('production_plan_bom_snapshot')
+                .insert({
+                  plan_id: plan.id,
+                  material_type: bomItem.material_type,
+                  material_id: bomItem.material_id,
+                  material_code: material.code,
+                  material_name: material.name,
+                  quantity_needed: bomItem.quantity_needed
+                });
+
+              if (snapshotError) {
+                console.error('❌ Error creating BOM snapshot:', snapshotError);
+                continue;
+              }
+
+              console.log('✅ BOM snapshot created for:', material.code);
+            }
+          }
+
           // Reserve materials
           for (const bomItem of bomItems) {
             const needed = bomItem.quantity_needed * item.quantity;

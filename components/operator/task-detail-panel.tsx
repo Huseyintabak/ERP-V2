@@ -23,11 +23,13 @@ import { ProductionLogRollbackDialog } from '@/components/production/production-
 
 interface ProductionTask {
   id: string;
-  order_id: string;
+  order_id?: string; // Normal üretim için
+  order_number?: string; // Yarı mamul üretim için
   product_id: string;
   planned_quantity: number;
   produced_quantity: number;
   status: string;
+  task_type?: 'production' | 'semi_production';
   order?: {
     id: string;
     order_number: string;
@@ -40,6 +42,7 @@ interface ProductionTask {
     name: string;
     code: string;
     barcode?: string;
+    unit?: string;
   };
 }
 
@@ -87,6 +90,7 @@ export function TaskDetailPanel({ task, onRefresh }: TaskDetailPanelProps) {
   const [fetchingLogs, setFetchingLogs] = useState(false);
   const [rollbackDialogOpen, setRollbackDialogOpen] = useState(false);
   const [selectedLog, setSelectedLog] = useState<ProductionLog | null>(null);
+  const [creatingReservation, setCreatingReservation] = useState(false);
 
   useEffect(() => {
     if (task) {
@@ -100,13 +104,26 @@ export function TaskDetailPanel({ task, onRefresh }: TaskDetailPanelProps) {
     
     setFetchingLogs(true);
     try {
-      const response = await fetch(`/api/production/logs?plan_id=${task.id}`);
+      let response;
+      
+      if (task.task_type === 'semi_production') {
+        // Yarı mamul üretim siparişi için
+        response = await fetch(`/api/production/semi-logs?order_id=${task.id}`);
+      } else {
+        // Normal üretim planı için
+        response = await fetch(`/api/production/logs?plan_id=${task.id}`);
+      }
+      
       if (response.ok) {
         const data = await response.json();
         setLogs(data.data || []);
+      } else {
+        console.error('Logs fetch failed:', response.status, response.statusText);
+        setLogs([]);
       }
     } catch (error) {
       console.error('Failed to fetch logs:', error);
+      setLogs([]);
     } finally {
       setFetchingLogs(false);
     }
@@ -116,13 +133,130 @@ export function TaskDetailPanel({ task, onRefresh }: TaskDetailPanelProps) {
     if (!task) return;
     
     try {
-      const response = await fetch(`/api/bom/snapshot/${task.id}`);
+      let response;
+      let url;
+      
+      if (task.task_type === 'semi_production') {
+        // Yarı mamul üretim siparişi için - product_id kullan
+        url = `/api/bom/${task.product_id}`;
+        console.log('🔍 Fetching semi BOM for product:', task.product_id, 'URL:', url);
+        response = await fetch(url);
+      } else {
+        // Normal üretim planı için - direkt BOM API'sini çağır
+        url = `/api/bom/${task.product_id}`;
+        console.log('🔍 Fetching normal BOM for product:', task.product_id, 'URL:', url);
+        response = await fetch(url);
+      }
+      
+      console.log('🔍 BOM response status:', response.status);
+      
       if (response.ok) {
-        const data = await response.json();
-        setBomMaterials(data.materials || []);
+        let data;
+        try {
+          const responseText = await response.text();
+          console.log('🔍 Raw response text (first 200 chars):', responseText.substring(0, 200));
+          data = JSON.parse(responseText);
+        } catch (parseError) {
+          console.error('JSON parse error:', parseError);
+          setBomMaterials([]);
+          return;
+        }
+        
+        console.log('🔍 BOM data received:', data);
+        
+        // Yarımmamül ürünler için BOM verilerini işle
+        if (task.task_type === 'semi_production') {
+          // Stok bilgilerini almak için ayrı API çağrıları yap
+          const materialsWithStock = await Promise.all((data.materials || []).map(async (material: any) => {
+            let currentStock = 0;
+            
+            try {
+              // Malzeme tipine göre stok bilgisini al
+              if (material.material_type === 'raw') {
+                const stockResponse = await fetch(`/api/stock/raw?limit=1000`);
+                if (stockResponse.ok) {
+                  const stockData = await stockResponse.json();
+                  const stockItem = stockData.data.find((item: any) => item.id === material.material_id);
+                  currentStock = stockItem?.quantity || 0;
+                }
+              } else if (material.material_type === 'semi') {
+                const stockResponse = await fetch(`/api/stock/semi?limit=1000`);
+                if (stockResponse.ok) {
+                  const stockData = await stockResponse.json();
+                  const stockItem = stockData.data.find((item: any) => item.id === material.material_id);
+                  currentStock = stockItem?.quantity || 0;
+                }
+              }
+            } catch (error) {
+              console.error('Error fetching stock for material:', material.material_id, error);
+            }
+            
+            return {
+              material_id: material.material_id,
+              material_name: material.material?.name || 'N/A',
+              material_code: material.material?.code || 'N/A',
+              material_type: material.material_type,
+              quantity_needed: material.quantity_needed || 0,
+              consumption_per_unit: material.quantity_needed || 0,
+              current_stock: currentStock,
+            };
+          }));
+          
+          setBomMaterials(materialsWithStock);
+        } else {
+          // Nihai ürünler için de stok bilgilerini al
+          const materialsWithStock = await Promise.all((data.materials || []).map(async (material: any) => {
+            let currentStock = 0;
+            
+            try {
+              // Malzeme tipine göre stok bilgisini al
+              if (material.material_type === 'raw') {
+                const stockResponse = await fetch(`/api/stock/raw?limit=1000`);
+                if (stockResponse.ok) {
+                  const stockData = await stockResponse.json();
+                  const stockItem = stockData.data.find((item: any) => item.id === material.material_id);
+                  currentStock = stockItem?.quantity || 0;
+                }
+              } else if (material.material_type === 'semi') {
+                const stockResponse = await fetch(`/api/stock/semi?limit=1000`);
+                if (stockResponse.ok) {
+                  const stockData = await stockResponse.json();
+                  const stockItem = stockData.data.find((item: any) => item.id === material.material_id);
+                  currentStock = stockItem?.quantity || 0;
+                }
+              } else if (material.material_type === 'finished') {
+                const stockResponse = await fetch(`/api/stock/finished?limit=1000`);
+                if (stockResponse.ok) {
+                  const stockData = await stockResponse.json();
+                  const stockItem = stockData.data.find((item: any) => item.id === material.material_id);
+                  currentStock = stockItem?.quantity || 0;
+                }
+              }
+            } catch (error) {
+              console.error('Error fetching stock for material:', material.material_id, error);
+            }
+            
+            return {
+              material_id: material.material_id,
+              material_name: material.material?.name || 'N/A',
+              material_code: material.material?.code || 'N/A',
+              material_type: material.material_type,
+              quantity_needed: material.quantity_needed || 0,
+              consumption_per_unit: material.quantity_needed || 0,
+              current_stock: currentStock,
+            };
+          }));
+          
+          setBomMaterials(materialsWithStock);
+        }
+      } else {
+        const errorText = await response.text();
+        console.error('BOM fetch failed:', response.status, response.statusText, errorText);
+        setBomMaterials([]);
       }
     } catch (error) {
       console.error('Failed to fetch BOM:', error);
+      setBomMaterials([]);
     }
   };
 
@@ -133,15 +267,31 @@ export function TaskDetailPanel({ task, onRefresh }: TaskDetailPanelProps) {
     setScanning(true);
 
     try {
-      const response = await fetch('/api/production/log', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          plan_id: task.id,
-          barcode_scanned: barcode.trim(),
-          quantity_produced: 1,
-        }),
-      });
+      let response;
+      
+      if (task.task_type === 'semi_production') {
+        // Yarı mamul üretim siparişi için
+        response = await fetch('/api/production/semi-log', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            order_id: task.id,
+            barcode_scanned: barcode.trim(),
+            quantity_produced: 1,
+          }),
+        });
+      } else {
+        // Normal üretim planı için
+        response = await fetch('/api/production/log', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            plan_id: task.id,
+            barcode_scanned: barcode.trim(),
+            quantity_produced: 1,
+          }),
+        });
+      }
 
       const data = await response.json();
 
@@ -182,6 +332,51 @@ export function TaskDetailPanel({ task, onRefresh }: TaskDetailPanelProps) {
     onRefresh?.();
   };
 
+  // Rezervasyon oluştur
+  const handleCreateReservation = async () => {
+    if (!task || !bomMaterials.length) {
+      toast.error('BOM malzemeleri bulunamadı');
+      return;
+    }
+
+    try {
+      setCreatingReservation(true);
+
+      const materials = bomMaterials.map(material => ({
+        material_id: material.material_id,
+        material_type: material.material_type,
+        quantity_needed: material.quantity_needed * task.planned_quantity,
+        material_name: material.material_name,
+        unit: material.unit
+      }));
+
+      const response = await fetch('/api/reservations', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          order_id: task.order_id || task.id,
+          order_type: task.task_type === 'semi_production' ? 'semi_production_plan' : 'production_plan',
+          materials
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Rezervasyon oluşturulamadı');
+      }
+
+      toast.success('Malzeme rezervasyonu başarıyla oluşturuldu');
+      onRefresh();
+    } catch (error: any) {
+      console.error('Reservation creation error:', error);
+      toast.error(error.message || 'Rezervasyon oluşturulamadı');
+    } finally {
+      setCreatingReservation(false);
+    }
+  };
+
   if (!task) {
     return (
       <div className="h-full flex items-center justify-center bg-muted/20">
@@ -209,8 +404,11 @@ export function TaskDetailPanel({ task, onRefresh }: TaskDetailPanelProps) {
         <div className="flex items-center gap-3">
           <Barcode className="h-7 w-7 text-blue-600" />
           <div>
-            <h2 className="text-2xl font-bold">{task.order?.order_number}</h2>
+            <h2 className="text-2xl font-bold">{task.order_number || task.order?.order_number}</h2>
             <p className="text-sm text-muted-foreground">{task.product?.name}</p>
+            {task.task_type === 'semi_production' && (
+              <p className="text-xs text-blue-600 font-medium">Yarı Mamul Üretimi</p>
+            )}
           </div>
         </div>
       </div>
@@ -227,7 +425,7 @@ export function TaskDetailPanel({ task, onRefresh }: TaskDetailPanelProps) {
             <CardContent className="space-y-3 text-base">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Müşteri:</span>
-                <span className="font-medium">{task.order?.customer_name}</span>
+                <span className="font-medium">{task.order?.customer_name || 'N/A'}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Ürün:</span>
@@ -241,8 +439,8 @@ export function TaskDetailPanel({ task, onRefresh }: TaskDetailPanelProps) {
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Öncelik:</span>
-                <Badge variant={task.order?.priority === 'yuksek' ? 'destructive' : 'default'}>
-                  {task.order?.priority === 'yuksek' ? 'Acil' : 'Normal'}
+                <Badge variant={(task.order?.priority || 'orta') === 'yuksek' ? 'destructive' : 'default'}>
+                  {(task.order?.priority || 'orta') === 'yuksek' ? 'Acil' : 'Normal'}
                 </Badge>
               </div>
             </CardContent>
@@ -363,9 +561,26 @@ export function TaskDetailPanel({ task, onRefresh }: TaskDetailPanelProps) {
         {/* Gerekli Malzemeler */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg font-semibold flex items-center gap-2">
-              <Package className="h-5 w-5" />
-              Gerekli Malzemeler
+            <CardTitle className="text-lg font-semibold flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Package className="h-5 w-5" />
+                Gerekli Malzemeler
+              </div>
+              <Button 
+                onClick={handleCreateReservation}
+                disabled={creatingReservation || bomMaterials.length === 0}
+                size="sm"
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                {creatingReservation ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Rezervasyon Oluşturuluyor...
+                  </>
+                ) : (
+                  'Malzeme Rezervasyonu Oluştur'
+                )}
+              </Button>
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
@@ -377,9 +592,13 @@ export function TaskDetailPanel({ task, onRefresh }: TaskDetailPanelProps) {
               ) : (
                 <div className="grid grid-cols-2 gap-4 p-6">
                   {bomMaterials.map((material, index) => {
-                    const totalNeeded = material.quantity_needed;
+                    // Toplam sipariş miktarı için gerekli malzeme miktarı
+                    const totalNeeded = material.quantity_needed * task.planned_quantity;
+                    // Şu ana kadar üretilen miktar için tüketilen malzeme
                     const consumed = material.consumption_per_unit * task.produced_quantity;
+                    // Kalan malzeme miktarı (toplam gerekli - tüketilen)
                     const remaining = totalNeeded - consumed;
+                    // Stok yetersiz mi kontrol et
                     const isLowStock = material.current_stock < totalNeeded;
                     
                     return (

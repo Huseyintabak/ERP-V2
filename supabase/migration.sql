@@ -108,6 +108,38 @@ CREATE TABLE bom (
 CREATE INDEX idx_bom_product ON bom(finished_product_id);
 CREATE INDEX idx_bom_material ON bom(material_type, material_id);
 
+-- 1.6.1 Semi-BOM (Yarımmamül Ürünler için BOM)
+CREATE TABLE semi_bom (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  semi_product_id UUID NOT NULL REFERENCES semi_finished_products(id) ON DELETE CASCADE,
+  material_id UUID NOT NULL,
+  material_type TEXT NOT NULL CHECK (material_type IN ('raw', 'semi', 'finished')),
+  quantity NUMERIC(12, 2) NOT NULL CHECK (quantity > 0),
+  unit TEXT DEFAULT 'adet',
+  notes TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(semi_product_id, material_id, material_type)
+);
+
+CREATE INDEX idx_semi_bom_semi_product_id ON semi_bom(semi_product_id);
+CREATE INDEX idx_semi_bom_material_id ON semi_bom(material_id);
+CREATE INDEX idx_semi_bom_material_type ON semi_bom(material_type);
+
+-- Updated_at trigger for semi_bom
+CREATE OR REPLACE FUNCTION update_semi_bom_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER semi_bom_updated_at_trigger
+    BEFORE UPDATE ON semi_bom
+    FOR EACH ROW
+    EXECUTE FUNCTION update_semi_bom_updated_at();
+
 -- 1.7 Orders
 CREATE TABLE orders (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

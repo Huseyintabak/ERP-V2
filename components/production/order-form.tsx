@@ -76,9 +76,19 @@ export function OrderForm({ onSuccess }: Props) {
     fetch('/api/operators')
       .then(res => res.json())
       .then(data => {
+        console.log('Operators API response:', data);
         if (Array.isArray(data)) {
           setOperators(data);
+        } else if (data.data && Array.isArray(data.data)) {
+          setOperators(data.data);
+        } else {
+          console.error('Unexpected operators data format:', data);
+          toast.error('Operatörler yüklenemedi');
         }
+      })
+      .catch(err => {
+        console.error('Failed to load operators:', err);
+        toast.error('Operatörler yüklenemedi');
       });
 
     // Customers'ları yükle

@@ -13,12 +13,13 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Plus, CheckCircle, Clock, Factory, Edit, Trash2, Users, XCircle } from 'lucide-react';
+import { Plus, CheckCircle, Clock, Factory, Edit, Trash2, Users, XCircle, Upload, Download } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatDate } from '@/lib/utils';
 import { OrderForm } from '@/components/production/order-form';
 import { CustomerDialog } from '@/components/customers/customer-dialog';
 import { OrderCancelDialog } from '@/components/orders/order-cancel-dialog';
+import { BulkOrderImportDialog } from '@/components/orders/bulk-order-import-dialog';
 import { useOrders, useOrderActions, useOrderLoading } from '@/stores/order-store';
 import { useRoleBasedRealtime } from '@/lib/hooks/use-realtime-store';
 import { useAuthStore } from '@/stores/auth-store';
@@ -171,20 +172,23 @@ export default function SiparislerPage() {
           <h1 className="text-3xl font-bold text-gray-900">Sipariş Yönetimi</h1>
           <p className="text-gray-500">Sipariş takibi ve yönetimi</p>
         </div>
-        <Dialog open={isOrderFormOpen} onOpenChange={setIsOrderFormOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              Yeni Sipariş
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Yeni Sipariş Oluştur</DialogTitle>
-            </DialogHeader>
-            <OrderForm onSuccess={() => setIsOrderFormOpen(false)} />
-          </DialogContent>
-        </Dialog>
+        <div className="flex gap-2">
+          <Dialog open={isOrderFormOpen} onOpenChange={setIsOrderFormOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="mr-2 h-4 w-4" />
+                Yeni Sipariş
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>Yeni Sipariş Oluştur</DialogTitle>
+              </DialogHeader>
+              <OrderForm onSuccess={() => setIsOrderFormOpen(false)} />
+            </DialogContent>
+          </Dialog>
+          <BulkOrderImportDialog onImportComplete={() => actions.fetchOrders()} />
+        </div>
       </div>
 
       <Card>

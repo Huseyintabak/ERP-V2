@@ -22,7 +22,8 @@ import {
   Pause,
   PlayCircle,
   Eye,
-  AlertCircle
+  AlertCircle,
+  Package
 } from 'lucide-react';
 import { useRealtime } from '@/lib/hooks/use-realtime';
 import { useAuthStore } from '@/stores/auth-store';
@@ -57,16 +58,19 @@ interface OperatorStats {
 
 interface ProductionTask {
   id: string;
-  order_id: string;
+  order_id?: string; // Normal üretim için
+  order_number?: string; // Yarı mamul üretim için
   product_id: string;
   planned_quantity: number;
   produced_quantity: number;
-  status: 'planlandi' | 'devam_ediyor' | 'duraklatildi' | 'tamamlandi' | 'iptal_edildi';
+  status: 'planlandi' | 'devam_ediyor' | 'duraklatildi' | 'tamamlandi' | 'iptal_edildi' | 'iptal';
   assigned_operator_id?: string;
   started_at?: string;
   completed_at?: string;
   created_at: string;
   updated_at: string;
+  priority?: 'dusuk' | 'orta' | 'yuksek'; // Yarı mamul üretim için
+  notes?: string; // Yarı mamul üretim için
   order?: {
     id: string;
     order_number: string;
@@ -79,6 +83,29 @@ interface ProductionTask {
     name: string;
     code: string;
     barcode?: string;
+    unit?: string; // Yarı mamul üretim için
+  };
+  // Yarı mamul üretim mi normal üretim mi?
+  task_type?: 'production' | 'semi_production';
+}
+
+interface SemiProductionTask {
+  id: string;
+  order_number: string;
+  product_id: string;
+  planned_quantity: number;
+  produced_quantity: number;
+  status: 'planlandi' | 'devam_ediyor' | 'tamamlandi' | 'iptal';
+  assigned_operator_id?: string;
+  priority: 'dusuk' | 'orta' | 'yuksek';
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+  product?: {
+    id: string;
+    name: string;
+    code: string;
+    unit: string;
   };
 }
 
@@ -105,7 +132,7 @@ export default function OperatorDashboard() {
     workStatus: 'idle',
   });
 
-  // 3 Ayrı Liste
+  // 3 Ayrı Liste - Hem normal üretim hem yarı mamul üretim
   const [assignedTasks, setAssignedTasks] = useState<ProductionTask[]>([]);
   const [activeTasks, setActiveTasks] = useState<ProductionTask[]>([]);
   const [pausedTasks, setPausedTasks] = useState<ProductionTask[]>([]);
@@ -164,12 +191,35 @@ export default function OperatorDashboard() {
     if (!operatorId) return;
     
     try {
-      const response = await fetch('/api/operators/tasks?status=planlandi');
-      if (!response.ok) {
-        throw new Error('Failed to fetch assigned tasks');
-      }
-      const data = await response.json();
-      setAssignedTasks(data.data || []);
+      // Hem normal üretim hem yarı mamul üretim siparişlerini çek
+      const [productionResponse, semiResponse] = await Promise.all([
+        fetch('/api/operators/tasks?status=planlandi'),
+        fetch('/api/operators/semi-tasks?status=planlandi')
+      ]);
+
+      const productionData = productionResponse.ok ? await productionResponse.json() : { data: [] };
+      const semiData = semiResponse.ok ? await semiResponse.json() : { data: [] };
+
+      // Normal üretim planlarını işle
+      const productionTasks = (productionData.data || []).map((task: any) => ({
+        ...task,
+        task_type: 'production' as const
+      }));
+
+      // Yarı mamul üretim siparişlerini işle
+      const semiTasks = (semiData.data || []).map((task: any) => ({
+        ...task,
+        task_type: 'semi_production' as const,
+        order_id: task.id, // Yarı mamul için order_id'yi id ile eşle
+        order_number: task.order_number
+      }));
+
+      // Birleştir ve sırala
+      const allTasks = [...productionTasks, ...semiTasks].sort((a, b) => 
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
+
+      setAssignedTasks(allTasks);
     } catch (error) {
       console.error('Assigned tasks fetch error:', error);
     }
@@ -179,12 +229,35 @@ export default function OperatorDashboard() {
     if (!operatorId) return;
     
     try {
-      const response = await fetch('/api/operators/tasks?status=devam_ediyor');
-      if (!response.ok) {
-        throw new Error('Failed to fetch active tasks');
-      }
-      const data = await response.json();
-      setActiveTasks(data.data || []);
+      // Hem normal üretim hem yarı mamul üretim siparişlerini çek
+      const [productionResponse, semiResponse] = await Promise.all([
+        fetch('/api/operators/tasks?status=devam_ediyor'),
+        fetch('/api/operators/semi-tasks?status=devam_ediyor')
+      ]);
+
+      const productionData = productionResponse.ok ? await productionResponse.json() : { data: [] };
+      const semiData = semiResponse.ok ? await semiResponse.json() : { data: [] };
+
+      // Normal üretim planlarını işle
+      const productionTasks = (productionData.data || []).map((task: any) => ({
+        ...task,
+        task_type: 'production' as const
+      }));
+
+      // Yarı mamul üretim siparişlerini işle
+      const semiTasks = (semiData.data || []).map((task: any) => ({
+        ...task,
+        task_type: 'semi_production' as const,
+        order_id: task.id, // Yarı mamul için order_id'yi id ile eşle
+        order_number: task.order_number
+      }));
+
+      // Birleştir ve sırala
+      const allTasks = [...productionTasks, ...semiTasks].sort((a, b) => 
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
+
+      setActiveTasks(allTasks);
     } catch (error) {
       console.error('Active tasks fetch error:', error);
     }
@@ -194,47 +267,103 @@ export default function OperatorDashboard() {
     if (!operatorId) return;
     
     try {
-      const response = await fetch('/api/operators/tasks?status=duraklatildi');
-      if (!response.ok) {
-        throw new Error('Failed to fetch paused tasks');
-      }
-      const data = await response.json();
-      setPausedTasks(data.data || []);
+      // Hem normal üretim hem yarı mamul üretim siparişlerini çek
+      const [productionResponse, semiResponse] = await Promise.all([
+        fetch('/api/operators/tasks?status=duraklatildi'),
+        fetch('/api/operators/semi-tasks?status=duraklatildi')
+      ]);
+
+      const productionData = productionResponse.ok ? await productionResponse.json() : { data: [] };
+      const semiData = semiResponse.ok ? await semiResponse.json() : { data: [] };
+
+      // Normal üretim planlarını işle
+      const productionTasks = (productionData.data || []).map((task: any) => ({
+        ...task,
+        task_type: 'production' as const
+      }));
+
+      // Yarı mamul üretim siparişlerini işle
+      const semiTasks = (semiData.data || []).map((task: any) => ({
+        ...task,
+        task_type: 'semi_production' as const,
+        order_id: task.id, // Yarı mamul için order_id'yi id ile eşle
+        order_number: task.order_number
+      }));
+
+      // Birleştir ve sırala
+      const allTasks = [...productionTasks, ...semiTasks].sort((a, b) => 
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
+
+      setPausedTasks(allTasks);
     } catch (error) {
       console.error('Paused tasks fetch error:', error);
     }
   }
 
-  // Plan status actions
-  const handlePlanAction = async (planId: string, action: 'accept' | 'pause' | 'resume' | 'complete') => {
+
+  // Plan status actions - Hem normal üretim hem yarı mamul üretim
+  const handlePlanAction = async (task: ProductionTask, action: 'accept' | 'pause' | 'resume' | 'complete') => {
     try {
-      const response = await fetch('/api/production/plan-status', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          plan_id: planId,
-          action: action
-        }),
-      });
+      let response;
+      
+      if (task.task_type === 'semi_production') {
+        // Yarı mamul üretim siparişi için
+        const status = action === 'accept' ? 'devam_ediyor' : 
+                     action === 'complete' ? 'tamamlandi' : 
+                     action === 'pause' ? 'duraklatildi' : 'devam_ediyor';
+        
+        response = await fetch(`/api/production/semi-orders/${task.id}/status`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ status }),
+        });
+      } else {
+        // Normal üretim planı için
+        response = await fetch('/api/production/plan-status', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            plan_id: task.id,
+            action: action
+          }),
+        });
+      }
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || `Failed to ${action} plan`);
+        let errorMessage = `Failed to ${action} ${task.task_type === 'semi_production' ? 'semi order' : 'plan'}`;
+        try {
+          const error = await response.json();
+          errorMessage = error.error || errorMessage;
+        } catch (parseError) {
+          errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+        }
+        console.error('Plan action error:', {
+          status: response.status,
+          statusText: response.statusText,
+          action,
+          taskId: task.id,
+          taskType: task.task_type
+        });
+        throw new Error(errorMessage);
       }
 
       const data = await response.json();
-      toast.success(data.message);
+      toast.success(data.message || `${task.task_type === 'semi_production' ? 'Yarı mamul üretim siparişi' : 'Üretim planı'} ${action === 'accept' ? 'başlatıldı' : action === 'complete' ? 'tamamlandı' : action === 'pause' ? 'duraklatıldı' : 'devam ettirildi'}`);
       
       // Verileri yenile
       fetchAllData();
       
     } catch (error) {
       console.error(`Plan ${action} error:`, error);
-      toast.error(error instanceof Error ? error.message : `Plan ${action} edilemedi`);
+      toast.error(error instanceof Error ? error.message : `${task.task_type === 'semi_production' ? 'Yarı mamul sipariş' : 'Plan'} ${action} edilemedi`);
     }
   };
+
 
   const selectTask = (task: ProductionTask) => {
     setSelectedTask(task);
@@ -338,25 +467,25 @@ export default function OperatorDashboard() {
                     onClick={() => selectTask(task)}
                   >
                     <div className="flex items-center justify-between">
-                      <Badge variant={task.order?.priority === 'yuksek' ? 'destructive' : 'default'}>
-                        {task.order?.priority === 'yuksek' ? 'Acil' : 'Normal'}
+                      <Badge variant={(task.priority || task.order?.priority) === 'yuksek' ? 'destructive' : 'default'}>
+                        {(task.priority || task.order?.priority) === 'yuksek' ? 'Acil' : 'Normal'}
                       </Badge>
                       <div className="text-sm text-muted-foreground">
-                        {task.order?.delivery_date ? new Date(task.order.delivery_date).toLocaleDateString('tr-TR') : 'N/A'}
+                        {task.task_type === 'semi_production' ? 'Yarı Mamul' : 'Normal Üretim'}
                       </div>
                     </div>
                     
                     <div>
-                      <div className="font-medium">{task.order?.order_number || 'N/A'}</div>
+                      <div className="font-medium">{task.order_number || task.order?.order_number || 'N/A'}</div>
                       <div className="text-sm text-muted-foreground">
-                        {task.product?.name || 'N/A'} - {task.planned_quantity} adet
+                        {task.product?.name || 'N/A'} - {task.planned_quantity} {task.product?.unit || 'adet'}
                       </div>
                     </div>
                     
                     <Button 
                       onClick={(e) => {
                         e.stopPropagation();
-                        handlePlanAction(task.id, 'accept');
+                        handlePlanAction(task, 'accept');
                       }}
                       className="w-full"
                       size="sm"
@@ -404,7 +533,7 @@ export default function OperatorDashboard() {
                       onClick={() => selectTask(task)}
                     >
                       <div className="flex items-center justify-between">
-                        <div className="font-medium">{task.order?.order_number || 'N/A'}</div>
+                        <div className="font-medium">{task.order_number || task.order?.order_number || 'N/A'}</div>
                         <Badge variant="outline" className="text-green-600 border-green-600">
                           {progress}%
                         </Badge>
@@ -413,24 +542,40 @@ export default function OperatorDashboard() {
                       <div>
                         <div className="text-sm">{task.product?.name || 'N/A'}</div>
                         <div className="text-xs text-muted-foreground">
-                          {task.produced_quantity} / {task.planned_quantity} adet
+                          {task.produced_quantity} / {task.planned_quantity} {task.product?.unit || 'adet'}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {task.task_type === 'semi_production' ? 'Yarı Mamul Üretimi' : 'Normal Üretim'}
                         </div>
                       </div>
                       
                       <Progress value={progress} className="h-2" />
                       
-                      <Button 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handlePlanAction(task.id, 'pause');
-                        }}
-                        size="sm"
-                        variant="outline"
-                        className="w-full"
-                      >
-                        <Pause className="h-4 w-4 mr-1" />
-                        Duraklat
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handlePlanAction(task, 'pause');
+                          }}
+                          size="sm"
+                          variant="outline"
+                          className="flex-1"
+                        >
+                          <Pause className="h-4 w-4 mr-1" />
+                          Duraklat
+                        </Button>
+                        <Button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handlePlanAction(task, 'complete');
+                          }}
+                          size="sm"
+                          className="flex-1"
+                        >
+                          <CheckCircle className="h-4 w-4 mr-1" />
+                          Tamamla
+                        </Button>
+                      </div>
                     </div>
                   );
                 })
@@ -471,7 +616,7 @@ export default function OperatorDashboard() {
                       onClick={() => selectTask(task)}
                     >
                       <div className="flex items-center justify-between">
-                        <div className="font-medium">{task.order?.order_number || 'N/A'}</div>
+                        <div className="font-medium">{task.order_number || task.order?.order_number || 'N/A'}</div>
                         <Badge variant="outline" className="text-orange-600 border-orange-600">
                           Duraklatıldı
                         </Badge>
@@ -480,7 +625,10 @@ export default function OperatorDashboard() {
                       <div>
                         <div className="text-sm">{task.product?.name || 'N/A'}</div>
                         <div className="text-xs text-muted-foreground">
-                          {task.produced_quantity} / {task.planned_quantity} adet (%{progress})
+                          {task.produced_quantity} / {task.planned_quantity} {task.product?.unit || 'adet'} (%{progress})
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {task.task_type === 'semi_production' ? 'Yarı Mamul Üretimi' : 'Normal Üretim'}
                         </div>
                       </div>
                       
@@ -491,7 +639,7 @@ export default function OperatorDashboard() {
                       <Button 
                         onClick={(e) => {
                           e.stopPropagation();
-                          handlePlanAction(task.id, 'resume');
+                          handlePlanAction(task, 'resume');
                         }}
                         className="w-full"
                         size="sm"
@@ -506,6 +654,7 @@ export default function OperatorDashboard() {
             </div>
           </CardContent>
         </Card>
+
           </div>
         </div>
       </div>

@@ -1,9 +1,24 @@
+'use client';
+
 import Link from 'next/link';
 import { ShieldAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useRouter } from 'next/navigation';
 
 export default function ForbiddenPage() {
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+      router.push('/login');
+    } catch (error) {
+      console.error('Logout error:', error);
+      router.push('/login');
+    }
+  };
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-50 p-4">
       <Card className="w-full max-w-md text-center shadow-xl">
@@ -28,10 +43,8 @@ export default function ForbiddenPage() {
                 Ana Sayfaya Dön
               </Link>
             </Button>
-            <Button variant="outline" asChild>
-              <Link href="/api/auth/logout">
-                Çıkış Yap
-              </Link>
+            <Button variant="outline" onClick={handleLogout}>
+              Çıkış Yap
             </Button>
           </div>
         </CardContent>
