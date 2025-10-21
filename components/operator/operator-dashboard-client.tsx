@@ -26,11 +26,9 @@ import {
   Package,
   RefreshCcw
 } from 'lucide-react';
-import { useRealtimeUnified } from '@/lib/hooks/use-realtime-unified';
+import { usePolling } from '@/lib/hooks/use-polling';
 import { useAuthStore } from '@/stores/auth-store';
 import { TaskDetailPanel } from '@/components/operator/task-detail-panel';
-import { RealtimeErrorBoundary } from '@/components/realtime-error-boundary';
-import { RealtimeConnectionMonitor } from '@/components/realtime-connection-monitor';
 import { toast } from 'sonner';
 
 interface OperatorStats {
@@ -145,52 +143,20 @@ export default function OperatorDashboardClient() {
   // Selected task for detail panel
   const [selectedTask, setSelectedTask] = useState<ProductionTask | null>(null);
 
-  // Real-time subscriptions with unified fallback mechanism
+  // Simple polling instead of WebSocket - more reliable!
   const { 
-    isConnected: plansConnected, 
-    isRealtimeEnabled: plansRealtimeEnabled,
-    isUsingFallback: plansUsingFallback,
-    retryRealtime: retryPlansRealtime
-  } = useRealtimeUnified('production_plans', 
-    () => {
+    isActive: isPollingActive,
+    lastUpdate,
+    refresh: manualRefresh
+  } = usePolling(
+    async () => {
       if (operatorId) {
-        fetchAllData();
+        await fetchAllData();
       }
     },
-    undefined, // onUpdate
-    undefined, // onDelete
-    () => fetchAllData(), // fallback fetch
     {
-      maxRetries: 3,
-      retryDelay: 2000,
-      enableFallback: true,
-      fallbackInterval: 30000
-    }
-  );
-  
-  const { 
-    isConnected: logsConnected, 
-    isRealtimeEnabled: logsRealtimeEnabled,
-    isUsingFallback: logsUsingFallback,
-    retryRealtime: retryLogsRealtime
-  } = useRealtimeUnified('production_logs',
-    () => {
-      if (operatorId) {
-        fetchStats();
-        fetchActiveTasks();
-      }
-    },
-    undefined, // onUpdate
-    undefined, // onDelete
-    () => {
-      fetchStats();
-      fetchActiveTasks();
-    }, // fallback fetch
-    {
-      maxRetries: 3,
-      retryDelay: 2000,
-      enableFallback: true,
-      fallbackInterval: 30000
+      interval: 5000, // 5 saniyede bir güncelle
+      enabled: !!operatorId
     }
   );
 
@@ -408,8 +374,7 @@ export default function OperatorDashboardClient() {
   };
 
   return (
-    <RealtimeErrorBoundary>
-      <div className="flex h-screen overflow-hidden">
+    <div className="flex h-screen overflow-hidden">
         {/* SOL PANEL - Görev Listeleri (30%) */}
         <div className="w-[30%] border-r overflow-y-auto">
           {/* Header */}
@@ -433,31 +398,30 @@ export default function OperatorDashboardClient() {
               <p>Tahmini Bitiş: {stats.estimatedCompletion || 'N/A'}</p>
             </div>
             
-            {/* Connection Status Monitor */}
-            <div className="mt-4">
-              <RealtimeConnectionMonitor
-                connections={[
-                  {
-                    table: 'production_plans',
-                    isConnected: plansConnected,
-                    isRealtimeEnabled: plansRealtimeEnabled,
-                    isUsingFallback: plansUsingFallback,
-                    error: null,
-                    retryCount: 0,
-                    retryRealtime: retryPlansRealtime
-                  },
-                  {
-                    table: 'production_logs',
-                    isConnected: logsConnected,
-                    isRealtimeEnabled: logsRealtimeEnabled,
-                    isUsingFallback: logsUsingFallback,
-                    error: null,
-                    retryCount: 0,
-                    retryRealtime: retryLogsRealtime
-                  }
-                ]}
-                className="bg-white/10 backdrop-blur-sm rounded-lg p-3"
-              />
+            {/* Polling Status Monitor */}
+            <div className="mt-4 bg-white/10 backdrop-blur-sm rounded-lg p-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className={`h-2 w-2 rounded-full ${isPollingActive ? 'bg-green-500 animate-pulse' : 'bg-gray-500'}`} />
+                  <span className="text-xs text-white">
+                    {isPollingActive ? 'Otomatik Güncelleme Aktif' : 'Güncelleme Durduruldu'}
+                  </span>
+                </div>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={manualRefresh}
+                  className="h-6 px-2 text-white hover:bg-white/20"
+                >
+                  <RefreshCcw className="h-3 w-3 mr-1" />
+                  Yenile
+                </Button>
+              </div>
+              {lastUpdate && (
+                <div className="text-xs text-white/70 mt-1">
+                  Son güncelleme: {lastUpdate.toLocaleTimeString('tr-TR')}
+                </div>
+              )}
             </div>
           </div>
 
@@ -733,6 +697,5 @@ export default function OperatorDashboardClient() {
           />
         </div>
       </div>
-    </RealtimeErrorBoundary>
   );
 }

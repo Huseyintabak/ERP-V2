@@ -43,8 +43,8 @@ import { formatDistanceToNow } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import { useSmartNotificationsUnified } from '@/lib/hooks/use-smart-notifications-unified';
 import { toast } from 'sonner';
-import { useRealtimeUnified } from '@/lib/hooks/use-realtime-unified';
-import { RealtimeConnectionMonitor } from '@/components/realtime-connection-monitor';
+import { usePolling } from '@/lib/hooks/use-polling';
+import { RefreshCcw } from 'lucide-react';
 
 const getNotificationIcon = (type: string) => {
   switch (type) {
@@ -98,39 +98,25 @@ export default function BildirimlerPage() {
     deleteNotification,
     markAllNotificationsAsRead,
     refreshNotifications,
-  } = useSmartNotificationsUnified(true); // Disable polling to avoid conflicts with realtime
+  } = useSmartNotificationsUnified(true); // Disable polling to avoid conflicts
 
   // Initial fetch when filters change
   useEffect(() => {
     refreshNotifications();
   }, [typeFilter, statusFilter, refreshNotifications]);
 
-  // Real-time updates for notifications with unified system
+  // Simple polling instead of WebSocket - more reliable!
   const { 
-    isConnected: notificationsConnected, 
-    isRealtimeEnabled: notificationsRealtimeEnabled,
-    isUsingFallback: notificationsUsingFallback,
-    retryRealtime: retryNotificationsRealtime
-  } = useRealtimeUnified('notifications', 
-    (newNotification) => {
-      console.log('🔔 New notification received:', newNotification);
-      refreshNotifications();
-      toast.success('Yeni bildirim geldi!');
+    isActive: isPollingActive,
+    lastUpdate,
+    refresh: manualRefresh
+  } = usePolling(
+    async () => {
+      await refreshNotifications();
     },
-    (updatedNotification) => {
-      console.log('🔔 Notification updated:', updatedNotification);
-      refreshNotifications();
-    },
-    (deletedNotification) => {
-      console.log('🔔 Notification deleted:', deletedNotification);
-      refreshNotifications();
-    },
-    () => refreshNotifications(), // fallback fetch
     {
-      maxRetries: 3,
-      retryDelay: 2000,
-      enableFallback: true,
-      fallbackInterval: 30000
+      interval: 10000, // 10 saniyede bir bildirimler güncellensin
+      enabled: true
     }
   );
 
@@ -182,21 +168,34 @@ export default function BildirimlerPage() {
         </div>
       </div>
 
-      {/* Connection Status Monitor */}
-      <RealtimeConnectionMonitor
-        connections={[
-          {
-            table: 'notifications',
-            isConnected: notificationsConnected,
-            isRealtimeEnabled: notificationsRealtimeEnabled,
-            isUsingFallback: notificationsUsingFallback,
-            error: null,
-            retryCount: 0,
-            retryRealtime: retryNotificationsRealtime
-          }
-        ]}
-        className="mb-6"
-      />
+      {/* Polling Status */}
+      <Card className="mb-6">
+        <CardContent className="py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className={`h-3 w-3 rounded-full ${isPollingActive ? 'bg-green-500 animate-pulse' : 'bg-gray-500'}`} />
+              <div>
+                <div className="font-medium">
+                  {isPollingActive ? 'Otomatik Güncelleme Aktif' : 'Güncelleme Durduruldu'}
+                </div>
+                {lastUpdate && (
+                  <div className="text-sm text-muted-foreground">
+                    Son güncelleme: {lastUpdate.toLocaleTimeString('tr-TR')}
+                  </div>
+                )}
+              </div>
+            </div>
+            <Button
+              onClick={manualRefresh}
+              variant="outline"
+              size="sm"
+            >
+              <RefreshCcw className="h-4 w-4 mr-2" />
+              Manuel Yenile
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-4">
