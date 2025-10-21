@@ -28,6 +28,7 @@ import {
 import { useRealtime } from '@/lib/hooks/use-realtime';
 import { useAuthStore } from '@/stores/auth-store';
 import { TaskDetailPanel } from '@/components/operator/task-detail-panel';
+import { RealtimeErrorBoundary } from '@/components/realtime-error-boundary';
 import { toast } from 'sonner';
 
 interface OperatorStats {
@@ -370,9 +371,10 @@ export default function OperatorDashboard() {
   };
 
   return (
-    <div className="flex h-screen overflow-hidden">
-      {/* SOL PANEL - Görev Listeleri (30%) */}
-      <div className="w-[30%] border-r overflow-y-auto">
+    <RealtimeErrorBoundary>
+      <div className="flex h-screen overflow-hidden">
+        {/* SOL PANEL - Görev Listeleri (30%) */}
+        <div className="w-[30%] border-r overflow-y-auto">
         {/* Header */}
         <div className="sticky top-0 bg-gradient-to-r from-purple-600 to-pink-600 p-6 text-white z-10">
           <div className="flex items-center justify-between">
@@ -659,13 +661,14 @@ export default function OperatorDashboard() {
         </div>
       </div>
 
-      {/* SAĞ PANEL - Görev Detayı (70%) */}
-      <div className="flex-1 overflow-hidden">
-        <TaskDetailPanel 
-          task={selectedTask} 
-          onRefresh={fetchAllData}
-        />
+        {/* SAĞ PANEL - Görev Detayı (70%) */}
+        <div className="flex-1 overflow-hidden">
+          <TaskDetailPanel 
+            task={selectedTask} 
+            onRefresh={fetchAllData}
+          />
+        </div>
       </div>
-    </div>
+    </RealtimeErrorBoundary>
   );
 }
