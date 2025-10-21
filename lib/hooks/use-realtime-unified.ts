@@ -148,19 +148,48 @@ export const useRealtimeUnified = (
     }, delay);
   }, [table, state.retryCount, maxRetries, retryDelay, startFallback, resetConnection]);
 
-  // Setup realtime connection
-  const setupRealtime = useCallback(async () => {
+  // Check connection health before attempting WebSocket connection
+  const checkConnectionHealth = useCallback(async () => {
+    try {
+      const response = await fetch('/api/test-notifications', {
+        method: 'GET',
+        signal: AbortSignal.timeout(5000) // 5 second timeout
+      });
+      return response.ok;
+    } catch (error) {
+      console.log(`🔔 Connection health check failed for ${table}:`, error);
+      return false;
+    }
+  }, [table]);
+
+  // Setup realtime connection with retry mechanism
+  const setupRealtime = useCallback(async (retryAttempt = 0) => {
     if (isDestroyedRef.current || !state.isRealtimeEnabled || !isHealthy) return;
 
     try {
+      // Check connection health before attempting WebSocket connection
+      if (retryAttempt === 0) {
+        console.log(`🔔 Checking connection health for ${table}...`);
+        const isHealthy = await checkConnectionHealth();
+        if (!isHealthy) {
+          console.log(`🔔 Connection health check failed for ${table}, switching to fallback`);
+          startFallback();
+          return;
+        }
+      }
+
       // Reset connection first
       resetConnection();
 
-      // Add a small delay to prevent rapid connection attempts
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Progressive delay based on retry attempt
+      const delay = Math.min(1000 * Math.pow(2, retryAttempt), 10000);
+      if (retryAttempt > 0) {
+        console.log(`🔔 Retry attempt ${retryAttempt} for ${table}, waiting ${delay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
 
       const channelName = `${table}-unified-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-      console.log(`🔔 Setting up unified realtime for ${table} (${channelName})`);
+      console.log(`🔔 Setting up unified realtime for ${table} (${channelName}) - attempt ${retryAttempt + 1}`);
 
       const channel = supabaseRef.current
         .channel(channelName, {
@@ -210,14 +239,20 @@ export const useRealtimeUnified = (
           console.log(`🔔 Unified subscription status for ${table}: ${status}`, err ? `Error: ${err.message}` : '');
 
           if (err) {
-            // Handle specific WebSocket errors
+            // Handle specific WebSocket errors with retry logic
             if (err.message?.includes('WebSocket is closed before the connection is established')) {
               console.log(`🔔 WebSocket closed early for ${table}, retrying...`);
-              setTimeout(() => {
-                if (!isDestroyedRef.current) {
-                  setupRealtime();
-                }
-              }, 2000);
+              
+              if (retryAttempt < 5) {
+                setTimeout(() => {
+                  if (!isDestroyedRef.current) {
+                    setupRealtime(retryAttempt + 1);
+                  }
+                }, 2000 * (retryAttempt + 1));
+              } else {
+                console.log(`🔔 Max retries reached for ${table}, switching to fallback`);
+                startFallback();
+              }
               return;
             }
             handleError(err.message || 'Unknown subscription error');
@@ -232,6 +267,7 @@ export const useRealtimeUnified = (
               retryCount: 0
             }));
             stopFallback();
+            console.log(`✅ Realtime connected for ${table} after ${retryAttempt + 1} attempts`);
           } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
             handleError(`Subscription ${status.toLowerCase()}`);
           } else if (status === 'CLOSED') {
@@ -241,19 +277,29 @@ export const useRealtimeUnified = (
               isConnected: false,
               error: 'Connection closed'
             }));
-            // Auto-retry on close
+            // Auto-retry on close with exponential backoff
             setTimeout(() => {
               if (!isDestroyedRef.current && !state.isUsingFallback) {
-                setupRealtime();
+                setupRealtime(retryAttempt + 1);
               }
-            }, 3000);
+            }, 3000 * (retryAttempt + 1));
           }
         });
 
       channelRef.current = channel;
     } catch (error) {
       console.error(`🔔 Error setting up realtime for ${table}:`, error);
-      handleError(error instanceof Error ? error.message : 'Setup error');
+      
+      if (retryAttempt < 3) {
+        console.log(`🔔 Setup error, retrying in ${2000 * (retryAttempt + 1)}ms...`);
+        setTimeout(() => {
+          if (!isDestroyedRef.current) {
+            setupRealtime(retryAttempt + 1);
+          }
+        }, 2000 * (retryAttempt + 1));
+      } else {
+        handleError(error instanceof Error ? error.message : 'Setup error');
+      }
     }
   }, [
     table,
@@ -267,7 +313,9 @@ export const useRealtimeUnified = (
     handleError,
     resetConnection,
     stopFallback,
-    isHealthy
+    isHealthy,
+    startFallback,
+    checkConnectionHealth
   ]);
 
   // Manual retry function
