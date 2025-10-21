@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 
 export const useRealtime = (
@@ -9,11 +9,20 @@ export const useRealtime = (
   onUpdate?: (payload: any) => void,
   onDelete?: (payload: any) => void
 ) => {
+  const [isClient, setIsClient] = useState(false);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout>();
   const maxReconnectAttempts = 5;
   const reconnectAttemptsRef = useRef(0);
 
+  // Ensure we're on the client side
   useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  useEffect(() => {
+    // Only run on client side
+    if (!isClient) return;
+
     const supabase = createClient();
     let channel: any = null;
 
@@ -101,6 +110,6 @@ export const useRealtime = (
         supabase.removeChannel(channel);
       }
     };
-  }, [table, onInsert, onUpdate, onDelete]);
+  }, [isClient, table, onInsert, onUpdate, onDelete]);
 };
 
