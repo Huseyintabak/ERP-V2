@@ -23,9 +23,10 @@ import {
   PlayCircle,
   Eye,
   AlertCircle,
-  Package
+  Package,
+  RefreshCcw
 } from 'lucide-react';
-import { useRealtimeSafe } from '@/lib/hooks/use-realtime-safe';
+import { useRealtimeFallback } from '@/lib/hooks/use-realtime-fallback';
 import { useAuthStore } from '@/stores/auth-store';
 import { TaskDetailPanel } from '@/components/operator/task-detail-panel';
 import { RealtimeErrorBoundary } from '@/components/realtime-error-boundary';
@@ -143,19 +144,42 @@ export default function OperatorDashboardClient() {
   // Selected task for detail panel
   const [selectedTask, setSelectedTask] = useState<ProductionTask | null>(null);
 
-  // Real-time subscriptions with safe hook
-  const { isConnected: plansConnected } = useRealtimeSafe('production_plans', () => {
-    if (operatorId) {
-      fetchAllData();
-    }
-  });
+  // Real-time subscriptions with fallback mechanism
+  const { 
+    isConnected: plansConnected, 
+    isRealtimeEnabled: plansRealtimeEnabled,
+    isUsingFallback: plansUsingFallback,
+    retryRealtime: retryPlansRealtime
+  } = useRealtimeFallback('production_plans', 
+    () => {
+      if (operatorId) {
+        fetchAllData();
+      }
+    },
+    undefined, // onUpdate
+    undefined, // onDelete
+    () => fetchAllData() // fallback fetch
+  );
   
-  const { isConnected: logsConnected } = useRealtimeSafe('production_logs', () => {
-    if (operatorId) {
+  const { 
+    isConnected: logsConnected, 
+    isRealtimeEnabled: logsRealtimeEnabled,
+    isUsingFallback: logsUsingFallback,
+    retryRealtime: retryLogsRealtime
+  } = useRealtimeFallback('production_logs',
+    () => {
+      if (operatorId) {
+        fetchStats();
+        fetchActiveTasks();
+      }
+    },
+    undefined, // onUpdate
+    undefined, // onDelete
+    () => {
       fetchStats();
       fetchActiveTasks();
-    }
-  });
+    } // fallback fetch
+  );
 
   useEffect(() => {
     if (operatorId) {
@@ -394,6 +418,46 @@ export default function OperatorDashboardClient() {
               <p>Mevcut Görev: {stats.currentTask || 'Yok'}</p>
               <p>Sıradaki Görev: {stats.nextTask || 'Yok'}</p>
               <p>Tahmini Bitiş: {stats.estimatedCompletion || 'N/A'}</p>
+            </div>
+            
+            {/* Connection Status Indicator */}
+            <div className="mt-4 flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <div className="flex items-center space-x-2">
+                  <div className={`w-2 h-2 rounded-full ${
+                    plansConnected ? 'bg-green-400' : 'bg-red-400'
+                  }`}></div>
+                  <span className="text-xs">
+                    Plans: {plansConnected ? 'Bağlı' : 'Bağlantı Yok'}
+                    {plansUsingFallback && ' (Fallback)'}
+                  </span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <div className={`w-2 h-2 rounded-full ${
+                    logsConnected ? 'bg-green-400' : 'bg-red-400'
+                  }`}></div>
+                  <span className="text-xs">
+                    Logs: {logsConnected ? 'Bağlı' : 'Bağlantı Yok'}
+                    {logsUsingFallback && ' (Fallback)'}
+                  </span>
+                </div>
+              </div>
+              
+              {(plansUsingFallback || logsUsingFallback) && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    retryPlansRealtime();
+                    retryLogsRealtime();
+                    toast.success('Realtime bağlantısı yeniden deneniyor...');
+                  }}
+                  className="text-xs bg-white/20 hover:bg-white/30 text-white border-white/30"
+                >
+                  <RefreshCcw className="h-3 w-3 mr-1" />
+                  Yeniden Dene
+                </Button>
+              )}
             </div>
           </div>
 

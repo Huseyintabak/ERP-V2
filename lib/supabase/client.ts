@@ -7,9 +7,9 @@ export function createClient() {
     {
       realtime: {
         params: {
-          eventsPerSecond: 5,
-          heartbeatIntervalMs: 30000,
-          reconnectAfterMs: [1000, 2000, 5000, 10000, 30000]
+          eventsPerSecond: 2, // Reduced from 5 to 2
+          heartbeatIntervalMs: 60000, // Increased from 30000 to 60000
+          reconnectAfterMs: [2000, 5000, 10000, 20000, 30000] // More conservative reconnection
         }
       },
       global: {
