@@ -83,6 +83,7 @@ interface TaskDetailPanelProps {
 
 export function TaskDetailPanel({ task, onRefresh }: TaskDetailPanelProps) {
   const [barcode, setBarcode] = useState('');
+  const [quantity, setQuantity] = useState(1);
   const [loading, setLoading] = useState(false);
   const [scanning, setScanning] = useState(false);
   const [logs, setLogs] = useState<ProductionLog[]>([]);
@@ -277,7 +278,7 @@ export function TaskDetailPanel({ task, onRefresh }: TaskDetailPanelProps) {
           body: JSON.stringify({
             order_id: task.id,
             barcode_scanned: barcode.trim(),
-            quantity_produced: 1,
+            quantity_produced: quantity,
           }),
         });
       } else {
@@ -288,7 +289,7 @@ export function TaskDetailPanel({ task, onRefresh }: TaskDetailPanelProps) {
           body: JSON.stringify({
             plan_id: task.id,
             barcode_scanned: barcode.trim(),
-            quantity_produced: 1,
+            quantity_produced: quantity,
           }),
         });
       }
@@ -299,8 +300,9 @@ export function TaskDetailPanel({ task, onRefresh }: TaskDetailPanelProps) {
         throw new Error(data.error || '❌ Üretim kaydı oluşturulamadı!\n\n🔍 Problem: Bilinmeyen hata\n💡 Çözüm: Lütfen sistem yöneticisi ile iletişime geçin.');
       }
 
-      toast.success('Üretim kaydı başarıyla eklendi');
+      toast.success(`Üretim kaydı başarıyla eklendi (+${quantity} adet)`);
       setBarcode('');
+      setQuantity(1);
       
       // Verileri yenile
       fetchLogs();
@@ -529,6 +531,47 @@ export function TaskDetailPanel({ task, onRefresh }: TaskDetailPanelProps) {
                 )}
               </div>
             </div>
+
+            {/* Adet Seçimi */}
+            <div className="space-y-3">
+              <Label className="text-base font-medium">Üretim Adedi</Label>
+              
+              {/* Hızlı Adet Butonları */}
+              <div className="grid grid-cols-3 gap-2">
+                {[5, 10, 15, 20, 25, 50].map((qty) => (
+                  <Button
+                    key={qty}
+                    variant={quantity === qty ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setQuantity(qty)}
+                    disabled={loading || isComplete}
+                    className={`h-10 text-sm font-medium ${
+                      quantity === qty 
+                        ? 'bg-blue-600 text-white border-blue-600' 
+                        : 'border-blue-300 text-blue-700 hover:bg-blue-50'
+                    }`}
+                  >
+                    {qty} adet
+                  </Button>
+                ))}
+              </div>
+              
+              {/* Manuel Adet Girişi */}
+              <div className="flex items-center gap-2">
+                <Label htmlFor="quantity" className="text-sm text-muted-foreground">Manuel:</Label>
+                <Input
+                  id="quantity"
+                  type="number"
+                  min="1"
+                  max="999"
+                  value={quantity}
+                  onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
+                  disabled={loading || isComplete}
+                  className="w-20 h-8 text-center"
+                />
+                <span className="text-sm text-muted-foreground">adet</span>
+              </div>
+            </div>
             
             <Button 
               onClick={handleBarcodeSubmit}
@@ -544,7 +587,7 @@ export function TaskDetailPanel({ task, onRefresh }: TaskDetailPanelProps) {
               ) : (
                 <>
                   <Package className="h-5 w-5 mr-2" />
-                  Kaydet (+1 adet)
+                  Kaydet (+{quantity} adet)
                 </>
               )}
             </Button>
