@@ -108,13 +108,16 @@ export function PriceHistoryDialog({
       );
       
       if (!response.ok) {
-        throw new Error('Failed to fetch trend data');
+        console.warn('Failed to fetch trend data, using fallback');
+        setTrendData([]);
+        return;
       }
       
       const data = await response.json();
       setTrendData(data.trend_data || []);
     } catch (error) {
       console.error('Error fetching trend data:', error);
+      setTrendData([]);
     }
   };
 

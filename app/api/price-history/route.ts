@@ -24,44 +24,80 @@ export async function GET(request: NextRequest) {
 
     // Yıllık ortalama fiyat
     if (year && materialType && materialId) {
-      const { data, error } = await supabase.rpc('get_yearly_average_price', {
-        p_material_type: materialType,
-        p_material_id: materialId,
-        p_year: parseInt(year)
-      });
+      try {
+        const { data, error } = await supabase.rpc('get_yearly_average_price', {
+          p_material_type: materialType,
+          p_material_id: materialId,
+          p_year: parseInt(year)
+        });
 
-      if (error) {
-        console.error('Error getting yearly average price:', error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        if (error) {
+          console.error('Error getting yearly average price:', error);
+          // Function bulunamadığında fallback olarak 0 döndür
+          return NextResponse.json({ 
+            yearly_average: 0,
+            material_type: materialType,
+            material_id: materialId,
+            year: parseInt(year),
+            error: 'Function not available'
+          });
+        }
+
+        return NextResponse.json({ 
+          yearly_average: data || 0,
+          material_type: materialType,
+          material_id: materialId,
+          year: parseInt(year)
+        });
+      } catch (error) {
+        console.error('Error in yearly average price calculation:', error);
+        return NextResponse.json({ 
+          yearly_average: 0,
+          material_type: materialType,
+          material_id: materialId,
+          year: parseInt(year),
+          error: 'Calculation failed'
+        });
       }
-
-      return NextResponse.json({ 
-        yearly_average: data,
-        material_type: materialType,
-        material_id: materialId,
-        year: parseInt(year)
-      });
     }
 
     // Fiyat trend analizi
     if (months && materialType && materialId) {
-      const { data, error } = await supabase.rpc('get_price_trend', {
-        p_material_type: materialType,
-        p_material_id: materialId,
-        p_months: parseInt(months)
-      });
+      try {
+        const { data, error } = await supabase.rpc('get_price_trend', {
+          p_material_type: materialType,
+          p_material_id: materialId,
+          p_months: parseInt(months)
+        });
 
-      if (error) {
-        console.error('Error getting price trend:', error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        if (error) {
+          console.error('Error getting price trend:', error);
+          // Function bulunamadığında fallback olarak boş array döndür
+          return NextResponse.json({ 
+            trend_data: [],
+            material_type: materialType,
+            material_id: materialId,
+            months: parseInt(months),
+            error: 'Function not available'
+          });
+        }
+
+        return NextResponse.json({ 
+          trend_data: data || [],
+          material_type: materialType,
+          material_id: materialId,
+          months: parseInt(months)
+        });
+      } catch (error) {
+        console.error('Error in price trend calculation:', error);
+        return NextResponse.json({ 
+          trend_data: [],
+          material_type: materialType,
+          material_id: materialId,
+          months: parseInt(months),
+          error: 'Calculation failed'
+        });
       }
-
-      return NextResponse.json({ 
-        trend_data: data,
-        material_type: materialType,
-        material_id: materialId,
-        months: parseInt(months)
-      });
     }
 
     // Genel fiyat geçmişi listesi
