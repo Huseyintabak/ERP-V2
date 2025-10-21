@@ -3,15 +3,16 @@
 import { useEffect, useRef, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 
-export const useRealtime = (
+export const useRealtimeSafe = (
   table: string,
   onInsert?: (payload: any) => void,
   onUpdate?: (payload: any) => void,
   onDelete?: (payload: any) => void
 ) => {
   const [isClient, setIsClient] = useState(false);
+  const [isConnected, setIsConnected] = useState(false);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout>();
-  const maxReconnectAttempts = 5;
+  const maxReconnectAttempts = 3;
   const reconnectAttemptsRef = useRef(0);
 
   // Ensure we're on the client side
@@ -28,26 +29,26 @@ export const useRealtime = (
 
     const setupRealtime = () => {
       try {
-        console.log(`🔔 Setting up real-time subscription for table: ${table}`);
+        console.log(`🔔 Setting up safe real-time subscription for table: ${table}`);
 
-               channel = supabase
-                 .channel(`${table}-changes-${Date.now()}`, {
-                   config: {
-                     broadcast: { self: false },
-                     presence: { key: '' },
-                     realtime: {
-                       heartbeat_interval_ms: 30000,
-                       reconnect_after_ms: [1000, 2000, 5000, 10000, 30000],
-                       events_per_second: 5
-                     }
-                   }
-                 })
+        channel = supabase
+          .channel(`${table}-safe-${Date.now()}`, {
+            config: {
+              broadcast: { self: false },
+              presence: { key: '' },
+              realtime: {
+                heartbeat_interval_ms: 30000,
+                reconnect_after_ms: [2000, 5000, 10000],
+                events_per_second: 3
+              }
+            }
+          })
           .on('postgres_changes', {
             event: 'INSERT',
             schema: 'public',
             table: table
           }, (payload) => {
-            console.log('🔔 Real-time INSERT:', payload);
+            console.log('🔔 Safe real-time INSERT:', payload);
             onInsert?.(payload.new);
           })
           .on('postgres_changes', {
@@ -55,7 +56,7 @@ export const useRealtime = (
             schema: 'public',
             table: table
           }, (payload) => {
-            console.log('🔔 Real-time UPDATE:', payload);
+            console.log('🔔 Safe real-time UPDATE:', payload);
             onUpdate?.(payload.new);
           })
           .on('postgres_changes', {
@@ -63,54 +64,60 @@ export const useRealtime = (
             schema: 'public',
             table: table
           }, (payload) => {
-            console.log('🔔 Real-time DELETE:', payload);
+            console.log('🔔 Safe real-time DELETE:', payload);
             onDelete?.(payload.old);
           })
           .subscribe((status, err) => {
-            console.log(`🔔 Real-time subscription status: ${status}`);
-            
+            console.log(`🔔 Safe real-time subscription status: ${status}`);
+
             if (err) {
-              console.error('🔔 Real-time subscription error:', err);
+              console.error('🔔 Safe real-time subscription error:', err);
             }
-            
+
             if (status === 'SUBSCRIBED') {
+              setIsConnected(true);
               reconnectAttemptsRef.current = 0;
             } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-              console.warn(`🔔 Real-time connection lost for table: ${table}, status: ${status}`);
-              
+              console.warn(`🔔 Safe real-time connection lost for table: ${table}, status: ${status}`);
+              setIsConnected(false);
+
               if (reconnectAttemptsRef.current < maxReconnectAttempts) {
                 reconnectAttemptsRef.current++;
-                console.log(`🔔 Attempting to reconnect (${reconnectAttemptsRef.current}/${maxReconnectAttempts})...`);
-                
+                console.log(`🔔 Attempting safe reconnect (${reconnectAttemptsRef.current}/${maxReconnectAttempts})...`);
+
                 reconnectTimeoutRef.current = setTimeout(() => {
                   if (channel) {
                     supabase.removeChannel(channel);
                   }
                   setupRealtime();
-                }, Math.min(1000 * Math.pow(2, reconnectAttemptsRef.current), 30000));
+                }, Math.min(2000 * reconnectAttemptsRef.current, 10000));
               } else {
-                console.error('🔔 Max reconnection attempts reached, giving up');
+                console.error('🔔 Max safe reconnection attempts reached, giving up');
               }
             }
           });
       } catch (error) {
-        console.error('🔔 Error setting up real-time subscription:', error);
+        console.error('🔔 Error setting up safe real-time subscription:', error);
+        setIsConnected(false);
       }
     };
 
     setupRealtime();
 
     return () => {
-      console.log(`🔔 Cleaning up real-time subscription for table: ${table}`);
-      
+      console.log(`🔔 Cleaning up safe real-time subscription for table: ${table}`);
+
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
       }
-      
+
       if (channel) {
         supabase.removeChannel(channel);
       }
+      
+      setIsConnected(false);
     };
   }, [isClient, table, onInsert, onUpdate, onDelete]);
-};
 
+  return { isConnected };
+};

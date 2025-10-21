@@ -7,13 +7,18 @@ export function createClient() {
     {
       realtime: {
         params: {
-          eventsPerSecond: 10
+          eventsPerSecond: 5,
+          heartbeatIntervalMs: 30000,
+          reconnectAfterMs: [1000, 2000, 5000, 10000, 30000]
         }
       },
       global: {
         headers: {
           'X-Client-Info': 'thunder-erp@1.0.0'
         }
+      },
+      db: {
+        schema: 'public'
       }
     }
   );

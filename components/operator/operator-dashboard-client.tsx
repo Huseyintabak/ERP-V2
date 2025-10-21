@@ -25,7 +25,7 @@ import {
   AlertCircle,
   Package
 } from 'lucide-react';
-import { useRealtime } from '@/lib/hooks/use-realtime';
+import { useRealtimeSafe } from '@/lib/hooks/use-realtime-safe';
 import { useAuthStore } from '@/stores/auth-store';
 import { TaskDetailPanel } from '@/components/operator/task-detail-panel';
 import { RealtimeErrorBoundary } from '@/components/realtime-error-boundary';
@@ -143,14 +143,14 @@ export default function OperatorDashboardClient() {
   // Selected task for detail panel
   const [selectedTask, setSelectedTask] = useState<ProductionTask | null>(null);
 
-  // Real-time subscriptions
-  useRealtime('production_plans', () => {
+  // Real-time subscriptions with safe hook
+  const { isConnected: plansConnected } = useRealtimeSafe('production_plans', () => {
     if (operatorId) {
       fetchAllData();
     }
   });
   
-  useRealtime('production_logs', () => {
+  const { isConnected: logsConnected } = useRealtimeSafe('production_logs', () => {
     if (operatorId) {
       fetchStats();
       fetchActiveTasks();
