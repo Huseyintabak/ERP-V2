@@ -3,65 +3,36 @@
 import { useState, useEffect } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Wifi, WifiOff } from 'lucide-react';
-import { createClient } from '@/lib/supabase/client';
 
 export function RealtimeStatus() {
-  const [isConnected, setIsConnected] = useState(false);
-  const [isConnecting, setIsConnecting] = useState(true);
+  const [isConnected, setIsConnected] = useState(true); // Default to connected
+  const [isConnecting, setIsConnecting] = useState(false);
 
   useEffect(() => {
-    const supabase = createClient();
-    
-    // Check initial connection
+    // Simple connection check without creating realtime subscriptions
     const checkConnection = async () => {
       try {
-        const { data, error } = await supabase
-          .from('users')
-          .select('count')
-          .limit(1);
-        
-        if (error) throw error;
-        setIsConnected(true);
-        setIsConnecting(false);
+        const response = await fetch('/api/test-notifications');
+        if (response.ok) {
+          setIsConnected(true);
+        } else {
+          setIsConnected(false);
+        }
       } catch (error) {
         setIsConnected(false);
-        setIsConnecting(false);
       }
     };
 
+    // Check connection on mount
     checkConnection();
 
-    // Subscribe to connection status changes
-    const channel = supabase
-      .channel('connection-status')
-      .on('system', {}, (status) => {
-        if (status.status === 'SUBSCRIBED') {
-          setIsConnected(true);
-        } else if (status.status === 'CHANNEL_ERROR' || status.status === 'TIMED_OUT') {
-          setIsConnected(false);
-        }
-      })
-      .subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
-          setIsConnected(true);
-        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-          setIsConnected(false);
-        }
-      });
+    // Check connection periodically (every 30 seconds)
+    const interval = setInterval(checkConnection, 30000);
 
     return () => {
-      supabase.removeChannel(channel);
+      clearInterval(interval);
     };
   }, []);
-
-  if (isConnecting) {
-    return (
-      <Badge variant="secondary" className="flex items-center gap-1">
-        <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse" />
-        Bağlanıyor...
-      </Badge>
-    );
-  }
 
   return (
     <Badge 

@@ -19,7 +19,7 @@ import {
   DollarSign,
   Activity
 } from 'lucide-react';
-import { useRealtime } from '@/lib/hooks/use-realtime';
+import { useRealtimeUnified } from '@/lib/hooks/use-realtime-unified';
 import { QuickStockEntryDialog } from '@/components/stock/quick-stock-entry-dialog';
 import { InventoryCountDialog } from '@/components/stock/inventory-count-dialog';
 // import { useMemoryLeakDetector } from '@/lib/hooks/use-memory-leak-detector';
@@ -99,10 +99,11 @@ export default function DepoDashboard() {
   const [inventoryCountOpen, setInventoryCountOpen] = useState(false);
 
   // Real-time subscriptions
-  useRealtime('raw_materials', fetchStats);
-  useRealtime('semi_finished_products', fetchStats);
-  useRealtime('finished_products', fetchStats);
-  useRealtime('stock_movements', fetchStats);
+  // Real-time updates with unified system
+  useRealtimeUnified('raw_materials', fetchStats, undefined, undefined, fetchStats, { maxRetries: 3, enableFallback: true });
+  useRealtimeUnified('semi_finished_products', fetchStats, undefined, undefined, fetchStats, { maxRetries: 3, enableFallback: true });
+  useRealtimeUnified('finished_products', fetchStats, undefined, undefined, fetchStats, { maxRetries: 3, enableFallback: true });
+  useRealtimeUnified('stock_movements', fetchStats, undefined, undefined, fetchStats, { maxRetries: 3, enableFallback: true });
 
   useEffect(() => {
     fetchStats();

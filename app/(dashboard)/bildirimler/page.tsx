@@ -41,9 +41,10 @@ import {
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { tr } from 'date-fns/locale';
-import { useSmartNotifications } from '@/lib/hooks/use-smart-notifications';
+import { useSmartNotificationsUnified } from '@/lib/hooks/use-smart-notifications-unified';
 import { toast } from 'sonner';
-import { useRealtime } from '@/lib/hooks/use-realtime';
+import { useRealtimeUnified } from '@/lib/hooks/use-realtime-unified';
+import { RealtimeConnectionMonitor } from '@/components/realtime-connection-monitor';
 
 const getNotificationIcon = (type: string) => {
   switch (type) {
@@ -97,16 +98,20 @@ export default function BildirimlerPage() {
     deleteNotification,
     markAllNotificationsAsRead,
     refreshNotifications,
-  } = useSmartNotifications();
+  } = useSmartNotificationsUnified(true); // Disable polling to avoid conflicts with realtime
 
   // Initial fetch when filters change
   useEffect(() => {
     refreshNotifications();
   }, [typeFilter, statusFilter, refreshNotifications]);
 
-  // Real-time updates for notifications
-  useRealtime(
-    'notifications',
+  // Real-time updates for notifications with unified system
+  const { 
+    isConnected: notificationsConnected, 
+    isRealtimeEnabled: notificationsRealtimeEnabled,
+    isUsingFallback: notificationsUsingFallback,
+    retryRealtime: retryNotificationsRealtime
+  } = useRealtimeUnified('notifications', 
     (newNotification) => {
       console.log('🔔 New notification received:', newNotification);
       refreshNotifications();
@@ -119,6 +124,13 @@ export default function BildirimlerPage() {
     (deletedNotification) => {
       console.log('🔔 Notification deleted:', deletedNotification);
       refreshNotifications();
+    },
+    () => refreshNotifications(), // fallback fetch
+    {
+      maxRetries: 3,
+      retryDelay: 2000,
+      enableFallback: true,
+      fallbackInterval: 30000
     }
   );
 
@@ -169,6 +181,22 @@ export default function BildirimlerPage() {
           )}
         </div>
       </div>
+
+      {/* Connection Status Monitor */}
+      <RealtimeConnectionMonitor
+        connections={[
+          {
+            table: 'notifications',
+            isConnected: notificationsConnected,
+            isRealtimeEnabled: notificationsRealtimeEnabled,
+            isUsingFallback: notificationsUsingFallback,
+            error: null,
+            retryCount: 0,
+            retryRealtime: retryNotificationsRealtime
+          }
+        ]}
+        className="mb-6"
+      />
 
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-4">

@@ -19,7 +19,7 @@ import {
   Zap,
   Users
 } from 'lucide-react';
-import { useRealtime } from '@/lib/hooks/use-realtime';
+import { useRealtimeUnified } from '@/lib/hooks/use-realtime-unified';
 // import { useMemoryLeakDetector } from '@/lib/hooks/use-memory-leak-detector';
 // import { usePerformanceMonitor } from '@/lib/hooks/use-performance-monitor';
 // import { useStoreSync } from '@/lib/hooks/use-store-sync';
@@ -83,11 +83,12 @@ export default function PlanlamaDashboard() {
   const [operators, setOperators] = useState<any[]>([]);
 
   // Real-time subscriptions
-  useRealtime('raw_materials', fetchStats);
-  useRealtime('semi_finished_products', fetchStats);
-  useRealtime('finished_products', fetchStats);
-  useRealtime('production_plans', fetchStats);
-  useRealtime('orders', fetchStats);
+  // Real-time updates with unified system
+  useRealtimeUnified('raw_materials', fetchStats, undefined, undefined, fetchStats, { maxRetries: 3, enableFallback: true });
+  useRealtimeUnified('semi_finished_products', fetchStats, undefined, undefined, fetchStats, { maxRetries: 3, enableFallback: true });
+  useRealtimeUnified('finished_products', fetchStats, undefined, undefined, fetchStats, { maxRetries: 3, enableFallback: true });
+  useRealtimeUnified('production_plans', fetchStats, undefined, undefined, fetchStats, { maxRetries: 3, enableFallback: true });
+  useRealtimeUnified('orders', fetchStats, undefined, undefined, fetchStats, { maxRetries: 3, enableFallback: true });
 
   useEffect(() => {
     fetchStats();

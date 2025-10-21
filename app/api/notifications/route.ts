@@ -17,12 +17,17 @@ const notificationSchema = z.object({
 // GET - List notifications for current user
 export async function GET(request: NextRequest) {
   try {
+    console.log('🔔 Notifications API called');
     const token = request.cookies.get('thunder_token')?.value;
+    console.log('🔔 Token exists:', !!token);
+    
     if (!token) {
+      console.log('🔔 No token found, returning 401');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const payload = await verifyJWT(token);
+    console.log('🔔 JWT payload:', { userId: payload.userId, role: payload.role });
     const supabase = await createClient();
 
     const { searchParams } = new URL(request.url);
@@ -58,17 +63,24 @@ export async function GET(request: NextRequest) {
     const { data: notifications, error, count } = await query
       .range((page - 1) * limit, page * limit - 1);
 
+    console.log('🔔 Database query result:', { 
+      notificationsCount: notifications?.length, 
+      error: error?.message,
+      count 
+    });
+
     if (error) {
-      console.error('Error fetching notifications:', error);
+      console.error('🔔 Error fetching notifications:', error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
+    console.log('🔔 Returning notifications:', notifications?.length || 0);
     return NextResponse.json({
-      data: notifications,
+      data: notifications || [],
       pagination: {
         page,
         limit,
-        total: count,
+        total: count || 0,
         pages: Math.ceil((count || 0) / limit),
       },
     });

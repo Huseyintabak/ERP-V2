@@ -67,7 +67,8 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith('/_next') ||
     pathname.startsWith('/favicon.ico') ||
     pathname.startsWith('/api/auth/login') ||
-    pathname.startsWith('/api/auth/logout')
+    pathname.startsWith('/api/auth/logout') ||
+    pathname.startsWith('/api/test-notifications')
   ) {
     return NextResponse.next();
   }

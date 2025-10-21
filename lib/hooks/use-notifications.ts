@@ -35,17 +35,33 @@ export function useNotifications() {
       if (params?.unread_only) searchParams.set('unread_only', 'true');
       if (params?.type) searchParams.set('type', params.type);
 
-      const response = await fetch(`/api/notifications?${searchParams.toString()}`);
+      const url = `/api/notifications?${searchParams.toString()}`;
+      console.log('🔔 Fetching notifications from:', url);
+      
+      const response = await fetch(url);
+      
+      console.log('🔔 Notifications response status:', response.status);
       
       if (!response.ok) {
-        throw new Error('Failed to fetch notifications');
+        const errorText = await response.text();
+        console.error('🔔 Notifications API error:', errorText);
+        
+        // If unauthorized, return empty array instead of throwing error
+        if (response.status === 401 || response.status === 403) {
+          console.log('🔔 User not authenticated, returning empty notifications');
+          setNotifications([]);
+          return;
+        }
+        
+        throw new Error(`Failed to fetch notifications: ${response.status} ${response.statusText}`);
       }
 
       const data = await response.json();
-      setNotifications(data.data);
+      console.log('🔔 Notifications data received:', data);
+      setNotifications(data.data || []);
     } catch (error: any) {
+      console.error('🔔 Error fetching notifications:', error);
       setError(error.message);
-      console.error('Error fetching notifications:', error);
     } finally {
       setLoading(false);
     }
@@ -63,6 +79,12 @@ export function useNotifications() {
       });
 
       if (!response.ok) {
+        // If unauthorized, just update local state
+        if (response.status === 401 || response.status === 403) {
+          console.log('🔔 User not authenticated, updating local state only');
+          markAsRead(id);
+          return;
+        }
         throw new Error('Failed to mark notification as read');
       }
 
@@ -81,6 +103,13 @@ export function useNotifications() {
       });
 
       if (!response.ok) {
+        // If unauthorized, just update local state
+        if (response.status === 401 || response.status === 403) {
+          console.log('🔔 User not authenticated, updating local state only');
+          removeNotification(id);
+          toast.success('Bildirim silindi (yerel)');
+          return;
+        }
         throw new Error('Failed to delete notification');
       }
 
@@ -97,8 +126,12 @@ export function useNotifications() {
     try {
       const unreadNotifications = notifications.filter(n => !n.is_read);
       
-      // Mark all unread notifications as read
-      await Promise.all(
+      if (unreadNotifications.length === 0) {
+        return;
+      }
+      
+      // Try to mark all unread notifications as read
+      const results = await Promise.allSettled(
         unreadNotifications.map(notification => 
           fetch(`/api/notifications/${notification.id}`, {
             method: 'PATCH',
@@ -110,11 +143,25 @@ export function useNotifications() {
         )
       );
 
-      markAllAsRead();
-      toast.success('Tüm bildirimler okundu olarak işaretlendi');
+      // Check if any requests failed due to authentication
+      const authErrors = results.filter(result => 
+        result.status === 'rejected' || 
+        (result.status === 'fulfilled' && (result.value.status === 401 || result.value.status === 403))
+      );
+
+      if (authErrors.length > 0) {
+        console.log('🔔 Some requests failed due to authentication, updating local state only');
+        markAllAsRead();
+        toast.success('Tüm bildirimler okundu olarak işaretlendi (yerel)');
+      } else {
+        markAllAsRead();
+        toast.success('Tüm bildirimler okundu olarak işaretlendi');
+      }
     } catch (error: any) {
       console.error('Error marking all notifications as read:', error);
-      toast.error('Bildirimler okundu olarak işaretlenemedi');
+      // Fallback: just update local state
+      markAllAsRead();
+      toast.success('Tüm bildirimler okundu olarak işaretlendi (yerel)');
     }
   }, [notifications, markAllAsRead]);
 

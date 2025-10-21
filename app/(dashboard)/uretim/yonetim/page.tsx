@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Package, TrendingUp, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatDate, formatCurrency } from '@/lib/utils';
-import { useRealtime } from '@/lib/hooks/use-realtime';
+import { useRealtimeUnified } from '@/lib/hooks/use-realtime-unified';
 
 interface OrderItem {
   id: string;
@@ -68,8 +68,8 @@ export default function UretimYonetimPage() {
     fetchOrders();
   }, []);
 
-  // Real-time updates for orders
-  useRealtime(
+  // Real-time updates for orders with unified system
+  useRealtimeUnified(
     'orders',
     (newOrder) => {
       setOrders(prev => [newOrder, ...prev]);
@@ -84,6 +84,13 @@ export default function UretimYonetimPage() {
     (deletedOrder) => {
       setOrders(prev => prev.filter(order => order.id !== deletedOrder.id));
       toast.success('Sipariş silindi!');
+    },
+    () => fetchOrders(), // fallback fetch
+    {
+      maxRetries: 3,
+      retryDelay: 2000,
+      enableFallback: true,
+      fallbackInterval: 30000
     }
   );
 

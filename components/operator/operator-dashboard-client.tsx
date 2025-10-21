@@ -26,10 +26,11 @@ import {
   Package,
   RefreshCcw
 } from 'lucide-react';
-import { useRealtimeFallback } from '@/lib/hooks/use-realtime-fallback';
+import { useRealtimeUnified } from '@/lib/hooks/use-realtime-unified';
 import { useAuthStore } from '@/stores/auth-store';
 import { TaskDetailPanel } from '@/components/operator/task-detail-panel';
 import { RealtimeErrorBoundary } from '@/components/realtime-error-boundary';
+import { RealtimeConnectionMonitor } from '@/components/realtime-connection-monitor';
 import { toast } from 'sonner';
 
 interface OperatorStats {
@@ -144,13 +145,13 @@ export default function OperatorDashboardClient() {
   // Selected task for detail panel
   const [selectedTask, setSelectedTask] = useState<ProductionTask | null>(null);
 
-  // Real-time subscriptions with fallback mechanism
+  // Real-time subscriptions with unified fallback mechanism
   const { 
     isConnected: plansConnected, 
     isRealtimeEnabled: plansRealtimeEnabled,
     isUsingFallback: plansUsingFallback,
     retryRealtime: retryPlansRealtime
-  } = useRealtimeFallback('production_plans', 
+  } = useRealtimeUnified('production_plans', 
     () => {
       if (operatorId) {
         fetchAllData();
@@ -158,7 +159,13 @@ export default function OperatorDashboardClient() {
     },
     undefined, // onUpdate
     undefined, // onDelete
-    () => fetchAllData() // fallback fetch
+    () => fetchAllData(), // fallback fetch
+    {
+      maxRetries: 3,
+      retryDelay: 2000,
+      enableFallback: true,
+      fallbackInterval: 30000
+    }
   );
   
   const { 
@@ -166,7 +173,7 @@ export default function OperatorDashboardClient() {
     isRealtimeEnabled: logsRealtimeEnabled,
     isUsingFallback: logsUsingFallback,
     retryRealtime: retryLogsRealtime
-  } = useRealtimeFallback('production_logs',
+  } = useRealtimeUnified('production_logs',
     () => {
       if (operatorId) {
         fetchStats();
@@ -178,7 +185,13 @@ export default function OperatorDashboardClient() {
     () => {
       fetchStats();
       fetchActiveTasks();
-    } // fallback fetch
+    }, // fallback fetch
+    {
+      maxRetries: 3,
+      retryDelay: 2000,
+      enableFallback: true,
+      fallbackInterval: 30000
+    }
   );
 
   useEffect(() => {
@@ -420,44 +433,31 @@ export default function OperatorDashboardClient() {
               <p>Tahmini Bitiş: {stats.estimatedCompletion || 'N/A'}</p>
             </div>
             
-            {/* Connection Status Indicator */}
-            <div className="mt-4 flex items-center justify-between">
-              <div className="flex items-center space-x-4">
-                <div className="flex items-center space-x-2">
-                  <div className={`w-2 h-2 rounded-full ${
-                    plansConnected ? 'bg-green-400' : 'bg-red-400'
-                  }`}></div>
-                  <span className="text-xs">
-                    Plans: {plansConnected ? 'Bağlı' : 'Bağlantı Yok'}
-                    {plansUsingFallback && ' (Fallback)'}
-                  </span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <div className={`w-2 h-2 rounded-full ${
-                    logsConnected ? 'bg-green-400' : 'bg-red-400'
-                  }`}></div>
-                  <span className="text-xs">
-                    Logs: {logsConnected ? 'Bağlı' : 'Bağlantı Yok'}
-                    {logsUsingFallback && ' (Fallback)'}
-                  </span>
-                </div>
-              </div>
-              
-              {(plansUsingFallback || logsUsingFallback) && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => {
-                    retryPlansRealtime();
-                    retryLogsRealtime();
-                    toast.success('Realtime bağlantısı yeniden deneniyor...');
-                  }}
-                  className="text-xs bg-white/20 hover:bg-white/30 text-white border-white/30"
-                >
-                  <RefreshCcw className="h-3 w-3 mr-1" />
-                  Yeniden Dene
-                </Button>
-              )}
+            {/* Connection Status Monitor */}
+            <div className="mt-4">
+              <RealtimeConnectionMonitor
+                connections={[
+                  {
+                    table: 'production_plans',
+                    isConnected: plansConnected,
+                    isRealtimeEnabled: plansRealtimeEnabled,
+                    isUsingFallback: plansUsingFallback,
+                    error: null,
+                    retryCount: 0,
+                    retryRealtime: retryPlansRealtime
+                  },
+                  {
+                    table: 'production_logs',
+                    isConnected: logsConnected,
+                    isRealtimeEnabled: logsRealtimeEnabled,
+                    isUsingFallback: logsUsingFallback,
+                    error: null,
+                    retryCount: 0,
+                    retryRealtime: retryLogsRealtime
+                  }
+                ]}
+                className="bg-white/10 backdrop-blur-sm rounded-lg p-3"
+              />
             </div>
           </div>
 

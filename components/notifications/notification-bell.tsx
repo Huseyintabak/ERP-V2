@@ -21,10 +21,10 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useSmartNotifications } from '@/lib/hooks/use-smart-notifications';
+import { useSmartNotificationsUnified } from '@/lib/hooks/use-smart-notifications-unified';
 import { formatDistanceToNow } from 'date-fns';
 import { tr } from 'date-fns/locale';
-import { useRealtime } from '@/lib/hooks/use-realtime';
+import { useRealtimeUnified } from '@/lib/hooks/use-realtime-unified';
 
 const getNotificationIcon = (type: string) => {
   switch (type) {
@@ -64,11 +64,15 @@ export default function NotificationBell() {
     deleteNotification,
     markAllNotificationsAsRead,
     refreshNotifications,
-  } = useSmartNotifications();
+  } = useSmartNotificationsUnified(true); // Disable polling to avoid conflicts
 
-  // Real-time updates for notifications
-  useRealtime(
-    'notifications',
+  // Real-time updates for notifications with unified system
+  const { 
+    isConnected: notificationsConnected, 
+    isRealtimeEnabled: notificationsRealtimeEnabled,
+    isUsingFallback: notificationsUsingFallback,
+    retryRealtime: retryNotificationsRealtime
+  } = useRealtimeUnified('notifications', 
     (newNotification) => {
       console.log('🔔 Bell: New notification received:', newNotification);
       refreshNotifications();
@@ -80,6 +84,13 @@ export default function NotificationBell() {
     (deletedNotification) => {
       console.log('🔔 Bell: Notification deleted:', deletedNotification);
       refreshNotifications();
+    },
+    () => refreshNotifications(), // fallback fetch
+    {
+      maxRetries: 3,
+      retryDelay: 2000,
+      enableFallback: true,
+      fallbackInterval: 30000
     }
   );
 
