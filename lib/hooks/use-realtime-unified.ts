@@ -149,12 +149,15 @@ export const useRealtimeUnified = (
   }, [table, state.retryCount, maxRetries, retryDelay, startFallback, resetConnection]);
 
   // Setup realtime connection
-  const setupRealtime = useCallback(() => {
+  const setupRealtime = useCallback(async () => {
     if (isDestroyedRef.current || !state.isRealtimeEnabled || !isHealthy) return;
 
     try {
       // Reset connection first
       resetConnection();
+
+      // Add a small delay to prevent rapid connection attempts
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
       const channelName = `${table}-unified-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
       console.log(`🔔 Setting up unified realtime for ${table} (${channelName})`);
@@ -204,9 +207,19 @@ export const useRealtimeUnified = (
         .subscribe((status, err) => {
           if (isDestroyedRef.current) return;
 
-          console.log(`🔔 Unified subscription status for ${table}: ${status}`);
+          console.log(`🔔 Unified subscription status for ${table}: ${status}`, err ? `Error: ${err.message}` : '');
 
           if (err) {
+            // Handle specific WebSocket errors
+            if (err.message?.includes('WebSocket is closed before the connection is established')) {
+              console.log(`🔔 WebSocket closed early for ${table}, retrying...`);
+              setTimeout(() => {
+                if (!isDestroyedRef.current) {
+                  setupRealtime();
+                }
+              }, 2000);
+              return;
+            }
             handleError(err.message || 'Unknown subscription error');
             return;
           }
@@ -221,6 +234,19 @@ export const useRealtimeUnified = (
             stopFallback();
           } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
             handleError(`Subscription ${status.toLowerCase()}`);
+          } else if (status === 'CLOSED') {
+            console.log(`🔔 Connection closed for ${table}, will retry...`);
+            setState(prev => ({
+              ...prev,
+              isConnected: false,
+              error: 'Connection closed'
+            }));
+            // Auto-retry on close
+            setTimeout(() => {
+              if (!isDestroyedRef.current && !state.isUsingFallback) {
+                setupRealtime();
+              }
+            }, 3000);
           }
         });
 
@@ -240,7 +266,8 @@ export const useRealtimeUnified = (
     eventsPerSecond,
     handleError,
     resetConnection,
-    stopFallback
+    stopFallback,
+    isHealthy
   ]);
 
   // Manual retry function

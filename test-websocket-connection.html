@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WebSocket Connection Test</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <h1>WebSocket Connection Test</h1>
+    <div id="status">Testing connection...</div>
+    <div id="logs"></div>
+
+    <script>
+        const SUPABASE_URL = 'https://unodzubpvymgownyjrgz.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVub2R6dWJwdnltZ293bnlqcmd6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk3NjY3NzUsImV4cCI6MjA3NTM0Mjc3NX0.XDyvPRd0bmSFiraEnY0BZR6fc8hSLNoU_KdMseuGTdk';
+
+        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+            realtime: {
+                params: {
+                    eventsPerSecond: 1,
+                    heartbeatIntervalMs: 120000,
+                    reconnectAfterMs: [5000, 10000, 20000, 30000, 60000]
+                }
+            }
+        });
+
+        function log(message) {
+            const logs = document.getElementById('logs');
+            const time = new Date().toLocaleTimeString();
+            logs.innerHTML += `<div>[${time}] ${message}</div>`;
+            console.log(message);
+        }
+
+        function updateStatus(status) {
+            document.getElementById('status').textContent = status;
+        }
+
+        log('Starting WebSocket connection test...');
+        updateStatus('Connecting...');
+
+        const channel = supabase
+            .channel('test-connection')
+            .on('postgres_changes', {
+                event: '*',
+                schema: 'public',
+                table: 'production_plans'
+            }, (payload) => {
+                log(`Received event: ${payload.eventType}`);
+            })
+            .subscribe((status, err) => {
+                log(`Connection status: ${status}`);
+                if (err) {
+                    log(`Error: ${err.message}`);
+                    updateStatus(`Error: ${err.message}`);
+                } else {
+                    updateStatus(`Connected: ${status}`);
+                }
+            });
+
+        // Test connection health
+        setTimeout(() => {
+            log('Testing connection health...');
+            fetch('/api/test-notifications')
+                .then(response => response.json())
+                .then(data => {
+                    log(`API test successful: ${JSON.stringify(data)}`);
+                })
+                .catch(error => {
+                    log(`API test failed: ${error.message}`);
+                });
+        }, 5000);
+    </script>
+</body>
+</html>
