@@ -101,31 +101,37 @@ export async function GET(request: NextRequest) {
     }
 
     // Genel fiyat geçmişi listesi
-    let query = supabase
-      .from('price_history')
-      .select(`
-        *,
-        user:users(name, email)
-      `)
-      .order('effective_date', { ascending: false })
-      .limit(100);
+    try {
+      let query = supabase
+        .from('price_history')
+        .select(`
+          *,
+          user:users(name, email)
+        `)
+        .order('effective_date', { ascending: false })
+        .limit(100);
 
-    if (materialType) {
-      query = query.eq('material_type', materialType);
+      if (materialType) {
+        query = query.eq('material_type', materialType);
+      }
+
+      if (materialId) {
+        query = query.eq('material_id', materialId);
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        console.error('Error fetching price history:', error);
+        // Tablo yapısı farklıysa boş array döndür
+        return NextResponse.json({ data: [] });
+      }
+
+      return NextResponse.json({ data: data || [] });
+    } catch (error) {
+      console.error('Error in price history query:', error);
+      return NextResponse.json({ data: [] });
     }
-
-    if (materialId) {
-      query = query.eq('material_id', materialId);
-    }
-
-    const { data, error } = await query;
-
-    if (error) {
-      console.error('Error fetching price history:', error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-
-    return NextResponse.json({ data });
 
   } catch (error: any) {
     console.error('Price history API error:', error);

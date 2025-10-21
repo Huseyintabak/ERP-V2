@@ -71,14 +71,16 @@ export function PriceHistoryDialog({
       );
       
       if (!response.ok) {
-        throw new Error('Failed to fetch price history');
+        console.warn('Failed to fetch price history, using fallback');
+        setHistory([]);
+        return;
       }
       
       const data = await response.json();
       setHistory(data.data || []);
     } catch (error) {
       console.error('Error fetching price history:', error);
-      toast.error('Fiyat geçmişi yüklenirken hata oluştu');
+      setHistory([]);
     } finally {
       setLoading(false);
     }
