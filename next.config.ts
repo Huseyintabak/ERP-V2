@@ -21,14 +21,11 @@ const nextConfig: NextConfig = {
       },
     ];
   },
-  // WebSocket için
-  experimental: {
-    // Turbopack ayarları
-    turbo: {
-      // WebSocket bağlantı sorunlarını azalt
-      resolveAlias: {
-        // Gerekirse buraya alias eklenebilir
-      },
+  // Turbopack configuration (deprecated experimental.turbo moved here)
+  turbopack: {
+    // WebSocket bağlantı sorunlarını azalt
+    resolveAlias: {
+      // Gerekirse buraya alias eklenebilir
     },
   },
 };
