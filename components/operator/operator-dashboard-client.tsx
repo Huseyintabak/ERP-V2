@@ -64,7 +64,7 @@ interface ProductionTask {
   product_id: string;
   planned_quantity: number;
   produced_quantity: number;
-  status: 'planlandi' | 'devam_ediyor' | 'duraklatildi' | 'tamamlandi' | 'iptal_edildi' | 'iptal';
+  status: 'planlandi' | 'devam_ediyor' | 'duraklatildi' | 'tamamlandi' | 'iptal';
   assigned_operator_id?: string;
   started_at?: string;
   completed_at?: string;

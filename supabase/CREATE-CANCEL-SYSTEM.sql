@@ -91,8 +91,7 @@ BEGIN
 
   EXCEPTION
     WHEN OTHERS THEN
-      -- Hata durumunda rollback
-      ROLLBACK;
+      -- Hata durumunda otomatik rollback yapılır
       RETURN json_build_object(
         'success', false,
         'error', SQLERRM
@@ -222,8 +221,7 @@ BEGIN
 
   EXCEPTION
     WHEN OTHERS THEN
-      -- Hata durumunda rollback
-      ROLLBACK;
+      -- Hata durumunda otomatik rollback yapılır
       RETURN json_build_object(
         'success', false,
         'error', SQLERRM

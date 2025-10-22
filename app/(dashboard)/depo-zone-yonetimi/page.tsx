@@ -592,14 +592,10 @@ export default function DepoZoneYonetimiPage() {
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => {
-                                // Transfer dialog'unu aç
-                                setSelectedZoneId('center');
-                                // Transfer işlemi için gerekli state'leri ayarla
-                              }}
+                              onClick={() => handleTransfer(inventory.product_id)}
                             >
                               <ArrowRightLeft className="h-4 w-4 mr-1" />
-                              Sevk Et
+                              Transfer
                             </Button>
                           </td>
                         </tr>
@@ -612,6 +608,7 @@ export default function DepoZoneYonetimiPage() {
           </div>
         </DialogContent>
       </Dialog>
+
     </div>
   );
 }

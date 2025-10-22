@@ -52,6 +52,14 @@ interface ZoneInventory {
   product: FinishedProduct;
 }
 
+interface TransferItem {
+  productId: string;
+  productName: string;
+  productCode: string;
+  quantity: number;
+  availableQuantity: number;
+}
+
 interface ZoneTransferDialogProps {
   zones: WarehouseZone[];
   selectedZoneId?: string;
@@ -74,17 +82,22 @@ export function ZoneTransferDialog({
   const [productId, setProductId] = useState('');
   const [quantity, setQuantity] = useState('');
   
+  // Multi-product state
+  const [transferItems, setTransferItems] = useState<TransferItem[]>([]);
+  const [isMultiProductMode, setIsMultiProductMode] = useState(false);
+  
   // Data state
   const [sourceInventory, setSourceInventory] = useState<ZoneInventory[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<FinishedProduct | null>(null);
   const [availableQuantity, setAvailableQuantity] = useState(0);
 
   // SearchableSelect için product options'ı hazırla
-  const productOptions: SearchableSelectOption[] = sourceInventory.map((inventory) => ({
+  const productOptions: SearchableSelectOption[] = sourceInventory.map((inventory, index) => ({
     value: inventory.product_id,
     label: inventory.product.name,
     description: inventory.product.code,
     badge: `${inventory.quantity} adet`,
+    key: `${inventory.product_id}-${index}`, // Unique key için index ekle
   }));
 
   // Load source zone inventory when fromZoneId changes
@@ -128,9 +141,9 @@ export function ZoneTransferDialog({
     }
   };
 
-  const handleTransfer = async () => {
-    if (!fromZoneId || !toZoneId || !productId || !quantity) {
-      toast.error('Tüm alanları doldurun');
+  const addProductToTransfer = () => {
+    if (!productId || !quantity) {
+      toast.error('Ürün ve miktar seçin');
       return;
     }
 
@@ -145,49 +158,148 @@ export function ZoneTransferDialog({
       return;
     }
 
-    setIsLoading(true);
+    // Check if product already exists in transfer list
+    const existingItem = transferItems.find(item => item.productId === productId);
+    if (existingItem) {
+      toast.error('Bu ürün zaten transfer listesinde');
+      return;
+    }
+
+    const newItem: TransferItem = {
+      productId,
+      productName: selectedProduct?.name || '',
+      productCode: selectedProduct?.code || '',
+      quantity: transferQuantity,
+      availableQuantity
+    };
+
+    setTransferItems([...transferItems, newItem]);
     
-    try {
-      const response = await fetch('/api/warehouse/transfer', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          fromZoneId,
-          toZoneId,
-          productId,
-          quantity: transferQuantity
-        }),
-      });
+    // Reset product selection
+    setProductId('');
+    setQuantity('');
+    setSelectedProduct(null);
+    setAvailableQuantity(0);
+  };
 
-      const data = await response.json();
+  const removeProductFromTransfer = (productId: string) => {
+    setTransferItems(transferItems.filter(item => item.productId !== productId));
+  };
 
-      if (response.ok && data.success) {
-        toast.success('Transfer başarıyla tamamlandı!', {
-          description: `${selectedProduct?.name} - ${transferQuantity} adet transfer edildi.`,
-        });
-        
-        // Reset form
-        setFromZoneId(selectedZoneId || '');
-        setToZoneId('');
-        setProductId('');
-        setQuantity('');
-        setIsOpen(false);
-        
-        onTransferComplete?.();
-      } else {
-        toast.error('Transfer başarısız', {
-          description: data.error || 'Bilinmeyen bir hata oluştu.',
-        });
+  const handleTransfer = async () => {
+    if (!fromZoneId || !toZoneId) {
+      toast.error('Kaynak ve hedef zone seçin');
+      return;
+    }
+
+    if (isMultiProductMode) {
+      if (transferItems.length === 0) {
+        toast.error('En az bir ürün ekleyin');
+        return;
       }
-    } catch (error) {
-      console.error('Transfer error:', error);
-      toast.error('Bağlantı hatası', {
-        description: 'Sunucuya bağlanılamadı.',
-      });
-    } finally {
-      setIsLoading(false);
+
+      setIsLoading(true);
+      
+      try {
+        const response = await fetch('/api/warehouse/transfer-multi', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            fromZoneId,
+            toZoneId,
+            transferItems: transferItems.map(item => ({
+              productId: item.productId,
+              quantity: item.quantity
+            }))
+          }),
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+          toast.success('Sevk işlemi başarıyla tamamlandı!', {
+            description: `${transferItems.length} ürün sevk edildi.`,
+          });
+          
+          // Reset form
+          resetForm();
+          setIsOpen(false);
+          
+          onTransferComplete?.();
+        } else {
+          toast.error('Sevk işlemi başarısız', {
+            description: data.error || 'Bilinmeyen bir hata oluştu.',
+          });
+        }
+      } catch (error) {
+        console.error('Sevk error:', error);
+        toast.error('Bağlantı hatası', {
+          description: 'Sunucuya bağlanılamadı.',
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    } else {
+      // Single product transfer (existing logic)
+      if (!productId || !quantity) {
+        toast.error('Tüm alanları doldurun');
+        return;
+      }
+
+      const transferQuantity = parseInt(quantity);
+      if (isNaN(transferQuantity) || transferQuantity <= 0) {
+        toast.error('Geçerli bir miktar girin');
+        return;
+      }
+
+      if (transferQuantity > availableQuantity) {
+        toast.error('Yetersiz stok');
+        return;
+      }
+
+      setIsLoading(true);
+      
+      try {
+        const response = await fetch('/api/warehouse/transfer', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            fromZoneId,
+            toZoneId,
+            productId,
+            quantity: transferQuantity
+          }),
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+          toast.success('Sevk işlemi başarıyla tamamlandı!', {
+            description: `${selectedProduct?.name} - ${transferQuantity} adet sevk edildi.`,
+          });
+          
+          // Reset form
+          resetForm();
+          setIsOpen(false);
+          
+          onTransferComplete?.();
+        } else {
+          toast.error('Sevk işlemi başarısız', {
+            description: data.error || 'Bilinmeyen bir hata oluştu.',
+          });
+        }
+      } catch (error) {
+        console.error('Sevk error:', error);
+        toast.error('Bağlantı hatası', {
+          description: 'Sunucuya bağlanılamadı.',
+        });
+      } finally {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -204,6 +316,8 @@ export function ZoneTransferDialog({
     setSourceInventory([]);
     setSelectedProduct(null);
     setAvailableQuantity(0);
+    setTransferItems([]);
+    setIsMultiProductMode(false);
   };
 
   return (
@@ -215,7 +329,7 @@ export function ZoneTransferDialog({
         {children || (
           <Button variant="outline" size="sm">
             <ArrowRightLeft className="h-4 w-4 mr-2" />
-            Zone Transfer
+            Sevk Et
           </Button>
         )}
       </DialogTrigger>
@@ -224,14 +338,39 @@ export function ZoneTransferDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <ArrowRightLeft className="h-5 w-5" />
-            Zone Transfer
+            Sevk Et
           </DialogTitle>
           <DialogDescription>
-            Ürünleri bir zone'dan diğerine transfer edin
+            Ürünleri bir zone'dan diğerine sevk edin
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6">
+          {/* Mode Toggle */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <Label className="text-sm font-medium">Transfer Modu</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Button
+                type="button"
+                variant={!isMultiProductMode ? "default" : "outline"}
+                size="sm"
+                onClick={() => setIsMultiProductMode(false)}
+              >
+                Tek Ürün
+              </Button>
+              <Button
+                type="button"
+                variant={isMultiProductMode ? "default" : "outline"}
+                size="sm"
+                onClick={() => setIsMultiProductMode(true)}
+              >
+                Çoklu Ürün
+              </Button>
+            </div>
+          </div>
+
           {/* Transfer Form */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
@@ -283,45 +422,91 @@ export function ZoneTransferDialog({
 
           {/* Product Selection */}
           {fromZoneId && (
-            <div className="space-y-2">
-              <Label htmlFor="product">Ürün</Label>
-        <SimpleSearchableSelect
-          options={productOptions}
-          value={productId}
-          onValueChange={setProductId}
-          placeholder="Transfer edilecek ürünü seçin"
-          searchPlaceholder="Ürün adı veya kodu ile ara..."
-          emptyText="Bu zonda ürün bulunamadı"
-          disabled={isLoading}
-          allowClear
-          maxHeight="300px"
-        />
-            </div>
-          )}
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="product">Ürün</Label>
+                <SimpleSearchableSelect
+                  options={productOptions}
+                  value={productId}
+                  onValueChange={setProductId}
+                  placeholder="Transfer edilecek ürünü seçin"
+                  searchPlaceholder="Ürün adı veya kodu ile ara..."
+                  emptyText="Bu zonda ürün bulunamadı"
+                  disabled={isLoading}
+                  allowClear
+                  maxHeight="300px"
+                />
+              </div>
 
-          {/* Quantity */}
-          {productId && (
-            <div className="space-y-2">
-              <Label htmlFor="quantity">Miktar</Label>
-              <Input
-                id="quantity"
-                type="number"
-                value={quantity}
-                onChange={(e) => setQuantity(e.target.value)}
-                placeholder="Transfer miktarı"
-                min="1"
-                max={availableQuantity}
-              />
-              {availableQuantity > 0 && (
-                <p className="text-sm text-muted-foreground">
-                  Mevcut stok: {availableQuantity} adet
-                </p>
+              {/* Quantity */}
+              {productId && (
+                <div className="space-y-2">
+                  <Label htmlFor="quantity">Miktar</Label>
+                  <Input
+                    id="quantity"
+                    type="number"
+                    value={quantity}
+                    onChange={(e) => setQuantity(e.target.value)}
+                    placeholder="Transfer miktarı"
+                    min="1"
+                    max={availableQuantity}
+                  />
+                  {availableQuantity > 0 && (
+                    <p className="text-sm text-muted-foreground">
+                      Mevcut stok: {availableQuantity} adet
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Add Product Button (Multi-product mode) */}
+              {isMultiProductMode && productId && quantity && (
+                <Button
+                  type="button"
+                  onClick={addProductToTransfer}
+                  disabled={isLoading}
+                  className="w-full"
+                >
+                  <Package className="h-4 w-4 mr-2" />
+                  Ürün Ekle
+                </Button>
               )}
             </div>
           )}
 
+          {/* Transfer Items List (Multi-product mode) */}
+          {isMultiProductMode && transferItems.length > 0 && (
+            <div className="space-y-2">
+              <Label>Transfer Listesi</Label>
+              <div className="space-y-2 max-h-48 overflow-y-auto">
+                {transferItems.map((item) => (
+                  <div key={item.productId} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div className="flex-1">
+                      <div className="font-medium">{item.productName}</div>
+                      <div className="text-sm text-gray-500">{item.productCode}</div>
+                      <div className="text-sm text-gray-600">
+                        {item.quantity} adet (Mevcut: {item.availableQuantity})
+                      </div>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => removeProductFromTransfer(item.productId)}
+                      className="text-red-600 hover:text-red-700"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Transfer Summary */}
-          {fromZoneId && toZoneId && productId && quantity && (
+          {fromZoneId && toZoneId && (
+            (isMultiProductMode ? transferItems.length > 0 : productId && quantity)
+          ) && (
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg">Transfer Özeti</CardTitle>
@@ -336,14 +521,36 @@ export function ZoneTransferDialog({
                     <Label className="text-sm font-medium text-gray-500">Hedef Zone</Label>
                     <p className="font-semibold">{getZoneName(toZoneId)}</p>
                   </div>
-                  <div className="space-y-1">
-                    <Label className="text-sm font-medium text-gray-500">Ürün</Label>
-                    <p className="font-semibold">{selectedProduct?.name}</p>
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-sm font-medium text-gray-500">Miktar</Label>
-                    <p className="font-semibold">{quantity} adet</p>
-                  </div>
+                  {isMultiProductMode ? (
+                    <>
+                      <div className="space-y-1 col-span-2">
+                        <Label className="text-sm font-medium text-gray-500">Ürünler</Label>
+                        <div className="space-y-1">
+                          {transferItems.map((item) => (
+                            <div key={item.productId} className="flex justify-between text-sm">
+                              <span>{item.productName} ({item.productCode})</span>
+                              <span className="font-medium">{item.quantity} adet</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="space-y-1 col-span-2">
+                        <Label className="text-sm font-medium text-gray-500">Toplam Ürün</Label>
+                        <p className="font-semibold">{transferItems.length} ürün</p>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="space-y-1">
+                        <Label className="text-sm font-medium text-gray-500">Ürün</Label>
+                        <p className="font-semibold">{selectedProduct?.name}</p>
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-sm font-medium text-gray-500">Miktar</Label>
+                        <p className="font-semibold">{quantity} adet</p>
+                      </div>
+                    </>
+                  )}
                 </div>
                 
                 <div className="flex items-start gap-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
@@ -367,18 +574,23 @@ export function ZoneTransferDialog({
           </Button>
           <Button
             onClick={handleTransfer}
-            disabled={isLoading || !fromZoneId || !toZoneId || !productId || !quantity}
+            disabled={
+              isLoading || 
+              !fromZoneId || 
+              !toZoneId || 
+              (isMultiProductMode ? transferItems.length === 0 : (!productId || !quantity))
+            }
             className="bg-blue-600 hover:bg-blue-700"
           >
             {isLoading ? (
               <>
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                Transfer Ediliyor...
+                Sevk Ediliyor...
               </>
             ) : (
               <>
                 <ArrowRightLeft className="h-4 w-4 mr-2" />
-                Transfer Et
+                Sevk Et
               </>
             )}
           </Button>

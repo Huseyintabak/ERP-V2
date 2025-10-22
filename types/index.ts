@@ -122,7 +122,7 @@ export interface Customer {
 
 export type OrderStatus = 'beklemede' | 'uretimde' | 'tamamlandi';
 export type Priority = 'dusuk' | 'orta' | 'yuksek';
-export type ProductionStatus = 'planlandi' | 'devam_ediyor' | 'duraklatildi' | 'tamamlandi' | 'iptal_edildi';
+export type ProductionStatus = 'planlandi' | 'devam_ediyor' | 'duraklatildi' | 'tamamlandi' | 'iptal';
 
 export interface Order {
   id: string;

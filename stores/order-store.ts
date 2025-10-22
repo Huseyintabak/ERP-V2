@@ -10,7 +10,7 @@ export interface Order {
   quantity: number;
   unit_price: number;
   total_price: number;
-  status: 'beklemede' | 'onaylandi' | 'uretimde' | 'tamamlandi' | 'iptal_edildi';
+  status: 'beklemede' | 'onaylandi' | 'uretimde' | 'tamamlandi' | 'iptal';
   priority: 'dusuk' | 'normal' | 'yuksek' | 'acil';
   order_date: string;
   delivery_date: string;
@@ -35,7 +35,7 @@ export interface ProductionPlan {
   product_id: string;
   target_quantity: number;
   produced_quantity: number;
-  status: 'planlandi' | 'devam_ediyor' | 'tamamlandi' | 'iptal_edildi';
+  status: 'planlandi' | 'devam_ediyor' | 'tamamlandi' | 'iptal';
   start_date: string;
   end_date: string;
   assigned_operator_id: string;
@@ -533,14 +533,14 @@ export const useOrderStore = create<OrderStore>()(
         
         cancelOrder: async (orderId: string, reason: string) => {
           // Optimistic update
-          get().actions.optimisticUpdateOrder(orderId, { status: 'iptal_edildi' });
+          get().actions.optimisticUpdateOrder(orderId, { status: 'iptal' });
           
           try {
             const response = await fetch(`/api/orders/${orderId}`, {
               method: 'PATCH',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ 
-                status: 'iptal_edildi',
+                status: 'iptal',
                 notes: reason,
               }),
             });

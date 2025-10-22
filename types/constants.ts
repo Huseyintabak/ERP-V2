@@ -16,7 +16,7 @@ export const PRODUCTION_STATUSES = {
   DEVAM_EDIYOR: 'devam_ediyor',
   DURAKLATILDI: 'duraklatildi',
   TAMAMLANDI: 'tamamlandi',
-  IPTAL_EDILDI: 'iptal_edildi',
+  IPTAL_EDILDI: 'iptal',
 } as const;
 
 export const MATERIAL_TYPES = {

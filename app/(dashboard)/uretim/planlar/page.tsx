@@ -35,7 +35,7 @@ interface ProductionPlan {
   product_id: string;
   target_quantity: number;
   produced_quantity: number;
-  status: 'planlandi' | 'devam_ediyor' | 'duraklatildi' | 'tamamlandi' | 'iptal_edildi';
+  status: 'planlandi' | 'devam_ediyor' | 'duraklatildi' | 'tamamlandi' | 'iptal';
   start_date: string;
   end_date: string;
   assigned_operator_id?: string;
@@ -152,9 +152,63 @@ export default function UretimPlanlariPage() {
     }
   };
 
+  const handleResumeProduction = async (planId: string) => {
+    try {
+      const response = await fetch('/api/production/plan-status', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          plan_id: planId,
+          action: 'resume'
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        toast.success('Üretim planı devam ettirildi');
+        actions.fetchProductionPlans();
+      } else {
+        toast.error(data.error || 'Plan devam ettirilemedi');
+      }
+    } catch (error) {
+      console.error('Resume error:', error);
+      toast.error('Bir hata oluştu');
+    }
+  };
+
   const handleCancel = (plan: ProductionPlan) => {
     setSelectedPlan(plan);
     setCancelDialogOpen(true);
+  };
+
+  const handleResume = async (planId: string) => {
+    try {
+      const response = await fetch('/api/production/plan-status', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          plan_id: planId,
+          action: 'resume'
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        toast.success('Üretim planı devam ettirildi');
+        actions.fetchProductionPlans();
+      } else {
+        toast.error(data.error || 'Plan devam ettirilemedi');
+      }
+    } catch (error) {
+      console.error('Resume error:', error);
+      toast.error('Bir hata oluştu');
+    }
   };
 
   const handleCancelSuccess = () => {
@@ -187,7 +241,7 @@ export default function UretimPlanlariPage() {
       devam_ediyor: 'default',
       duraklatildi: 'destructive',
       tamamlandi: 'default',
-      iptal_edildi: 'destructive',
+      iptal: 'destructive',
     } as const;
 
     const labels = {
@@ -195,7 +249,7 @@ export default function UretimPlanlariPage() {
       devam_ediyor: 'Devam Ediyor',
       duraklatildi: 'Duraklatıldı',
       tamamlandi: 'Tamamlandı',
-      iptal_edildi: 'İptal Edildi',
+      iptal: 'İptal Edildi',
     };
 
     return (
@@ -277,7 +331,7 @@ export default function UretimPlanlariPage() {
                   <SelectItem value="devam_ediyor">Devam Ediyor</SelectItem>
                   <SelectItem value="duraklatildi">Duraklatıldı</SelectItem>
                   <SelectItem value="tamamlandi">Tamamlandı</SelectItem>
-                  <SelectItem value="iptal_edildi">İptal Edildi</SelectItem>
+                  <SelectItem value="iptal">İptal Edildi</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -411,6 +465,17 @@ export default function UretimPlanlariPage() {
                               onComplete={() => actions.fetchProductionPlans()}
                             />
                           </>
+                        )}
+
+                        {plan.status === 'duraklatildi' && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleResumeProduction(plan.id)}
+                            className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                          >
+                            <Play className="h-4 w-4" />
+                          </Button>
                         )}
                         
                         {!plan.assigned_operator_id && (

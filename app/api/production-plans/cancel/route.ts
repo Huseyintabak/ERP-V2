@@ -83,8 +83,11 @@ export async function POST(request: NextRequest) {
 
     if (cancelError) {
       console.error('Cancel error:', cancelError);
+      console.error('Cancel error details:', JSON.stringify(cancelError, null, 2));
       return NextResponse.json({ error: cancelError.message }, { status: 500 });
     }
+
+    console.log('Cancel result:', cancelResult);
 
     return NextResponse.json({ 
       success: true, 

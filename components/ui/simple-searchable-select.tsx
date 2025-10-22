@@ -158,9 +158,9 @@ export function SimpleSearchableSelect({
               </div>
             ) : (
               <div className="space-y-1">
-                {filteredOptions.map((option) => (
+                {filteredOptions.map((option, index) => (
                   <div
-                    key={option.value}
+                    key={option.key || option.value || index}
                     onMouseDown={(e) => {
                       e.preventDefault();
                       handleSelect(option.value);

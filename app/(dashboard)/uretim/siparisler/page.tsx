@@ -125,7 +125,7 @@ export default function SiparislerPage() {
       onaylandi: 'default',
       uretimde: 'default',
       tamamlandi: 'default',
-      iptal_edildi: 'destructive',
+      iptal: 'destructive',
     } as const;
 
     const labels = {
@@ -133,7 +133,7 @@ export default function SiparislerPage() {
       onaylandi: 'Onaylandı',
       uretimde: 'Üretimde',
       tamamlandi: 'Tamamlandı',
-      iptal_edildi: 'İptal Edildi',
+      iptal: 'İptal Edildi',
     };
 
     return (
