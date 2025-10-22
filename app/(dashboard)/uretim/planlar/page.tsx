@@ -530,7 +530,22 @@ export default function UretimPlanlariPage() {
           setCancelDialogOpen(false);
           setSelectedPlan(null);
         }}
-        plan={selectedPlan}
+        plan={selectedPlan ? {
+          id: selectedPlan.id,
+          order_id: selectedPlan.order_id,
+          product_name: selectedPlan.product?.name || 'N/A',
+          target_quantity: selectedPlan.target_quantity,
+          produced_quantity: selectedPlan.produced_quantity,
+          status: selectedPlan.status,
+          created_at: selectedPlan.created_at,
+          order: selectedPlan.order ? {
+            id: selectedPlan.order_id,
+            order_number: selectedPlan.order.order_number,
+            customer_name: selectedPlan.order.customer_name,
+            status: 'active',
+            created_by: 'system'
+          } : undefined
+        } : null}
         onCancelSuccess={handleCancelSuccess}
       />
     </div>
