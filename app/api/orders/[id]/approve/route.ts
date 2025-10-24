@@ -204,15 +204,37 @@ async function handleApprove(
       console.log('📦 Order items:', JSON.stringify(orderItems, null, 2));
 
       if (orderItems && orderItems.length > 0) {
-        // Create production plans and reserve materials for each product
+        // Group items by product_id to avoid duplicate production plans
+        const productGroups = new Map();
+        
         for (const item of orderItems) {
-          console.log('🏭 Processing product:', item.product_id, 'quantity:', item.quantity);
+          const productId = item.product_id;
+          if (productGroups.has(productId)) {
+            // If same product exists, add quantities together
+            productGroups.get(productId).quantity += item.quantity;
+            console.log(`🔄 Merging duplicate product ${productId}: ${item.quantity} added to existing ${productGroups.get(productId).quantity - item.quantity}`);
+          } else {
+            // New product
+            productGroups.set(productId, {
+              product_id: productId,
+              quantity: item.quantity,
+              product_name: item.product_name
+            });
+            console.log(`🆕 New product ${productId}: ${item.quantity} units`);
+          }
+        }
+
+        console.log(`📊 Grouped ${orderItems.length} items into ${productGroups.size} unique products`);
+
+        // Create production plans for each unique product
+        for (const [productId, productData] of productGroups) {
+          console.log('🏭 Processing product:', productId, 'total quantity:', productData.quantity);
           
           // Create production plan with operator assignment if available
           const planData = {
             order_id: id,
-            product_id: item.product_id,
-            planned_quantity: item.quantity,
+            product_id: productId,
+            planned_quantity: productData.quantity,
             produced_quantity: 0,
             status: 'planlandi',
             created_at: new Date().toISOString(),
@@ -296,7 +318,7 @@ async function handleApprove(
 
           // Reserve materials (stock already checked above)
           for (const bomItem of bomItems) {
-            const needed = bomItem.quantity_needed * item.quantity;
+            const needed = bomItem.quantity_needed * productData.quantity;
             
             // Get material details
             const tableName = bomItem.material_type === 'raw' ? 'raw_materials' : 'semi_finished_products';
