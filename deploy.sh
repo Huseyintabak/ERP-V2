@@ -14,9 +14,11 @@ YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m' # No Color
 
-# 1. Git pull
+# 1. Git pull (çakışmaları çöz)
 echo -e "${YELLOW}📥 Git'ten son değişiklikler çekiliyor...${NC}"
+git stash  # Yerel değişiklikleri sakla
 git pull origin main
+git stash pop || true  # Saklananları geri getir (çakışma yoksa)
 
 # 2. Cache temizleme
 echo -e "${YELLOW}🧹 Cache temizleniyor...${NC}"
