@@ -1,14 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+import { logger } from '@/lib/utils/logger';
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ orderId: string }> }
 ) {
   try {
-    console.log('🔍 Simple Semi BOM API called');
+    logger.log('🔍 Simple Semi BOM API called');
     
     const { orderId } = await params;
-    console.log('🔍 Order ID:', orderId);
+    logger.log('🔍 Order ID:', orderId);
 
     // Basit örnek veri döndür
     const sampleMaterials = [
@@ -41,7 +42,7 @@ export async function GET(
       }
     ];
 
-    console.log('✅ Returning sample materials:', sampleMaterials.length);
+    logger.log('✅ Returning sample materials:', sampleMaterials.length);
 
     return NextResponse.json({
       materials: sampleMaterials,
@@ -56,7 +57,7 @@ export async function GET(
     });
 
   } catch (error) {
-    console.error('Simple Semi BOM API error:', error);
+    logger.error('Simple Semi BOM API error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

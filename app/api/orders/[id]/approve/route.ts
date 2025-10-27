@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { verifyJWT } from '@/lib/auth/jwt';
 
+import { logger } from '@/lib/utils/logger';
 // Support both POST and PATCH for flexibility
 export async function POST(
   request: NextRequest,
@@ -44,7 +45,7 @@ async function handleApprove(
     const status = 'uretimde';
 
     // First, check stock availability before approving the order
-    console.log('🔍 Checking stock availability before approval...');
+    logger.log('🔍 Checking stock availability before approval...');
     
     const { data: orderItems, error: itemsError } = await supabase
       .from('order_items')
@@ -52,7 +53,7 @@ async function handleApprove(
       .eq('order_id', id);
 
     if (itemsError) {
-      console.error('❌ Error fetching order items:', itemsError);
+      logger.error('❌ Error fetching order items:', itemsError);
       return NextResponse.json({ 
         error: 'Failed to fetch order items', 
         details: itemsError.message 
@@ -60,7 +61,7 @@ async function handleApprove(
     }
 
     if (!orderItems || orderItems.length === 0) {
-      console.warn('⚠️ No order items found in order!');
+      logger.warn('⚠️ No order items found in order!');
       return NextResponse.json({ error: 'Siparişte ürün bulunamadı' }, { status: 400 });
     }
 
@@ -68,7 +69,7 @@ async function handleApprove(
     const insufficientMaterials = [];
     
     for (const item of orderItems) {
-      console.log(`🔍 Checking stock for: ${item.product_name} (${item.quantity} units)`);
+      logger.log(`🔍 Checking stock for: ${item.product_name} (${item.quantity} units)`);
 
       // Get BOM for this product
       const { data: bomItems, error: bomError } = await supabase
@@ -81,7 +82,7 @@ async function handleApprove(
         .eq('finished_product_id', item.product_id);
 
       if (bomError) {
-        console.error('❌ Error fetching BOM:', bomError);
+        logger.error('❌ Error fetching BOM:', bomError);
         continue;
       }
 
@@ -98,7 +99,7 @@ async function handleApprove(
             .single();
           
           if (materialError) {
-            console.error('❌ Error fetching material:', materialError);
+            logger.error('❌ Error fetching material:', materialError);
             continue;
           }
           
@@ -115,7 +116,7 @@ async function handleApprove(
                 available: available,
                 shortfall: needed - available
               });
-              console.warn(`⚠️ Insufficient stock for ${material.code}: needed ${needed}, available ${available}`);
+              logger.warn(`⚠️ Insufficient stock for ${material.code}: needed ${needed}, available ${available}`);
             }
           }
         }
@@ -140,10 +141,10 @@ async function handleApprove(
     }
 
     // If stock is sufficient, proceed with approval
-    console.log('✅ Stock check passed, proceeding with approval...');
+    logger.log('✅ Stock check passed, proceeding with approval...');
     
     // Update order status
-    console.log('🔍 Updating order:', id, 'to status:', status);
+    logger.log('🔍 Updating order:', id, 'to status:', status);
     const { data: order, error: orderError } = await supabase
       .from('orders')
       .update({
@@ -155,8 +156,8 @@ async function handleApprove(
       .single();
 
     if (orderError) {
-      console.error('❌ Order update error:', orderError);
-      console.error('Error details:', JSON.stringify(orderError, null, 2));
+      logger.error('❌ Order update error:', orderError);
+      logger.error('Error details:', JSON.stringify(orderError, null, 2));
       return NextResponse.json({ 
         error: 'Failed to update order status', 
         details: orderError.message,
@@ -164,11 +165,11 @@ async function handleApprove(
       }, { status: 400 });
     }
 
-    console.log('✅ Order updated successfully:', order.order_number);
+    logger.log('✅ Order updated successfully:', order.order_number);
 
     // If status is 'uretimde' (approved), create production plans and reserve materials
     if (status === 'uretimde') {
-      console.log('🏭 Starting order approval for order:', id);
+      logger.log('🏭 Starting order approval for order:', id);
       
       // Get order details including assigned operator
       const { data: orderDetails, error: orderDetailsError } = await supabase
@@ -178,14 +179,14 @@ async function handleApprove(
         .single();
 
       if (orderDetailsError) {
-        console.error('❌ Error fetching order details:', orderDetailsError);
+        logger.error('❌ Error fetching order details:', orderDetailsError);
         return NextResponse.json({ 
           error: 'Failed to fetch order details', 
           details: orderDetailsError.message 
         }, { status: 400 });
       }
 
-      console.log('👤 Order assigned operator:', orderDetails.assigned_operator_id);
+      logger.log('👤 Order assigned operator:', orderDetails.assigned_operator_id);
       
       // Fetch order items
       const { data: orderItems, error: itemsError } = await supabase
@@ -194,14 +195,14 @@ async function handleApprove(
         .eq('order_id', id);
 
       if (itemsError) {
-        console.error('❌ Error fetching order items:', itemsError);
+        logger.error('❌ Error fetching order items:', itemsError);
         return NextResponse.json({ 
           error: 'Failed to fetch order items', 
           details: itemsError.message 
         }, { status: 400 });
       }
 
-      console.log('📦 Order items:', JSON.stringify(orderItems, null, 2));
+      logger.log('📦 Order items:', JSON.stringify(orderItems, null, 2));
 
       if (orderItems && orderItems.length > 0) {
         // Group items by product_id to avoid duplicate production plans
@@ -212,7 +213,7 @@ async function handleApprove(
           if (productGroups.has(productId)) {
             // If same product exists, add quantities together
             productGroups.get(productId).quantity += item.quantity;
-            console.log(`🔄 Merging duplicate product ${productId}: ${item.quantity} added to existing ${productGroups.get(productId).quantity - item.quantity}`);
+            logger.log(`🔄 Merging duplicate product ${productId}: ${item.quantity} added to existing ${productGroups.get(productId).quantity - item.quantity}`);
           } else {
             // New product
             productGroups.set(productId, {
@@ -220,15 +221,29 @@ async function handleApprove(
               quantity: item.quantity,
               product_name: item.product_name
             });
-            console.log(`🆕 New product ${productId}: ${item.quantity} units`);
+            logger.log(`🆕 New product ${productId}: ${item.quantity} units`);
           }
         }
 
-        console.log(`📊 Grouped ${orderItems.length} items into ${productGroups.size} unique products`);
+        logger.log(`📊 Grouped ${orderItems.length} items into ${productGroups.size} unique products`);
 
         // Create production plans for each unique product
         for (const [productId, productData] of productGroups) {
-          console.log('🏭 Processing product:', productId, 'total quantity:', productData.quantity);
+          logger.log('🏭 Processing product:', productId, 'total quantity:', productData.quantity);
+          
+          // Check if production plan already exists for this order and product
+          const { data: existingPlan } = await supabase
+            .from('production_plans')
+            .select('id, status')
+            .eq('order_id', id)
+            .eq('product_id', productId)
+            .single();
+
+          if (existingPlan) {
+            logger.log('⚠️ Production plan already exists for this order and product. Skipping...');
+            logger.log('   Plan ID:', existingPlan.id, 'Status:', existingPlan.status);
+            continue; // Skip creating duplicate plan
+          }
           
           // Create production plan with operator assignment if available
           const planData = {
@@ -244,7 +259,7 @@ async function handleApprove(
           // If order has assigned operator, assign to production plan
           if (orderDetails.assigned_operator_id) {
             planData.assigned_operator_id = orderDetails.assigned_operator_id;
-            console.log('👤 Assigning operator to production plan:', orderDetails.assigned_operator_id);
+            logger.log('👤 Assigning operator to production plan:', orderDetails.assigned_operator_id);
           }
 
           const { data: plan, error: planError } = await supabase
@@ -254,11 +269,11 @@ async function handleApprove(
             .single();
 
           if (planError) {
-            console.error('❌ Error creating production plan:', planError);
+            logger.error('❌ Error creating production plan:', planError);
             continue;
           }
 
-          console.log('✅ Production plan created:', plan.id);
+          logger.log('✅ Production plan created:', plan.id);
 
           // Get BOM for this product
           const { data: bomItems, error: bomError } = await supabase
@@ -268,18 +283,18 @@ async function handleApprove(
               material_id,
               quantity_needed
             `)
-            .eq('finished_product_id', item.product_id);
+            .eq('finished_product_id', productId);
 
           if (bomError) {
-            console.error('❌ Error fetching BOM:', bomError);
+            logger.error('❌ Error fetching BOM:', bomError);
             continue;
           }
 
-          console.log('🔧 BOM items:', JSON.stringify(bomItems, null, 2));
+          logger.log('🔧 BOM items:', JSON.stringify(bomItems, null, 2));
 
           // Create BOM snapshot for this production plan
           if (bomItems && bomItems.length > 0) {
-            console.log('📸 Creating BOM snapshot for plan:', plan.id);
+            logger.log('📸 Creating BOM snapshot for plan:', plan.id);
             
             for (const bomItem of bomItems) {
               // Get material details for snapshot
@@ -291,7 +306,7 @@ async function handleApprove(
                 .single();
               
               if (materialError || !material) {
-                console.error('❌ Error fetching material for snapshot:', materialError);
+                logger.error('❌ Error fetching material for snapshot:', materialError);
                 continue;
               }
 
@@ -308,11 +323,11 @@ async function handleApprove(
                 });
 
               if (snapshotError) {
-                console.error('❌ Error creating BOM snapshot:', snapshotError);
+                logger.error('❌ Error creating BOM snapshot:', snapshotError);
                 continue;
               }
 
-              console.log('✅ BOM snapshot created for:', material.code);
+              logger.log('✅ BOM snapshot created for:', material.code);
             }
           }
 
@@ -329,7 +344,7 @@ async function handleApprove(
               .single();
             
             if (materialError) {
-              console.error('❌ Error fetching material:', materialError);
+              logger.error('❌ Error fetching material:', materialError);
               continue;
             }
             
@@ -344,24 +359,24 @@ async function handleApprove(
                 .eq('id', bomItem.material_id);
 
               if (updateError) {
-                console.error('❌ Error updating reserved quantity:', updateError);
+                logger.error('❌ Error updating reserved quantity:', updateError);
                 continue;
               }
 
-              console.log('✅ Reserved', needed, 'units of', material.code);
+              logger.log('✅ Reserved', needed, 'units of', material.code);
             }
           }
         }
       } else {
-        console.warn('⚠️ No order items found in order!');
+        logger.warn('⚠️ No order items found in order!');
       }
 
-      console.log('✅ Order approved successfully with BOM reservations');
+      logger.log('✅ Order approved successfully with BOM reservations');
     }
 
     return NextResponse.json(order);
   } catch (error) {
-    console.error('Error updating order status:', error);
+    logger.error('Error updating order status:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

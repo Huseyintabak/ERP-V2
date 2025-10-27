@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { verifyJWT } from '@/lib/auth/jwt';
 
+import { logger } from '@/lib/utils/logger';
 export async function POST(request: NextRequest) {
   try {
     const token = request.cookies.get('thunder_token')?.value;
@@ -55,7 +56,7 @@ export async function POST(request: NextRequest) {
           .eq('id', materialId);
 
         if (updateError) {
-          console.error(`Error updating ${materialType} material:`, updateError);
+          logger.error(`Error updating ${materialType} material:`, updateError);
           results.push({
             materialId,
             success: false,
@@ -78,7 +79,7 @@ export async function POST(request: NextRequest) {
           });
 
         if (movementError) {
-          console.error('Error creating stock movement:', movementError);
+          logger.error('Error creating stock movement:', movementError);
           // Don't fail the whole operation for movement record error
         }
 
@@ -97,7 +98,7 @@ export async function POST(request: NextRequest) {
           });
 
         if (auditError) {
-          console.error('Error creating audit log:', auditError);
+          logger.error('Error creating audit log:', auditError);
           // Don't fail the whole operation for audit log error
         }
 
@@ -109,7 +110,7 @@ export async function POST(request: NextRequest) {
         });
 
       } catch (error: any) {
-        console.error(`Error processing update for material ${materialId}:`, error);
+        logger.error(`Error processing update for material ${materialId}:`, error);
         results.push({
           materialId,
           success: false,
@@ -133,7 +134,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error: any) {
-    console.error('Error in inventory count process:', error);
+    logger.error('Error in inventory count process:', error);
     return NextResponse.json({ 
       error: error.message || 'Internal server error' 
     }, { status: 500 });

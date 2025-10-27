@@ -34,6 +34,7 @@ import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Upload, Download, CheckCircle, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import { logger } from '@/lib/utils/logger';
 
 const importSchema = z.object({
   type: z.enum(['raw', 'semi', 'finished'], {
@@ -122,7 +123,7 @@ export function ExcelImportDialog({ onImportComplete }: ExcelImportDialogProps) 
       }
 
     } catch (error: unknown) {
-      console.error('Import error:', error);
+      logger.error('Import error:', error);
       const errorMessage = error instanceof Error ? error.message : 'İçe aktarma hatası';
       toast.error(errorMessage);
     } finally {
@@ -150,7 +151,7 @@ export function ExcelImportDialog({ onImportComplete }: ExcelImportDialogProps) 
       
       toast.success('Template indirildi');
     } catch (error: unknown) {
-      console.error('Template download error:', error);
+      logger.error('Template download error:', error);
       toast.error('Template indirme hatası');
     }
   };

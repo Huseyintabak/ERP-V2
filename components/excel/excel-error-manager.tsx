@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
+import { logger } from '@/lib/utils/logger';
 import { 
   AlertTriangle, 
   CheckCircle, 
@@ -110,7 +111,7 @@ export default function ExcelErrorManager() {
         setPagination(data.pagination);
       }
     } catch (error) {
-      console.error('Error fetching errors:', error);
+      logger.error('Error fetching errors:', error);
       setMessage({ type: 'error', text: 'Hatalar yüklenemedi' });
     } finally {
       setLoading(false);
@@ -126,7 +127,7 @@ export default function ExcelErrorManager() {
         setStats(data.data.stats);
       }
     } catch (error) {
-      console.error('Error fetching stats:', error);
+      logger.error('Error fetching stats:', error);
     }
   };
 

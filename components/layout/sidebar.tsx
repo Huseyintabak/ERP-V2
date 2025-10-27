@@ -23,7 +23,6 @@ import {
   Building2,
   ShoppingCart,
   ArrowUpDown,
-  BarChart3,
   FileText,
   Radio,
   ScrollText
@@ -117,12 +116,9 @@ const navItems: NavItem[] = [
   },
   {
     title: 'Raporlar',
+    href: '/raporlar',
     icon: FileBarChart,
     roles: ['yonetici'],
-    children: [
-      { title: 'Gelişmiş Raporlar', href: '/raporlar/gelismis', icon: BarChart3 },
-      { title: 'Standart Raporlar', href: '/raporlar', icon: FileText },
-    ],
   },
   {
     title: 'Bildirimler',

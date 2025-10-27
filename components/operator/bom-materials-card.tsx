@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { AlertCircle, Package, Loader2 } from 'lucide-react';
+import { logger } from '@/lib/utils/logger';
 
 interface BomMaterial {
   material_type: 'raw' | 'semi';
@@ -39,7 +40,7 @@ export function BomMaterialsCard({ planId, producedQuantity, plannedQuantity }: 
         setMaterials(data.materials || []);
       }
     } catch (error) {
-      console.error('Error fetching BOM materials:', error);
+      logger.error('Error fetching BOM materials:', error);
     } finally {
       setLoading(false);
     }

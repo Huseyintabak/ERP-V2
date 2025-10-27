@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { logger } from '@/lib/utils/logger';
 
 interface RealtimeConfig {
   maxReconnectAttempts?: number;
@@ -64,7 +65,7 @@ export const useRealtimeRobust = (
         const supabase = createClient();
         supabase.removeChannel(channelRef.current);
       } catch (error) {
-        console.warn('Error removing channel:', error);
+        logger.warn('Error removing channel:', error);
       }
       channelRef.current = null;
     }
@@ -86,7 +87,7 @@ export const useRealtimeRobust = (
       const supabase = createClient();
       const channelName = `${table}-robust-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
       
-      console.log(`🔔 Setting up robust real-time subscription for table: ${table} (${channelName})`);
+      logger.log(`🔔 Setting up robust real-time subscription for table: ${table} (${channelName})`);
 
       const channel = supabase
         .channel(channelName, {
@@ -109,12 +110,12 @@ export const useRealtimeRobust = (
           
           const now = Date.now();
           if (now - lastEventRef.current < 100) {
-            console.log('🔔 Throttling rapid INSERT events');
+            logger.log('🔔 Throttling rapid INSERT events');
             return;
           }
           lastEventRef.current = now;
           
-          console.log('🔔 Robust real-time INSERT:', payload);
+          logger.log('🔔 Robust real-time INSERT:', payload);
           onEvent?.(payload.new);
           onInsert?.(payload.new);
         })
@@ -127,12 +128,12 @@ export const useRealtimeRobust = (
           
           const now = Date.now();
           if (now - lastEventRef.current < 100) {
-            console.log('🔔 Throttling rapid UPDATE events');
+            logger.log('🔔 Throttling rapid UPDATE events');
             return;
           }
           lastEventRef.current = now;
           
-          console.log('🔔 Robust real-time UPDATE:', payload);
+          logger.log('🔔 Robust real-time UPDATE:', payload);
           onEvent?.(payload.new);
           onUpdate?.(payload.new);
         })
@@ -145,22 +146,22 @@ export const useRealtimeRobust = (
           
           const now = Date.now();
           if (now - lastEventRef.current < 100) {
-            console.log('🔔 Throttling rapid DELETE events');
+            logger.log('🔔 Throttling rapid DELETE events');
             return;
           }
           lastEventRef.current = now;
           
-          console.log('🔔 Robust real-time DELETE:', payload);
+          logger.log('🔔 Robust real-time DELETE:', payload);
           onEvent?.(payload.old);
           onDelete?.(payload.old);
         })
         .subscribe((subscriptionStatus, err) => {
           if (!isActiveRef.current) return;
 
-          console.log(`🔔 Robust real-time subscription status for ${table}: ${subscriptionStatus}`);
+          logger.log(`🔔 Robust real-time subscription status for ${table}: ${subscriptionStatus}`);
 
           if (err) {
-            console.error('🔔 Robust real-time subscription error:', err);
+            logger.error('🔔 Robust real-time subscription error:', err);
             setStatus(prev => ({
               ...prev,
               isConnecting: false,
@@ -172,7 +173,7 @@ export const useRealtimeRobust = (
           }
 
           if (subscriptionStatus === 'SUBSCRIBED') {
-            console.log(`🔔 Successfully connected to ${table}`);
+            logger.log(`🔔 Successfully connected to ${table}`);
             setStatus(prev => ({
               ...prev,
               isConnected: true,
@@ -185,7 +186,7 @@ export const useRealtimeRobust = (
                      subscriptionStatus === 'TIMED_OUT' || 
                      subscriptionStatus === 'CLOSED') {
             
-            console.warn(`🔔 Robust real-time connection lost for table: ${table}, status: ${subscriptionStatus}`);
+            logger.warn(`🔔 Robust real-time connection lost for table: ${table}, status: ${subscriptionStatus}`);
             
             setStatus(prev => ({
               ...prev,
@@ -198,7 +199,7 @@ export const useRealtimeRobust = (
             // Attempt reconnection with exponential backoff
             if (status.reconnectAttempts < maxReconnectAttempts) {
               const delay = Math.min(reconnectDelay * Math.pow(2, status.reconnectAttempts), 30000);
-              console.log(`🔔 Attempting robust reconnect (${status.reconnectAttempts + 1}/${maxReconnectAttempts}) in ${delay}ms...`);
+              logger.log(`🔔 Attempting robust reconnect (${status.reconnectAttempts + 1}/${maxReconnectAttempts}) in ${delay}ms...`);
               
               reconnectTimeoutRef.current = setTimeout(() => {
                 if (isActiveRef.current) {
@@ -206,7 +207,7 @@ export const useRealtimeRobust = (
                 }
               }, delay);
             } else {
-              console.error('🔔 Max robust reconnection attempts reached, giving up');
+              logger.error('🔔 Max robust reconnection attempts reached, giving up');
               setStatus(prev => ({
                 ...prev,
                 error: 'Max reconnection attempts reached'
@@ -216,7 +217,7 @@ export const useRealtimeRobust = (
         });
 
     } catch (error) {
-      console.error('🔔 Error setting up robust real-time subscription:', error);
+      logger.error('🔔 Error setting up robust real-time subscription:', error);
       setStatus(prev => ({
         ...prev,
         isConnecting: false,
@@ -232,7 +233,7 @@ export const useRealtimeRobust = (
     setupRealtime();
 
     return () => {
-      console.log(`🔔 Cleaning up robust real-time subscription for table: ${table}`);
+      logger.log(`🔔 Cleaning up robust real-time subscription for table: ${table}`);
       isActiveRef.current = false;
       cleanup();
     };

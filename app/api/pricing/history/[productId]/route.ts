@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
+import { logger } from '@/lib/utils/logger';
 /**
  * GET /api/pricing/history/[productId]
  * Ürün fiyat geçmişini getirir
@@ -95,7 +96,7 @@ export async function GET(
     });
 
   } catch (error: any) {
-    console.error('❌ Price history error:', error);
+    logger.error('❌ Price history error:', error);
     return NextResponse.json(
       { error: error.message || 'Fiyat geçmişi alınamadı' },
       { status: 500 }

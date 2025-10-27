@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { logger } from '@/lib/utils/logger';
 
 interface RealtimeSubscription {
   table: string;
@@ -38,7 +39,7 @@ class RealtimeManager {
     for (const [table, subscription] of this.subscriptions.entries()) {
       if (subscription.subscribers.size === 0 || 
           (now - subscription.lastActivity > inactiveThreshold)) {
-        console.log(`🔔 Cleaning up inactive subscription for table: ${table}`);
+        logger.log(`🔔 Cleaning up inactive subscription for table: ${table}`);
         this.removeSubscription(table);
       }
     }
@@ -90,7 +91,7 @@ class RealtimeManager {
   ): RealtimeSubscription {
     const channelName = `${table}-managed-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     
-    console.log(`🔔 Creating managed subscription for table: ${table} (${channelName})`);
+    logger.log(`🔔 Creating managed subscription for table: ${table} (${channelName})`);
 
     const channel = this.supabase
       .channel(channelName, {
@@ -109,7 +110,7 @@ class RealtimeManager {
         schema: 'public',
         table: table
       }, (payload) => {
-        console.log('🔔 Managed real-time INSERT:', payload);
+        logger.log('🔔 Managed real-time INSERT:', payload);
         onInsert?.(payload.new);
       })
       .on('postgres_changes', {
@@ -117,7 +118,7 @@ class RealtimeManager {
         schema: 'public',
         table: table
       }, (payload) => {
-        console.log('🔔 Managed real-time UPDATE:', payload);
+        logger.log('🔔 Managed real-time UPDATE:', payload);
         onUpdate?.(payload.new);
       })
       .on('postgres_changes', {
@@ -125,14 +126,14 @@ class RealtimeManager {
         schema: 'public',
         table: table
       }, (payload) => {
-        console.log('🔔 Managed real-time DELETE:', payload);
+        logger.log('🔔 Managed real-time DELETE:', payload);
         onDelete?.(payload.old);
       })
       .subscribe((status, err) => {
-        console.log(`🔔 Managed real-time subscription status for ${table}: ${status}`);
+        logger.log(`🔔 Managed real-time subscription status for ${table}: ${status}`);
 
         if (err) {
-          console.error('🔔 Managed real-time subscription error:', err);
+          logger.error('🔔 Managed real-time subscription error:', err);
           return;
         }
 
@@ -156,12 +157,12 @@ class RealtimeManager {
     const subscription = this.subscriptions.get(table);
     if (!subscription) return;
 
-    console.log(`🔔 Removing managed subscription for table: ${table}`);
+    logger.log(`🔔 Removing managed subscription for table: ${table}`);
     
     try {
       this.supabase.removeChannel(subscription.channel);
     } catch (error) {
-      console.warn('Error removing channel:', error);
+      logger.warn('Error removing channel:', error);
     }
     
     this.subscriptions.delete(table);
@@ -218,7 +219,7 @@ export const useRealtimeManager = (
       setIsConnected(result.isConnected);
       setError(result.error);
     } catch (err) {
-      console.error('Error subscribing to realtime:', err);
+      logger.error('Error subscribing to realtime:', err);
       setError(err instanceof Error ? err.message : 'Unknown error');
     }
 

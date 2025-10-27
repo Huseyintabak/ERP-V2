@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { operatorSchema } from '@/types';
 import { hashPassword } from '@/lib/auth/password';
 
+import { logger } from '@/lib/utils/logger';
 // GET - List Operators
 export async function GET(request: NextRequest) {
   try {
@@ -18,15 +19,15 @@ export async function GET(request: NextRequest) {
       .order('series');
 
     if (error) {
-      console.error('❌ Operators GET error:', error);
+      logger.error('❌ Operators GET error:', error);
       throw error;
     }
 
-    console.log('✅ Operators data:', data);
-    console.log('✅ Operators count:', data?.length || 0);
+    logger.log('✅ Operators data:', data);
+    logger.log('✅ Operators count:', data?.length || 0);
     return NextResponse.json(data);
   } catch (error: any) {
-    console.error('❌ Operators API error:', error);
+    logger.error('❌ Operators API error:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { verifyJWT } from '@/lib/auth/jwt';
 
+import { logger } from '@/lib/utils/logger';
 // Üretim tamamlandığında otomatik stok güncelleme
 export async function POST(request: NextRequest) {
   try {
@@ -120,7 +121,7 @@ export async function POST(request: NextRequest) {
     }, { status: 200 });
 
   } catch (error: any) {
-    console.error('Production completion error:', error);
+    logger.error('Production completion error:', error);
     return NextResponse.json({ 
       error: error.message || 'Üretim tamamlanamadı' 
     }, { status: 500 });

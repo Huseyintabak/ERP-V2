@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { verifyJWT } from '@/lib/auth/jwt';
 
+import { logger } from '@/lib/utils/logger';
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -35,7 +36,7 @@ export async function GET(
       .order('quantity', { ascending: false });
 
     if (invError) {
-      console.error('Error fetching zone inventory:', invError);
+      logger.error('Error fetching zone inventory:', invError);
       return NextResponse.json({ error: invError.message }, { status: 500 });
     }
 
@@ -51,7 +52,7 @@ export async function GET(
       .in('id', productIds);
 
     if (prodError) {
-      console.error('Error fetching products:', prodError);
+      logger.error('Error fetching products:', prodError);
       return NextResponse.json({ error: prodError.message }, { status: 500 });
     }
 
@@ -82,7 +83,7 @@ export async function GET(
       .single();
 
     if (zoneError) {
-      console.error('Error fetching zone info:', zoneError);
+      logger.error('Error fetching zone info:', zoneError);
       return NextResponse.json({ error: zoneError.message }, { status: 500 });
     }
 
@@ -92,7 +93,7 @@ export async function GET(
     });
 
   } catch (error) {
-    console.error('Zone inventory API error:', error);
+    logger.error('Zone inventory API error:', error);
     return NextResponse.json({ 
       error: 'Internal server error' 
     }, { status: 500 });
@@ -146,14 +147,14 @@ export async function POST(
       .single();
 
     if (error) {
-      console.error('Error updating zone inventory:', error);
+      logger.error('Error updating zone inventory:', error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
     return NextResponse.json({ data });
 
   } catch (error) {
-    console.error('Update zone inventory API error:', error);
+    logger.error('Update zone inventory API error:', error);
     return NextResponse.json({ 
       error: 'Internal server error' 
     }, { status: 500 });

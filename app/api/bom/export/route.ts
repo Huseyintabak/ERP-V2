@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { verifyJWT } from '@/lib/auth/jwt';
 import * as XLSX from 'xlsx';
 
+import { logger } from '@/lib/utils/logger';
 export async function GET(request: NextRequest) {
   try {
     const token = request.cookies.get('thunder_token')?.value;
@@ -114,7 +115,7 @@ export async function GET(request: NextRequest) {
     return createExcelFile(exportData, 'BOM Listesi');
 
   } catch (error: unknown) {
-    console.error('BOM export error:', error);
+    logger.error('BOM export error:', error);
     const errorMessage = error instanceof Error ? error.message : 'Export failed';
     return NextResponse.json({ error: errorMessage }, { status: 500 });
   }

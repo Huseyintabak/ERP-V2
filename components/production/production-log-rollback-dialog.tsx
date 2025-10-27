@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Clock, User, Package, AlertTriangle, Undo2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuthStore } from '@/stores/auth-store';
+import { logger } from '@/lib/utils/logger';
 
 interface ProductionLog {
   id: string;
@@ -87,7 +88,7 @@ export function ProductionLogRollbackDialog({
       setReason('');
 
     } catch (error: any) {
-      console.error('Rollback error:', error);
+      logger.error('Rollback error:', error);
       toast.error(error.message || 'Geri alma işlemi başarısız');
     } finally {
       setIsRollingBack(false);

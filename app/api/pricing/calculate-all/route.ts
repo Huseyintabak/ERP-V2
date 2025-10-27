@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { verifyJWT } from '@/lib/auth/jwt';
 
+import { logger } from '@/lib/utils/logger';
 /**
  * POST /api/pricing/calculate-all
  * Tüm BOM'u olan ürünlerin maliyetlerini toplu hesaplar
@@ -41,7 +42,7 @@ export async function POST(request: NextRequest) {
     // Get unique product IDs
     const uniqueProductIds = [...new Set(bomProducts.map(b => b.finished_product_id))];
     
-    console.log(`🔄 Toplu maliyet hesaplama başlatılıyor: ${uniqueProductIds.length} ürün`);
+    logger.log(`🔄 Toplu maliyet hesaplama başlatılıyor: ${uniqueProductIds.length} ürün`);
 
     const results = {
       total: uniqueProductIds.length,
@@ -58,14 +59,14 @@ export async function POST(request: NextRequest) {
           .rpc('calculate_bom_cost', { p_product_id: productId });
 
         if (costError) {
-          console.error(`❌ Cost calculation failed for ${productId}:`, costError.message);
+          logger.error(`❌ Cost calculation failed for ${productId}:`, costError.message);
           results.failed++;
           results.errors.push(`${productId}: ${costError.message}`);
           continue;
         }
 
         if (!costData || costData.length === 0) {
-          console.warn(`⚠️ No BOM data for ${productId}`);
+          logger.warn(`⚠️ No BOM data for ${productId}`);
           results.failed++;
           results.errors.push(`${productId}: BOM bulunamadı`);
           continue;
@@ -92,11 +93,11 @@ export async function POST(request: NextRequest) {
             .eq('id', productId);
 
           if (updateError) {
-            console.error(`❌ Update failed for finished ${finishedProduct.code}:`, updateError.message);
+            logger.error(`❌ Update failed for finished ${finishedProduct.code}:`, updateError.message);
             results.failed++;
             results.errors.push(`${finishedProduct.code}: ${updateError.message}`);
           } else {
-            console.log(`✅ Finished product ${finishedProduct.code}: ₺${totalCost}`);
+            logger.log(`✅ Finished product ${finishedProduct.code}: ₺${totalCost}`);
             results.success++;
           }
         } else {
@@ -115,28 +116,28 @@ export async function POST(request: NextRequest) {
               .eq('id', productId);
 
             if (updateError) {
-              console.error(`❌ Update failed for semi ${semiProduct.code}:`, updateError.message);
+              logger.error(`❌ Update failed for semi ${semiProduct.code}:`, updateError.message);
               results.failed++;
               results.errors.push(`${semiProduct.code}: ${updateError.message}`);
             } else {
-              console.log(`✅ Semi product ${semiProduct.code}: ₺${totalCost}`);
+              logger.log(`✅ Semi product ${semiProduct.code}: ₺${totalCost}`);
               results.success++;
             }
           } else {
-            console.warn(`⚠️ Product not found: ${productId}`);
+            logger.warn(`⚠️ Product not found: ${productId}`);
             results.failed++;
             results.errors.push(`${productId}: Ürün bulunamadı`);
           }
         }
 
       } catch (error: any) {
-        console.error(`❌ Error processing ${productId}:`, error.message);
+        logger.error(`❌ Error processing ${productId}:`, error.message);
         results.failed++;
         results.errors.push(`${productId}: ${error.message}`);
       }
     }
 
-    console.log('✅ Toplu maliyet hesaplama tamamlandı:', results);
+    logger.log('✅ Toplu maliyet hesaplama tamamlandı:', results);
 
     return NextResponse.json({
       success: true,
@@ -145,7 +146,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error: any) {
-    console.error('❌ Bulk pricing calculation error:', error);
+    logger.error('❌ Bulk pricing calculation error:', error);
     return NextResponse.json(
       { error: error.message || 'Toplu hesaplama hatası' },
       { status: 500 }

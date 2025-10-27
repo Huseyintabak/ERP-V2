@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { verifyJWT } from '@/lib/auth/jwt';
 
+import { logger } from '@/lib/utils/logger';
 export async function GET(request: NextRequest) {
   try {
     const token = request.cookies.get('thunder_token')?.value;
@@ -106,7 +107,7 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Dashboard stats error:', error);
+    logger.error('Dashboard stats error:', error);
     return NextResponse.json({ 
       error: 'Failed to fetch dashboard stats',
       details: error instanceof Error ? error.message : 'Unknown error'

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import * as XLSX from 'xlsx';
 
+import { logger } from '@/lib/utils/logger';
 /**
  * GET /api/reports/export/operators
  * Operatör raporunu Excel formatında export eder
@@ -82,7 +83,7 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error: any) {
-    console.error('❌ Operator export error:', error);
+    logger.error('❌ Operator export error:', error);
     return NextResponse.json(
       { error: error.message || 'Export hatası' },
       { status: 500 }

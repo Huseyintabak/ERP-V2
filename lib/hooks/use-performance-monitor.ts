@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { logger } from '@/lib/utils/logger';
 
 interface PerformanceMetrics {
   renderTime: number;
@@ -43,19 +44,19 @@ export const usePerformanceMonitor = (
     renderTimesRef.current = [];
 
     if (process.env.NODE_ENV === 'development') {
-      console.log(`[Performance] Component ${componentName} mounted`);
+      logger.log(`[Performance] Component ${componentName} mounted`);
     }
 
     return () => {
       const totalTime = performance.now() - mountTimeRef.current;
       
       if (process.env.NODE_ENV === 'development') {
-        console.log(`[Performance] Component ${componentName} unmounted after ${totalTime.toFixed(2)}ms`);
-        console.log(`[Performance] Total renders: ${renderCountRef.current}`);
-        console.log(`[Performance] Average render time: ${metrics.averageRenderTime.toFixed(2)}ms`);
+        logger.log(`[Performance] Component ${componentName} unmounted after ${totalTime.toFixed(2)}ms`);
+        logger.log(`[Performance] Total renders: ${renderCountRef.current}`);
+        logger.log(`[Performance] Average render time: ${metrics.averageRenderTime.toFixed(2)}ms`);
         
         if (renderCountRef.current > thresholds.maxReRenders) {
-          console.warn(`[Performance Warning] ${componentName} rendered ${renderCountRef.current} times (threshold: ${thresholds.maxReRenders})`);
+          logger.warn(`[Performance Warning] ${componentName} rendered ${renderCountRef.current} times (threshold: ${thresholds.maxReRenders})`);
         }
       }
     };
@@ -98,15 +99,15 @@ export const usePerformanceMonitor = (
     // Performance warnings
     if (process.env.NODE_ENV === 'development') {
       if (renderTime > thresholds.slowRender) {
-        console.warn(`[Performance Warning] ${componentName} slow render: ${renderTime.toFixed(2)}ms`);
+        logger.warn(`[Performance Warning] ${componentName} slow render: ${renderTime.toFixed(2)}ms`);
       }
 
       if (memoryUsage > thresholds.highMemory) {
-        console.warn(`[Performance Warning] ${componentName} high memory usage: ${memoryUsage.toFixed(2)}MB`);
+        logger.warn(`[Performance Warning] ${componentName} high memory usage: ${memoryUsage.toFixed(2)}MB`);
       }
 
       if (renderCountRef.current > thresholds.maxReRenders) {
-        console.warn(`[Performance Warning] ${componentName} excessive re-renders: ${renderCountRef.current}`);
+        logger.warn(`[Performance Warning] ${componentName} excessive re-renders: ${renderCountRef.current}`);
       }
     }
   });
@@ -118,7 +119,7 @@ export const usePerformanceMonitor = (
 
     if (process.env.NODE_ENV === 'development') {
       if (duration > 10) { // 10ms threshold for store operations
-        console.warn(`[Store Performance] ${storeName}.${actionName} took ${duration.toFixed(2)}ms`);
+        logger.warn(`[Store Performance] ${storeName}.${actionName} took ${duration.toFixed(2)}ms`);
       }
     }
 
@@ -135,14 +136,14 @@ export const usePerformanceMonitor = (
 
       if (process.env.NODE_ENV === 'development') {
         if (duration > 1000) { // 1 second threshold for API calls
-          console.warn(`[API Performance] ${apiName} took ${duration.toFixed(2)}ms`);
+          logger.warn(`[API Performance] ${apiName} took ${duration.toFixed(2)}ms`);
         }
       }
 
       return result;
     } catch (error) {
       const duration = performance.now() - startTime;
-      console.error(`[API Error] ${apiName} failed after ${duration.toFixed(2)}ms:`, error);
+      logger.error(`[API Error] ${apiName} failed after ${duration.toFixed(2)}ms:`, error);
       throw error;
     }
   };
@@ -197,7 +198,7 @@ export const useGlobalPerformanceMonitor = () => {
         }));
 
         if (process.env.NODE_ENV === 'development' && memoryUsage > 100) {
-          console.warn('[Global Performance] High memory usage detected:', {
+          logger.warn('[Global Performance] High memory usage detected:', {
             used: `${memoryUsage.toFixed(2)}MB`,
             limit: `${(memory.jsHeapSizeLimit / 1024 / 1024).toFixed(2)}MB`,
           });

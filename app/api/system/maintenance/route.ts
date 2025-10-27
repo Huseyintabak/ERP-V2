@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { verifyJWT } from '@/lib/auth/jwt';
 
+import { logger } from '@/lib/utils/logger';
 export async function GET(request: NextRequest) {
   try {
     const token = request.cookies.get('thunder_token')?.value;
@@ -61,7 +62,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ data: result });
 
   } catch (error: any) {
-    console.error('Error in system maintenance:', error);
+    logger.error('Error in system maintenance:', error);
     return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 });
   }
 }
@@ -128,7 +129,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ data: result });
 
   } catch (error: any) {
-    console.error('Error in system maintenance:', error);
+    logger.error('Error in system maintenance:', error);
     return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 });
   }
 }

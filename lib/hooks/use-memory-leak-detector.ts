@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { logger } from '@/lib/utils/logger';
 
 interface MemoryLeakDetection {
   activeSubscriptions: Set<string>;
@@ -20,7 +21,7 @@ export const useMemoryLeakDetector = (componentName: string) => {
     detectionRef.current.componentInstances.add(instanceId);
 
     if (process.env.NODE_ENV === 'development') {
-      console.log(`[Memory] Component ${componentName} mounted (instance: ${instanceId})`);
+      logger.log(`[Memory] Component ${componentName} mounted (instance: ${instanceId})`);
     }
 
     return () => {
@@ -30,22 +31,22 @@ export const useMemoryLeakDetector = (componentName: string) => {
       const { activeSubscriptions, activeIntervals, activeTimeouts } = detectionRef.current;
       
       if (activeSubscriptions.size > 0) {
-        console.warn(`[Memory Leak] ${componentName} unmounted with ${activeSubscriptions.size} active subscriptions:`, 
+        logger.warn(`[Memory Leak] ${componentName} unmounted with ${activeSubscriptions.size} active subscriptions:`, 
           Array.from(activeSubscriptions));
       }
       
       if (activeIntervals.size > 0) {
-        console.warn(`[Memory Leak] ${componentName} unmounted with ${activeIntervals.size} active intervals:`, 
+        logger.warn(`[Memory Leak] ${componentName} unmounted with ${activeIntervals.size} active intervals:`, 
           Array.from(activeIntervals));
       }
       
       if (activeTimeouts.size > 0) {
-        console.warn(`[Memory Leak] ${componentName} unmounted with ${activeTimeouts.size} active timeouts:`, 
+        logger.warn(`[Memory Leak] ${componentName} unmounted with ${activeTimeouts.size} active timeouts:`, 
           Array.from(activeTimeouts));
       }
 
       if (process.env.NODE_ENV === 'development') {
-        console.log(`[Memory] Component ${componentName} unmounted (instance: ${instanceId})`);
+        logger.log(`[Memory] Component ${componentName} unmounted (instance: ${instanceId})`);
       }
     };
   }, [componentName]);
@@ -54,7 +55,7 @@ export const useMemoryLeakDetector = (componentName: string) => {
     detectionRef.current.activeSubscriptions.add(subscriptionId);
     
     if (process.env.NODE_ENV === 'development') {
-      console.log(`[Memory] Subscription ${subscriptionId} created for ${componentName}`);
+      logger.log(`[Memory] Subscription ${subscriptionId} created for ${componentName}`);
     }
   };
 
@@ -62,7 +63,7 @@ export const useMemoryLeakDetector = (componentName: string) => {
     detectionRef.current.activeSubscriptions.delete(subscriptionId);
     
     if (process.env.NODE_ENV === 'development') {
-      console.log(`[Memory] Subscription ${subscriptionId} cleaned up for ${componentName}`);
+      logger.log(`[Memory] Subscription ${subscriptionId} cleaned up for ${componentName}`);
     }
   };
 
@@ -70,7 +71,7 @@ export const useMemoryLeakDetector = (componentName: string) => {
     detectionRef.current.activeIntervals.add(intervalId);
     
     if (process.env.NODE_ENV === 'development') {
-      console.log(`[Memory] Interval ${intervalId} created for ${componentName}`);
+      logger.log(`[Memory] Interval ${intervalId} created for ${componentName}`);
     }
   };
 
@@ -78,7 +79,7 @@ export const useMemoryLeakDetector = (componentName: string) => {
     detectionRef.current.activeIntervals.delete(intervalId);
     
     if (process.env.NODE_ENV === 'development') {
-      console.log(`[Memory] Interval ${intervalId} cleaned up for ${componentName}`);
+      logger.log(`[Memory] Interval ${intervalId} cleaned up for ${componentName}`);
     }
   };
 
@@ -86,7 +87,7 @@ export const useMemoryLeakDetector = (componentName: string) => {
     detectionRef.current.activeTimeouts.add(timeoutId);
     
     if (process.env.NODE_ENV === 'development') {
-      console.log(`[Memory] Timeout ${timeoutId} created for ${componentName}`);
+      logger.log(`[Memory] Timeout ${timeoutId} created for ${componentName}`);
     }
   };
 
@@ -94,7 +95,7 @@ export const useMemoryLeakDetector = (componentName: string) => {
     detectionRef.current.activeTimeouts.delete(timeoutId);
     
     if (process.env.NODE_ENV === 'development') {
-      console.log(`[Memory] Timeout ${timeoutId} cleaned up for ${componentName}`);
+      logger.log(`[Memory] Timeout ${timeoutId} cleaned up for ${componentName}`);
     }
   };
 
@@ -134,7 +135,7 @@ export const useGlobalMemoryLeakDetector = () => {
         globalMemoryLeakDetector.totalMemoryUsage = memory.usedJSHeapSize / 1024 / 1024; // MB
         
         if (process.env.NODE_ENV === 'development') {
-          console.log('[Global Memory]', {
+          logger.log('[Global Memory]', {
             used: `${globalMemoryLeakDetector.totalMemoryUsage.toFixed(2)}MB`,
             limit: `${(memory.jsHeapSizeLimit / 1024 / 1024).toFixed(2)}MB`,
             components: globalMemoryLeakDetector.activeComponents.size,
@@ -143,7 +144,7 @@ export const useGlobalMemoryLeakDetector = () => {
           
           // Warning if memory usage is high
           if (globalMemoryLeakDetector.totalMemoryUsage > 100) {
-            console.warn('[Memory Warning] High memory usage detected!', {
+            logger.warn('[Memory Warning] High memory usage detected!', {
               usage: `${globalMemoryLeakDetector.totalMemoryUsage.toFixed(2)}MB`,
               components: Array.from(globalMemoryLeakDetector.activeComponents),
             });

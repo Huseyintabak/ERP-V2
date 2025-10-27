@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { verifyJWT } from '@/lib/auth/jwt';
 
+import { logger } from '@/lib/utils/logger';
 export async function GET(request: NextRequest) {
   try {
     // Authentication check
@@ -52,7 +53,7 @@ export async function GET(request: NextRequest) {
       .range(offset, offset + limit - 1);
 
     if (error) {
-      console.error('Error fetching stock movements:', error);
+      logger.error('Error fetching stock movements:', error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
@@ -74,7 +75,7 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Stock movements API error:', error);
+    logger.error('Stock movements API error:', error);
     return NextResponse.json({ 
       error: 'Internal server error' 
     }, { status: 500 });
@@ -173,7 +174,7 @@ export async function POST(request: NextRequest) {
       .eq('id', material_id);
 
     if (updateError) {
-      console.error('Error updating material quantity:', updateError);
+      logger.error('Error updating material quantity:', updateError);
       return NextResponse.json({ error: updateError.message }, { status: 500 });
     }
 
@@ -195,14 +196,14 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) {
-      console.error('Error creating stock movement:', error);
+      logger.error('Error creating stock movement:', error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
     return NextResponse.json({ data }, { status: 201 });
 
   } catch (error) {
-    console.error('Create stock movement API error:', error);
+    logger.error('Create stock movement API error:', error);
     return NextResponse.json({ 
       error: 'Internal server error' 
     }, { status: 500 });

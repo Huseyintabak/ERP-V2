@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { verifyJWT } from '@/lib/auth/jwt';
 
+import { logger } from '@/lib/utils/logger';
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -28,7 +29,7 @@ export async function GET(
 
     return NextResponse.json(material);
   } catch (error) {
-    console.error('Error fetching raw material:', error);
+    logger.error('Error fetching raw material:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -65,7 +66,7 @@ export async function PUT(
       .single();
 
     if (error) {
-      console.error('❌ Update error:', error);
+      logger.error('❌ Update error:', error);
       return NextResponse.json({ 
         error: 'Güncelleme başarısız', 
         details: error.message,
@@ -102,7 +103,7 @@ export async function PUT(
               user_id: payload.userId
             });
           
-          console.log('🔔 Kritik stok bildirimi oluşturuldu:', material.name);
+          logger.log('🔔 Kritik stok bildirimi oluşturuldu:', material.name);
         }
       } else {
         // Stok normal seviyeye çıktıysa, mevcut bildirimleri okundu olarak işaretle
@@ -113,13 +114,13 @@ export async function PUT(
           .eq('type', 'critical_stock')
           .eq('is_read', false);
           
-        console.log('✅ Kritik stok bildirimleri okundu olarak işaretlendi:', material.name);
+        logger.log('✅ Kritik stok bildirimleri okundu olarak işaretlendi:', material.name);
       }
     }
 
     return NextResponse.json(material);
   } catch (error) {
-    console.error('❌ Error updating raw material:', error);
+    logger.error('❌ Error updating raw material:', error);
     return NextResponse.json({ 
       error: error instanceof Error ? error.message : 'Internal server error' 
     }, { status: 500 });
@@ -164,7 +165,7 @@ export async function DELETE(
       .eq('id', id);
 
     if (error) {
-      console.error('Delete error:', error);
+      logger.error('Delete error:', error);
       return NextResponse.json({ 
         error: 'Failed to delete material', 
         details: error.message 
@@ -173,7 +174,7 @@ export async function DELETE(
 
     return NextResponse.json({ message: 'Material deleted successfully' });
   } catch (error) {
-    console.error('Error deleting raw material:', error);
+    logger.error('Error deleting raw material:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

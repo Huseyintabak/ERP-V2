@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { verifyJWT } from '@/lib/auth/jwt';
 import * as XLSX from 'xlsx';
 
+import { logger } from '@/lib/utils/logger';
 export async function GET(request: NextRequest) {
   try {
     const token = request.cookies.get('thunder_token')?.value;
@@ -171,7 +172,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error: any) {
-    console.error('Export error:', error);
+    logger.error('Export error:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

@@ -9,6 +9,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Loader2 } from 'lucide-react';
+import { logger } from '@/lib/utils/logger';
 
 interface Customer {
   id: string;
@@ -49,15 +50,15 @@ export function CustomerSelect({
         
         const text = await response.text();
         if (!text || text.includes('/login')) {
-          console.warn('Redirect to login detected');
+          logger.warn('Redirect to login detected');
           return;
         }
         
         const data = JSON.parse(text);
-        console.log('Customers API response:', data); // Debug log
+        logger.log('Customers API response:', data); // Debug log
         setCustomers(data.data || []);
       } catch (error) {
-        console.error('Error fetching customers:', error);
+        logger.error('Error fetching customers:', error);
       } finally {
         setIsLoading(false);
       }

@@ -4,6 +4,7 @@ import { verifyJWT } from '@/lib/auth/jwt';
 import { hashPassword } from '@/lib/auth/password';
 import { z } from 'zod';
 
+import { logger } from '@/lib/utils/logger';
 const resetPasswordSchema = z.object({
   new_password: z.string().min(6).max(100),
 });
@@ -64,7 +65,7 @@ export async function POST(
       .eq('id', id);
 
     if (updateError) {
-      console.error('Error updating password:', updateError);
+      logger.error('Error updating password:', updateError);
       return NextResponse.json({ error: 'Failed to update password' }, { status: 500 });
     }
 
@@ -80,7 +81,7 @@ export async function POST(
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: 'Invalid data', details: error.errors }, { status: 400 });
     }
-    console.error('Unexpected error resetting password:', error);
+    logger.error('Unexpected error resetting password:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

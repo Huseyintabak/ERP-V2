@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
+import { logger } from '@/lib/utils/logger';
 
 interface StartTaskModalProps {
   task: any;
@@ -44,7 +45,7 @@ export function StartTaskModal({ task, isOpen, onClose, onSuccess }: StartTaskMo
       onSuccess();
       onClose();
     } catch (error) {
-      console.error('Error starting task:', error);
+      logger.error('Error starting task:', error);
       toast.error(error instanceof Error ? error.message : 'Görev başlatılamadı');
     } finally {
       setLoading(false);

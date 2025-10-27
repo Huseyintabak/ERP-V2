@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { verifyJWT } from '@/lib/auth/jwt';
 
+import { logger } from '@/lib/utils/logger';
 export async function GET(request: NextRequest) {
   try {
     const token = request.cookies.get('thunder_token')?.value;
@@ -27,14 +28,14 @@ export async function GET(request: NextRequest) {
       });
 
     if (error) {
-      console.error('Error fetching excel error stats:', error);
+      logger.error('Error fetching excel error stats:', error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
     return NextResponse.json({ data: stats });
 
   } catch (error: any) {
-    console.error('Error in excel error stats:', error);
+    logger.error('Error in excel error stats:', error);
     return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 });
   }
 }

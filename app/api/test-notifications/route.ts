@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
+import { logger } from '@/lib/utils/logger';
 // Test endpoint to check notifications without authentication
 export async function GET(request: NextRequest) {
   try {
-    console.log('🔔 Test notifications API called');
     const supabase = await createClient();
 
     // Check if notifications table exists and has data
@@ -12,12 +12,6 @@ export async function GET(request: NextRequest) {
       .from('notifications')
       .select('*', { count: 'exact' })
       .limit(5);
-
-    console.log('🔔 Test query result:', { 
-      notificationsCount: notifications?.length, 
-      error: error?.message,
-      count 
-    });
 
     if (error) {
       return NextResponse.json({ 
@@ -35,7 +29,7 @@ export async function GET(request: NextRequest) {
       message: 'Notifications table accessible'
     });
   } catch (error: any) {
-    console.error('🔔 Test notifications error:', error);
+    logger.error('🔔 Test notifications error:', error);
     return NextResponse.json({ 
       error: error.message,
       type: 'unexpected_error'

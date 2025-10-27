@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { verifyJWT } from '@/lib/auth/jwt';
 
+import { logger } from '@/lib/utils/logger';
 export async function GET(request: NextRequest) {
   try {
     // Authentication check
@@ -271,7 +272,7 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Depo stats API error:', error);
+    logger.error('Depo stats API error:', error);
     return NextResponse.json({ 
       error: 'Internal server error' 
     }, { status: 500 });

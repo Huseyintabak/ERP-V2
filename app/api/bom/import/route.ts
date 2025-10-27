@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { verifyJWT } from '@/lib/auth/jwt';
 import * as XLSX from 'xlsx';
 
+import { logger } from '@/lib/utils/logger';
 /**
  * POST /api/bom/import
  * Excel dosyasından BOM verilerini içe aktarır
@@ -35,7 +36,7 @@ export async function POST(request: NextRequest) {
     const worksheet = workbook.Sheets[sheetName];
     const data = XLSX.utils.sheet_to_json(worksheet) as any[];
 
-    console.log('📊 Excel data parsed:', {
+    logger.log('📊 Excel data parsed:', {
       sheetName,
       rowCount: data.length,
       firstRow: data[0]
@@ -55,12 +56,12 @@ export async function POST(request: NextRequest) {
       const row = data[i];
       const rowNum = i + 2; // Excel row number (1-based + header)
 
-      console.log(`\n📝 Processing row ${rowNum}:`, row);
+      logger.log(`\n📝 Processing row ${rowNum}:`, row);
 
       // Validate required fields
       if (!row['Ürün Kodu'] || !row['Malzeme Kodu'] || !row['Miktar']) {
         const error = `Satır ${rowNum}: Ürün Kodu, Malzeme Kodu ve Miktar zorunludur`;
-        console.log(`❌ ${error}`);
+        logger.log(`❌ ${error}`);
         errors.push(error);
         successCount.errors++;
         continue;
@@ -162,7 +163,7 @@ export async function POST(request: NextRequest) {
               errors.push(`Satır ${rowNum}: ${updateError.message}`);
               successCount.errors++;
             } else {
-              console.log(`✅ Updated: ${row['Ürün Kodu']} + ${row['Malzeme Kodu']} (${existingBOM.quantity_needed} → ${newQuantity})`);
+              logger.log(`✅ Updated: ${row['Ürün Kodu']} + ${row['Malzeme Kodu']} (${existingBOM.quantity_needed} → ${newQuantity})`);
               successCount.updated++;
             }
           } else {
@@ -184,7 +185,7 @@ export async function POST(request: NextRequest) {
             errors.push(`Satır ${rowNum}: ${insertError.message}`);
             successCount.errors++;
           } else {
-            console.log(`✅ Created: ${row['Ürün Kodu']} + ${row['Malzeme Kodu']} (${newQuantity})`);
+            logger.log(`✅ Created: ${row['Ürün Kodu']} + ${row['Malzeme Kodu']} (${newQuantity})`);
             successCount.created++;
           }
         }
@@ -202,12 +203,12 @@ export async function POST(request: NextRequest) {
       errors: errors.length > 0 ? errors : undefined
     };
 
-    console.log('✅ Import completed:', result);
+    logger.log('✅ Import completed:', result);
 
     return NextResponse.json(result);
 
   } catch (error: any) {
-    console.error('BOM import error:', error);
+    logger.error('BOM import error:', error);
     return NextResponse.json(
       { error: error.message || 'Import hatası' },
       { status: 500 }

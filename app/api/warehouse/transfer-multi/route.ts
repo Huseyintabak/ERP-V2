@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { verifyJWT } from '@/lib/auth/jwt';
 
+import { logger } from '@/lib/utils/logger';
 interface TransferItem {
   productId: string;
   quantity: number;
@@ -60,7 +61,7 @@ export async function POST(request: NextRequest) {
       .single();
     
     if (zoneError) {
-      console.error('Error fetching source zone:', zoneError);
+      logger.error('Error fetching source zone:', zoneError);
       return NextResponse.json({ error: zoneError.message }, { status: 500 });
     }
 
@@ -140,7 +141,7 @@ export async function POST(request: NextRequest) {
 
     for (const item of transferItems) {
       try {
-        console.log('🔄 Transferring product:', {
+        logger.log('🔄 Transferring product:', {
           from_zone: fromZoneId,
           to_zone: toZoneId,
           product: item.productId,
@@ -157,19 +158,19 @@ export async function POST(request: NextRequest) {
         });
 
         if (error) {
-          console.error('❌ Transfer error for product:', item.productId, error);
+          logger.error('❌ Transfer error for product:', item.productId, error);
           errors.push({
             productId: item.productId,
             error: error.message
           });
         } else if (!data || !data.success) {
-          console.error('❌ Transfer failed for product:', item.productId, data);
+          logger.error('❌ Transfer failed for product:', item.productId, data);
           errors.push({
             productId: item.productId,
             error: data?.error || 'Transfer failed'
           });
         } else {
-          console.log('✅ Transfer successful for product:', item.productId);
+          logger.log('✅ Transfer successful for product:', item.productId);
           transferResults.push({
             productId: item.productId,
             quantity: item.quantity,
@@ -177,7 +178,7 @@ export async function POST(request: NextRequest) {
           });
         }
       } catch (error) {
-        console.error('❌ Exception during transfer for product:', item.productId, error);
+        logger.error('❌ Exception during transfer for product:', item.productId, error);
         errors.push({
           productId: item.productId,
           error: 'Transfer exception occurred'
@@ -211,7 +212,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Multi-product transfer API error:', error);
+    logger.error('Multi-product transfer API error:', error);
     return NextResponse.json({ 
       error: 'Internal server error' 
     }, { status: 500 });

@@ -1,15 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
+import { logger } from '@/lib/utils/logger';
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ orderId: string }> }
 ) {
   try {
-    console.log('🔍 Real Semi BOM API called');
+    logger.log('🔍 Real Semi BOM API called');
     
     const { orderId } = await params;
-    console.log('🔍 Order ID:', orderId);
+    logger.log('🔍 Order ID:', orderId);
 
     const supabase = await createClient();
 
@@ -32,7 +33,7 @@ export async function GET(
     let plannedQuantity = 100; // Varsayılan miktar
 
     if (orderError || !order) {
-      console.log('❌ Order not found, trying as product ID:', orderError);
+      logger.log('❌ Order not found, trying as product ID:', orderError);
       
       // Eğer sipariş bulunamazsa, orderId'yi ürün ID'si olarak kabul et
       productId = orderId;
@@ -45,7 +46,7 @@ export async function GET(
         .single();
 
       if (productError || !product) {
-        console.log('❌ Product not found:', productError);
+        logger.log('❌ Product not found:', productError);
         return NextResponse.json({ error: 'Ürün bulunamadı' }, { status: 404 });
       }
 
@@ -64,8 +65,8 @@ export async function GET(
         .eq('finished_product_id', productId);
 
       if (bomError) {
-        console.error('BOM fetch error:', bomError);
-        console.log('Product ID:', productId);
+        logger.error('BOM fetch error:', bomError);
+        logger.log('Product ID:', productId);
         return NextResponse.json({ error: 'BOM verileri alınamadı: ' + bomError.message }, { status: 500 });
       }
 
@@ -134,10 +135,10 @@ export async function GET(
     productId = order.product_id;
     plannedQuantity = order.planned_quantity;
     
-    console.log('✅ Order found:', order.id, 'Product:', order.product?.name);
+    logger.log('✅ Order found:', order.id, 'Product:', order.product?.name);
 
     // Yarı mamul ürünün BOM'unu getir (bom tablosundan - finished_product_id kullanarak)
-    console.log('🔍 Fetching BOM for semi product:', order.product_id);
+    logger.log('🔍 Fetching BOM for semi product:', order.product_id);
     const { data: bomItems, error: bomError } = await supabase
       .from('bom')
       .select(`
@@ -163,10 +164,10 @@ export async function GET(
       `)
       .eq('finished_product_id', order.product_id);
       
-    console.log('🔍 BOM fetch result:', { bomItems: bomItems?.length, bomError });
+    logger.log('🔍 BOM fetch result:', { bomItems: bomItems?.length, bomError });
 
     if (bomError) {
-      console.error('BOM fetch error:', bomError);
+      logger.error('BOM fetch error:', bomError);
       // BOM bulunamadı, gerçek verilerden örnek veri döndür
       const sampleMaterials = [
         {
@@ -284,7 +285,7 @@ export async function GET(
       })
     );
 
-    console.log('✅ Returning real BOM materials:', materials.length);
+    logger.log('✅ Returning real BOM materials:', materials.length);
 
     return NextResponse.json({
       materials,
@@ -294,7 +295,7 @@ export async function GET(
     });
 
   } catch (error) {
-    console.error('Real Semi BOM API error:', error);
+    logger.error('Real Semi BOM API error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

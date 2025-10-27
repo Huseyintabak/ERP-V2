@@ -4,6 +4,7 @@ import { verifyJWT } from '@/lib/auth/jwt';
 import { z } from 'zod';
 import bcrypt from 'bcryptjs';
 
+import { logger } from '@/lib/utils/logger';
 const userUpdateSchema = z.object({
   name: z.string().min(1).max(255).optional(),
   email: z.string().email().optional(),
@@ -18,6 +19,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const token = request.cookies.get('thunder_token')?.value;
     if (!token) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -53,7 +55,7 @@ export async function GET(
       .single();
 
     if (error) {
-      console.error('Error fetching user:', error);
+      logger.error('Error fetching user:', error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
@@ -63,7 +65,7 @@ export async function GET(
 
     return NextResponse.json(user);
   } catch (error: any) {
-    console.error('Unexpected error fetching user:', error);
+    logger.error('Unexpected error fetching user:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
@@ -74,6 +76,7 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const token = request.cookies.get('thunder_token')?.value;
     if (!token) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -150,7 +153,7 @@ export async function PUT(
       .single();
 
     if (error) {
-      console.error('Error updating user:', error);
+      logger.error('Error updating user:', error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
@@ -159,7 +162,7 @@ export async function PUT(
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: 'Invalid data', details: error.errors }, { status: 400 });
     }
-    console.error('Unexpected error updating user:', error);
+    logger.error('Unexpected error updating user:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
@@ -170,6 +173,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const token = request.cookies.get('thunder_token')?.value;
     if (!token) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -210,13 +214,13 @@ export async function DELETE(
       .eq('id', id);
 
     if (error) {
-      console.error('Error deleting user:', error);
+      logger.error('Error deleting user:', error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
     return NextResponse.json({ success: true });
   } catch (error: any) {
-    console.error('Unexpected error deleting user:', error);
+    logger.error('Unexpected error deleting user:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

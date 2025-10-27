@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { verifyJWT } from '@/lib/auth/jwt';
 
+import { logger } from '@/lib/utils/logger';
 export async function POST(request: NextRequest) {
   try {
     const token = request.cookies.get('thunder_token')?.value;
@@ -47,7 +48,7 @@ export async function POST(request: NextRequest) {
       });
 
     if (error) {
-      console.error('Error creating broadcast:', error);
+      logger.error('Error creating broadcast:', error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
@@ -58,7 +59,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error: any) {
-    console.error('Error in settings broadcast:', error);
+    logger.error('Error in settings broadcast:', error);
     return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 });
   }
 }

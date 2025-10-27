@@ -1,6 +1,7 @@
 import { useEffect, useCallback } from 'react';
 import { useNotificationStore } from '@/stores/notification-store';
 import { toast } from 'sonner';
+import { logger } from '@/lib/utils/logger';
 
 export function useNotifications() {
   const {
@@ -36,19 +37,19 @@ export function useNotifications() {
       if (params?.type) searchParams.set('type', params.type);
 
       const url = `/api/notifications?${searchParams.toString()}`;
-      console.log('🔔 Fetching notifications from:', url);
+      logger.log('🔔 Fetching notifications from:', url);
       
       const response = await fetch(url);
       
-      console.log('🔔 Notifications response status:', response.status);
+      logger.log('🔔 Notifications response status:', response.status);
       
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('🔔 Notifications API error:', errorText);
+        logger.error('🔔 Notifications API error:', errorText);
         
         // If unauthorized, return empty array instead of throwing error
         if (response.status === 401 || response.status === 403) {
-          console.log('🔔 User not authenticated, returning empty notifications');
+          logger.log('🔔 User not authenticated, returning empty notifications');
           setNotifications([]);
           return;
         }
@@ -57,10 +58,10 @@ export function useNotifications() {
       }
 
       const data = await response.json();
-      console.log('🔔 Notifications data received:', data);
+      logger.log('🔔 Notifications data received:', data);
       setNotifications(data.data || []);
     } catch (error: any) {
-      console.error('🔔 Error fetching notifications:', error);
+      logger.error('🔔 Error fetching notifications:', error);
       setError(error.message);
     } finally {
       setLoading(false);
@@ -81,7 +82,7 @@ export function useNotifications() {
       if (!response.ok) {
         // If unauthorized, just update local state
         if (response.status === 401 || response.status === 403) {
-          console.log('🔔 User not authenticated, updating local state only');
+          logger.log('🔔 User not authenticated, updating local state only');
           markAsRead(id);
           return;
         }
@@ -90,7 +91,7 @@ export function useNotifications() {
 
       markAsRead(id);
     } catch (error: any) {
-      console.error('Error marking notification as read:', error);
+      logger.error('Error marking notification as read:', error);
       toast.error('Bildirim okundu olarak işaretlenemedi');
     }
   }, [markAsRead]);
@@ -105,7 +106,7 @@ export function useNotifications() {
       if (!response.ok) {
         // If unauthorized, just update local state
         if (response.status === 401 || response.status === 403) {
-          console.log('🔔 User not authenticated, updating local state only');
+          logger.log('🔔 User not authenticated, updating local state only');
           removeNotification(id);
           toast.success('Bildirim silindi (yerel)');
           return;
@@ -116,7 +117,7 @@ export function useNotifications() {
       removeNotification(id);
       toast.success('Bildirim silindi');
     } catch (error: any) {
-      console.error('Error deleting notification:', error);
+      logger.error('Error deleting notification:', error);
       toast.error('Bildirim silinemedi');
     }
   }, [removeNotification]);
@@ -150,7 +151,7 @@ export function useNotifications() {
       );
 
       if (authErrors.length > 0) {
-        console.log('🔔 Some requests failed due to authentication, updating local state only');
+        logger.log('🔔 Some requests failed due to authentication, updating local state only');
         markAllAsRead();
         toast.success('Tüm bildirimler okundu olarak işaretlendi (yerel)');
       } else {
@@ -158,7 +159,7 @@ export function useNotifications() {
         toast.success('Tüm bildirimler okundu olarak işaretlendi');
       }
     } catch (error: any) {
-      console.error('Error marking all notifications as read:', error);
+      logger.error('Error marking all notifications as read:', error);
       // Fallback: just update local state
       markAllAsRead();
       toast.success('Tüm bildirimler okundu olarak işaretlendi (yerel)');
@@ -191,7 +192,7 @@ export function useNotifications() {
       toast.success('Bildirim oluşturuldu');
       return notification;
     } catch (error: any) {
-      console.error('Error creating notification:', error);
+      logger.error('Error creating notification:', error);
       toast.error('Bildirim oluşturulamadı');
       throw error;
     }

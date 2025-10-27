@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { verifyJWT } from '@/lib/auth/jwt';
 
+import { logger } from '@/lib/utils/logger';
 export async function GET(request: NextRequest) {
   try {
     // Authentication check
@@ -30,7 +31,7 @@ export async function GET(request: NextRequest) {
       .single();
 
     if (zoneError || !centerZone) {
-      console.error('Error fetching center zone:', zoneError);
+      logger.error('Error fetching center zone:', zoneError);
       return NextResponse.json({ error: 'Merkez zone bulunamadı' }, { status: 404 });
     }
 
@@ -42,7 +43,7 @@ export async function GET(request: NextRequest) {
       .order('name');
 
     if (productsError) {
-      console.error('Error fetching finished products:', productsError);
+      logger.error('Error fetching finished products:', productsError);
       return NextResponse.json({ error: productsError.message }, { status: 500 });
     }
 
@@ -68,7 +69,7 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error fetching center zone inventory:', error);
+    logger.error('Error fetching center zone inventory:', error);
     return NextResponse.json({ 
       error: 'Internal server error' 
     }, { status: 500 });

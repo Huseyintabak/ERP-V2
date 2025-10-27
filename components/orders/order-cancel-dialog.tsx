@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuthStore } from '@/stores/auth-store';
+import { logger } from '@/lib/utils/logger';
 
 interface Order {
   id: string;
@@ -72,7 +73,7 @@ export function OrderCancelDialog({
       const data = await response.json();
       setPermissionCheck(data);
     } catch (error) {
-      console.error('Permission check error:', error);
+      logger.error('Permission check error:', error);
       setPermissionCheck({ allowed: false, reason: 'İzin kontrolü başarısız' });
     }
   };
@@ -109,7 +110,7 @@ export function OrderCancelDialog({
       setReason('');
 
     } catch (error: any) {
-      console.error('Cancel error:', error);
+      logger.error('Cancel error:', error);
       toast.error(error.message || 'İptal işlemi başarısız');
     } finally {
       setIsCancelling(false);

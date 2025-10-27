@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { verifyJWT } from '@/lib/auth/jwt';
 
+import { logger } from '@/lib/utils/logger';
 // Rezervasyon tüketimi (üretim tamamlandığında)
 export async function POST(request: NextRequest) {
   try {
@@ -116,7 +117,7 @@ export async function POST(request: NextRequest) {
     }, { status: 200 });
 
   } catch (error: any) {
-    console.error('Reservation consumption error:', error);
+    logger.error('Reservation consumption error:', error);
     return NextResponse.json({ 
       error: error.message || 'Malzeme tüketimi kaydedilemedi' 
     }, { status: 500 });

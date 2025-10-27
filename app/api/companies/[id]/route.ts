@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { verifyJWT } from '@/lib/auth/jwt';
 import { z } from 'zod';
 
+import { logger } from '@/lib/utils/logger';
 const companyUpdateSchema = z.object({
   name: z.string().min(1).optional(),
   email: z.string().email().optional(),
@@ -90,7 +91,7 @@ export async function GET(
     });
 
   } catch (error: unknown) {
-    console.error('Company fetch error:', error);
+    logger.error('Company fetch error:', error);
     const errorMessage = error instanceof Error ? error.message : 'Failed to fetch company';
     return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
@@ -146,7 +147,7 @@ export async function PUT(
     });
 
   } catch (error: unknown) {
-    console.error('Company update error:', error);
+    logger.error('Company update error:', error);
     
     if (error instanceof z.ZodError) {
       return NextResponse.json({ 
@@ -222,7 +223,7 @@ export async function DELETE(
     });
 
   } catch (error: unknown) {
-    console.error('Company deletion error:', error);
+    logger.error('Company deletion error:', error);
     const errorMessage = error instanceof Error ? error.message : 'Failed to delete company';
     return NextResponse.json({ error: errorMessage }, { status: 500 });
   }

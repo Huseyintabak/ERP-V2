@@ -19,6 +19,7 @@ import { CustomerDialog } from '@/components/customers/customer-dialog';
 import { toast } from 'sonner';
 import { useState, useEffect } from 'react';
 import { Plus, Trash2, Users } from 'lucide-react';
+import { logger } from '@/lib/utils/logger';
 
 interface Props {
   onSuccess: () => void;
@@ -76,18 +77,18 @@ export function OrderForm({ onSuccess }: Props) {
     fetch('/api/operators')
       .then(res => res.json())
       .then(data => {
-        console.log('Operators API response:', data);
+        logger.log('Operators API response:', data);
         if (Array.isArray(data)) {
           setOperators(data);
         } else if (data.data && Array.isArray(data.data)) {
           setOperators(data.data);
         } else {
-          console.error('Unexpected operators data format:', data);
+          logger.error('Unexpected operators data format:', data);
           toast.error('Operatörler yüklenemedi');
         }
       })
       .catch(err => {
-        console.error('Failed to load operators:', err);
+        logger.error('Failed to load operators:', err);
         toast.error('Operatörler yüklenemedi');
       });
 
@@ -100,16 +101,16 @@ export function OrderForm({ onSuccess }: Props) {
         }
       })
       .catch(err => {
-        console.error('Failed to load customers:', err);
+        logger.error('Failed to load customers:', err);
         toast.error('Müşteriler yüklenemedi');
       });
   }, []);
 
   const onSubmit = async (data: OrderFormData) => {
-    console.log('🚀 Form submit başladı, data:', data);
+    logger.log('🚀 Form submit başladı, data:', data);
     setLoading(true);
     try {
-      console.log('📦 API\'ye gönderilecek data:', data);
+      logger.log('📦 API\'ye gönderilecek data:', data);
 
       const response = await fetch('/api/orders', {
         method: 'POST',
@@ -117,19 +118,19 @@ export function OrderForm({ onSuccess }: Props) {
         body: JSON.stringify(data),
       });
 
-      console.log('📡 API Response status:', response.status);
+      logger.log('📡 API Response status:', response.status);
       const result = await response.json();
-      console.log('📡 API Response data:', result);
+      logger.log('📡 API Response data:', result);
 
       if (response.ok) {
         toast.success(result.message || 'Siparişler oluşturuldu');
         onSuccess();
       } else {
-        console.error('❌ API error:', result);
+        logger.error('❌ API error:', result);
         throw new Error(result.error || 'Bir hata oluştu');
       }
     } catch (error: any) {
-      console.error('❌ Submit error:', error);
+      logger.error('❌ Submit error:', error);
       toast.error(error.message || 'Bir hata oluştu');
     } finally {
       setLoading(false);
@@ -163,7 +164,7 @@ export function OrderForm({ onSuccess }: Props) {
   return (
     <form 
       onSubmit={(e) => {
-        console.log('Form submit triggered!');
+        logger.log('Form submit triggered!');
         handleSubmit(onSubmit)(e);
       }} 
       className="space-y-6"
@@ -186,7 +187,7 @@ export function OrderForm({ onSuccess }: Props) {
             const selectedCustomer = customers.find(c => c.id === value);
             if (selectedCustomer) {
               setValue('customer_name', selectedCustomer.name);
-              console.log('✅ Müşteri seçildi:', selectedCustomer.name);
+              logger.log('✅ Müşteri seçildi:', selectedCustomer.name);
             }
           }}
           placeholder="Müşteri seçin"
@@ -337,8 +338,8 @@ export function OrderForm({ onSuccess }: Props) {
           type="submit" 
           disabled={loading}
           onClick={(e) => {
-            console.log('Button clicked!', { selectedCustomerId, loading });
-            console.log('Form data:', watch());
+            logger.log('Button clicked!', { selectedCustomerId, loading });
+            logger.log('Form data:', watch());
           }}
         >
           {loading ? 'Kaydediliyor...' : 'Sipariş Oluştur'}

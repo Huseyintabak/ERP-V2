@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
+import { logger } from '@/lib/utils/logger';
 import { 
   Database, 
   Trash2, 
@@ -63,7 +64,7 @@ export default function SystemMaintenance() {
         setMetrics(data.data);
       }
     } catch (error) {
-      console.error('Error fetching metrics:', error);
+      logger.error('Error fetching metrics:', error);
     } finally {
       setLoading(false);
     }
@@ -80,7 +81,7 @@ export default function SystemMaintenance() {
         setHealthStatus(data.data.status || 'healthy');
       }
     } catch (error) {
-      console.error('Error fetching health:', error);
+      logger.error('Error fetching health:', error);
     } finally {
       setLoading(false);
     }
@@ -263,7 +264,7 @@ export default function SystemMaintenance() {
               {getHealthStatusText(healthStatus)}
             </Badge>
             <span className="text-sm text-muted-foreground">
-              Son güncelleme: {health?.timestamp ? new Date(health.timestamp).toLocaleString('tr-TR') : 'Bilinmiyor'}
+              Son güncelleme: {health?.last_check ? new Date(health.last_check).toLocaleString('tr-TR') : health?.timestamp ? new Date(health.timestamp).toLocaleString('tr-TR') : new Date().toLocaleString('tr-TR')}
             </span>
           </div>
           

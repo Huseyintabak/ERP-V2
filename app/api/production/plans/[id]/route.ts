@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { verifyJWT } from '@/lib/auth/jwt';
 
+import { logger } from '@/lib/utils/logger';
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -41,7 +42,7 @@ export async function GET(
 
     return NextResponse.json(plan);
   } catch (error) {
-    console.error('Error fetching production plan:', error);
+    logger.error('Error fetching production plan:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -68,7 +69,7 @@ export async function PATCH(
 
     const updateData = await request.json();
     
-    console.log('📝 Production plan PATCH:', { id, updateData });
+    logger.log('📝 Production plan PATCH:', { id, updateData });
 
     const { data: plan, error } = await supabase
       .from('production_plans')
@@ -81,13 +82,13 @@ export async function PATCH(
       .single();
 
     if (error) {
-      console.error('❌ Production plan update error:', error);
+      logger.error('❌ Production plan update error:', error);
       return NextResponse.json({ error: 'Failed to update production plan' }, { status: 400 });
     }
 
     return NextResponse.json(plan);
   } catch (error) {
-    console.error('Error updating production plan:', error);
+    logger.error('Error updating production plan:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -129,7 +130,7 @@ export async function PUT(
 
     return NextResponse.json(plan);
   } catch (error) {
-    console.error('Error updating production plan:', error);
+    logger.error('Error updating production plan:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -177,7 +178,7 @@ export async function DELETE(
 
     return NextResponse.json({ message: 'Production plan deleted successfully' });
   } catch (error) {
-    console.error('Error deleting production plan:', error);
+    logger.error('Error deleting production plan:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

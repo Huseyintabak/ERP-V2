@@ -17,6 +17,7 @@ import {
 import { Switch } from '@/components/ui/switch';
 import { Loader2, Save, X } from 'lucide-react';
 import { toast } from 'sonner';
+import { logger } from '@/lib/utils/logger';
 
 const userSchema = z.object({
   name: z.string().min(1, 'Ad soyad gerekli').max(255, 'Ad soyad çok uzun'),
@@ -100,7 +101,7 @@ export default function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
       onSuccess();
     } catch (error: any) {
       toast.error(error.message || 'İşlem sırasında hata oluştu');
-      console.error('Error saving user:', error);
+      logger.error('Error saving user:', error);
     } finally {
       setIsLoading(false);
     }

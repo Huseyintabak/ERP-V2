@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
+import { logger } from '@/lib/utils/logger';
 /**
  * GET /api/stock/count/export
  * Envanter sayımlarını Excel formatında export eder
@@ -93,7 +94,7 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error: any) {
-    console.error('❌ Export error:', error);
+    logger.error('❌ Export error:', error);
     return NextResponse.json(
       { error: error.message || 'Export hatası' },
       { status: 500 }

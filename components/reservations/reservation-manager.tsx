@@ -10,11 +10,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, Package, AlertTriangle, CheckCircle, Clock } from 'lucide-react';
+import { logger } from '@/lib/utils/logger';
 
 interface Reservation {
   id: string;
   order_id: string;
-  order_type: string;
+  plan_id?: string;
+  order_type?: string;
   material_id: string;
   material_type: 'raw' | 'semi' | 'finished';
   reserved_quantity: number;
@@ -24,6 +26,10 @@ interface Reservation {
   material_name?: string;
   material_code?: string;
   unit?: string;
+  order_info?: {
+    order_number: string;
+    customer_name: string;
+  };
 }
 
 interface ReservationManagerProps {
@@ -37,6 +43,7 @@ export default function ReservationManager({ orderId, onReservationCreated }: Re
   const [error, setError] = useState<string | null>(null);
   const [filterOrderId, setFilterOrderId] = useState(orderId || '');
   const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [autoRefresh, setAutoRefresh] = useState(true);
 
   // Rezervasyonları getir
   const fetchReservations = async () => {
@@ -45,22 +52,22 @@ export default function ReservationManager({ orderId, onReservationCreated }: Re
       const params = new URLSearchParams();
       if (filterOrderId) params.append('order_id', filterOrderId);
       
-      console.log('🔍 Fetching reservations with params:', params.toString());
+      logger.log('🔍 Fetching reservations with params:', params.toString());
       
       const response = await fetch(`/api/reservations?${params.toString()}`);
-      console.log('📡 API response status:', response.status);
+      logger.log('📡 API response status:', response.status);
       
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('❌ API error response:', errorText);
+        logger.error('❌ API error response:', errorText);
         throw new Error('Rezervasyonlar getirilemedi');
       }
       
       const data = await response.json();
-      console.log('📦 API response data:', data);
+      logger.log('📦 API response data:', data);
       setReservations(data.data || []);
     } catch (err: any) {
-      console.error('❌ Fetch error:', err);
+      logger.error('❌ Fetch error:', err);
       setError(err.message);
     } finally {
       setLoading(false);
@@ -69,7 +76,23 @@ export default function ReservationManager({ orderId, onReservationCreated }: Re
 
   useEffect(() => {
     fetchReservations();
-  }, [filterOrderId]);
+    
+    // Auto-refresh every 30 seconds for real-time updates
+    let intervalId: NodeJS.Timeout | undefined;
+    
+    if (autoRefresh) {
+      intervalId = setInterval(() => {
+        logger.log('🔄 Auto-refreshing reservations...');
+        fetchReservations();
+      }, 30000); // 30 seconds
+    }
+    
+    return () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
+    };
+  }, [filterOrderId, autoRefresh]);
 
   // Rezervasyon durumu badge'i
   const getStatusBadge = (status: string) => {
@@ -161,9 +184,15 @@ export default function ReservationManager({ orderId, onReservationCreated }: Re
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex items-end">
-              <Button onClick={fetchReservations} className="w-full">
-                Filtrele
+            <div className="flex items-end gap-2">
+              <Button 
+                variant={autoRefresh ? "default" : "outline"} 
+                onClick={() => setAutoRefresh(!autoRefresh)}
+              >
+                {autoRefresh ? '⏸️ Duraklat' : '▶️ Başlat'}
+              </Button>
+              <Button onClick={fetchReservations} className="flex-1">
+                🔄 Yenile
               </Button>
             </div>
           </div>
@@ -214,7 +243,7 @@ export default function ReservationManager({ orderId, onReservationCreated }: Re
                   return (
                     <TableRow key={reservation.id}>
                       <TableCell className="font-mono text-sm">
-                        {reservation.order_id.slice(0, 8)}...
+                        {reservation.order_info?.order_number || (reservation.order_id ? reservation.order_id.slice(0, 8) + '...' : 'N/A')}
                       </TableCell>
                       <TableCell>
                         <div>
@@ -233,13 +262,23 @@ export default function ReservationManager({ orderId, onReservationCreated }: Re
                       </TableCell>
                       <TableCell>
                         <div className="text-right">
-                          <div>{reservation.consumed_quantity.toLocaleString()}</div>
+                          <div className="font-medium">{reservation.consumed_quantity.toLocaleString()}</div>
                           <div className="text-sm text-gray-500">{reservation.unit}</div>
+                          {/* Progress bar */}
+                          <div className="mt-2 w-16 h-1.5 bg-gray-200 rounded-full overflow-hidden ml-auto">
+                            <div 
+                              className={`h-full transition-all ${
+                                consumptionPercentage < 50 ? 'bg-green-500' :
+                                consumptionPercentage < 90 ? 'bg-yellow-500' : 'bg-orange-500'
+                              }`}
+                              style={{ width: `${Math.min(consumptionPercentage, 100)}%` }}
+                            />
+                          </div>
                         </div>
                       </TableCell>
                       <TableCell>
                         <div className="text-right">
-                          <div className={remaining < 0 ? 'text-red-600 font-medium' : ''}>
+                          <div className={`font-medium ${remaining < 0 ? 'text-red-600' : remaining < 10 ? 'text-orange-600' : ''}`}>
                             {remaining.toLocaleString()}
                           </div>
                           <div className="text-sm text-gray-500">{reservation.unit}</div>
@@ -248,7 +287,11 @@ export default function ReservationManager({ orderId, onReservationCreated }: Re
                       <TableCell>
                         <div className="space-y-1">
                           {getStatusBadge(reservation.status)}
-                          <div className="text-xs text-gray-500">
+                          <div className={`text-xs font-medium ${
+                            consumptionPercentage === 0 ? 'text-gray-500' :
+                            consumptionPercentage < 50 ? 'text-green-600' :
+                            consumptionPercentage < 90 ? 'text-yellow-600' : 'text-orange-600'
+                          }`}>
                             %{consumptionPercentage} tüketildi
                           </div>
                         </div>

@@ -42,6 +42,7 @@ import {
 import { format, parseISO } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import { toast } from 'sonner';
+import { logger } from '@/lib/utils/logger';
 
 interface AuditLog {
   id: string;
@@ -113,7 +114,7 @@ export function AuditLogViewer({ onExport }: AuditLogViewerProps) {
       setAuditLogs(data.logs || []);
       setTotalPages(data.totalPages || 1);
     } catch (error: any) {
-      console.error('Error loading audit logs:', error);
+      logger.error('Error loading audit logs:', error);
       toast.error(error.message || 'Audit log verisi yüklenirken hata oluştu');
     } finally {
       setLoading(false);

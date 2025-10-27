@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { verifyJWT } from '@/lib/auth/jwt';
 
+import { logger } from '@/lib/utils/logger';
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -28,7 +29,7 @@ export async function GET(
 
     return NextResponse.json(product);
   } catch (error) {
-    console.error('Error fetching semi-finished product:', error);
+    logger.error('Error fetching semi-finished product:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -70,7 +71,7 @@ export async function PUT(
 
     return NextResponse.json(product);
   } catch (error) {
-    console.error('Error updating semi-finished product:', error);
+    logger.error('Error updating semi-finished product:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -113,7 +114,7 @@ export async function DELETE(
       .eq('id', id);
 
     if (error) {
-      console.error('Delete error:', error);
+      logger.error('Delete error:', error);
       return NextResponse.json({ 
         error: 'Failed to delete product', 
         details: error.message 
@@ -122,7 +123,7 @@ export async function DELETE(
 
     return NextResponse.json({ message: 'Product deleted successfully' });
   } catch (error) {
-    console.error('Error deleting semi-finished product:', error);
+    logger.error('Error deleting semi-finished product:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

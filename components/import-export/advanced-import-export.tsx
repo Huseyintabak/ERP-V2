@@ -61,6 +61,7 @@ import {
   FileSpreadsheet,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { logger } from '@/lib/utils/logger';
 
 interface ImportResult {
   success: number;
@@ -174,7 +175,7 @@ export default function AdvancedImportExport() {
       }
     } catch (error) {
       toast.error('Import sırasında hata oluştu');
-      console.error('Import error:', error);
+      logger.error('Import error:', error);
     } finally {
       setIsLoading(false);
       setProgress(0);
@@ -211,7 +212,7 @@ export default function AdvancedImportExport() {
       }
     } catch (error) {
       toast.error('Export sırasında hata oluştu');
-      console.error('Export error:', error);
+      logger.error('Export error:', error);
     } finally {
       setIsLoading(false);
     }

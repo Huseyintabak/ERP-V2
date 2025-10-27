@@ -105,29 +105,36 @@ export default function RaporlarPage() {
         fetch('/api/stock/movements?limit=1000').then(r => r.ok ? r.json() : { data: [] })
       ]);
 
-      // 1. PRODUCTION REPORT - Son 7 günün günlük üretim raporu
-      const last7Days = Array.from({ length: 7 }, (_, i) => {
+      // 1. PRODUCTION REPORT - Son 30 günün (1 ay) günlük üretim raporu
+      const last30Days = Array.from({ length: 30 }, (_, i) => {
         const date = new Date();
-        date.setDate(date.getDate() - (6 - i));
+        date.setDate(date.getDate() - (29 - i));
         return date.toISOString().split('T')[0];
       });
 
-      const productionReport = last7Days.map(date => {
-        const dayPlans = plans.data?.filter((p: any) => 
-          p.created_at && p.created_at.startsWith(date)
-        ) || [];
+      const productionReport = last30Days.map(date => {
+        // Tarih formatını YYYY-MM-DD'ye çevir
+        const dateStr = date.split('T')[0];
         
-        const dayCompleted = plans.data?.filter((p: any) => 
-          p.completed_at && p.completed_at.startsWith(date)
-        ) || [];
+        // Planlanan: o tarihte oluşturulan planlar
+        const dayPlans = plans.data?.filter((p: any) => {
+          const planDate = p.created_at?.split('T')[0] || '';
+          return planDate === dateStr;
+        }) || [];
+        
+        // Tamamlanan: o tarihte tamamlanan planlar
+        const dayCompleted = plans.data?.filter((p: any) => {
+          const completedDate = p.completed_at?.split('T')[0] || '';
+          return completedDate === dateStr;
+        }) || [];
 
-        const planned = dayPlans.reduce((sum: number, p: any) => sum + (p.planned_quantity || 0), 0);
-        const completed = dayCompleted.reduce((sum: number, p: any) => sum + (p.produced_quantity || 0), 0);
+        const planned = dayPlans.reduce((sum: number, p: any) => sum + parseFloat(p.planned_quantity || 0), 0);
+        const completed = dayCompleted.reduce((sum: number, p: any) => sum + parseFloat(p.produced_quantity || 0), 0);
         const efficiency = planned > 0 ? (completed / planned) * 100 : 0;
         const revenue = completed * 3000; // Ortalama ürün fiyatı (gerçek fiyat sistemi eklenebilir)
 
         return { 
-          date, 
+          date: dateStr, 
           planned: Math.round(planned), 
           completed: Math.round(completed), 
           efficiency: Math.round(efficiency * 10) / 10, 
@@ -439,11 +446,23 @@ export default function RaporlarPage() {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="h-[300px]">
+                <div className="h-[400px]">
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={productionData}>
                       <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="date" />
+                      <XAxis 
+                        dataKey="date" 
+                        tick={{ fontSize: 11 }}
+                        angle={-45}
+                        textAnchor="end"
+                        height={100}
+                        interval={3}
+                        tickFormatter={(value) => {
+                          // Tarihi DD/MM formatına çevir
+                          const d = new Date(value);
+                          return `${d.getDate()}/${d.getMonth() + 1}`;
+                        }}
+                      />
                       <YAxis />
                       <Tooltip />
                       <Legend />
@@ -481,12 +500,24 @@ export default function RaporlarPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="h-[250px]">
+              <div className="h-[300px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={productionData}>
                     <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="date" />
-                    <YAxis domain={[90, 100]} />
+                    <XAxis 
+                      dataKey="date" 
+                      tick={{ fontSize: 11 }}
+                      angle={-45}
+                      textAnchor="end"
+                      height={100}
+                      interval={3}
+                      tickFormatter={(value) => {
+                        // Tarihi DD/MM formatına çevir
+                        const d = new Date(value);
+                        return `${d.getDate()}/${d.getMonth() + 1}`;
+                      }}
+                    />
+                    <YAxis />
                     <Tooltip formatter={(value) => [`${value}%`, 'Verimlilik']} />
                     <Legend />
                     <Line 

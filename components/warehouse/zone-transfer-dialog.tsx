@@ -23,8 +23,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ArrowRightLeft, Package, AlertTriangle } from 'lucide-react';
+import { ArrowRightLeft, Package, AlertTriangle, X } from 'lucide-react';
 import { toast } from 'sonner';
+import { logger } from '@/lib/utils/logger';
 
 interface WarehouseZone {
   id: string;
@@ -136,7 +137,7 @@ export function ZoneTransferDialog({
       const result = await response.json();
       setSourceInventory(result.data || []);
     } catch (error) {
-      console.error('Error fetching zone inventory:', error);
+      logger.error('Error fetching zone inventory:', error);
       toast.error('Stok bilgileri yüklenirken hata oluştu');
     }
   };
@@ -234,7 +235,7 @@ export function ZoneTransferDialog({
           });
         }
       } catch (error) {
-        console.error('Sevk error:', error);
+        logger.error('Sevk error:', error);
         toast.error('Bağlantı hatası', {
           description: 'Sunucuya bağlanılamadı.',
         });
@@ -293,7 +294,7 @@ export function ZoneTransferDialog({
           });
         }
       } catch (error) {
-        console.error('Sevk error:', error);
+        logger.error('Sevk error:', error);
         toast.error('Bağlantı hatası', {
           description: 'Sunucuya bağlanılamadı.',
         });

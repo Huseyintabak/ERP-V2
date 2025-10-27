@@ -10,6 +10,7 @@ import { SimpleSearchableSelect, type SearchableSelectOption } from '@/component
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { TrendingUp, TrendingDown } from 'lucide-react';
+import { logger } from '@/lib/utils/logger';
 
 interface Props {
   open: boolean;
@@ -50,7 +51,7 @@ export function QuickStockEntryDialog({ open, onClose, type }: Props) {
       const result = await response.json();
       setMaterials(result.data || []);
     } catch (error) {
-      console.error('Failed to fetch materials:', error);
+      logger.error('Failed to fetch materials:', error);
       toast.error('Malzemeler yüklenemedi');
     }
   };

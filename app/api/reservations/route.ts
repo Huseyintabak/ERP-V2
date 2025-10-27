@@ -2,49 +2,50 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { verifyJWT } from '@/lib/auth/jwt';
 
+import { logger } from '@/lib/utils/logger';
 // Rezervasyon oluştur
 export async function POST(request: NextRequest) {
   try {
-    console.log('🚀 Reservation POST request started');
+    logger.log('🚀 Reservation POST request started');
     
     const token = request.cookies.get('thunder_token')?.value;
     if (!token) {
-      console.log('❌ No token found');
+      logger.log('❌ No token found');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    console.log('✅ Token found, verifying...');
+    logger.log('✅ Token found, verifying...');
     const payload = await verifyJWT(token);
-    console.log('✅ Token verified, role:', payload.role);
+    logger.log('✅ Token verified, role:', payload.role);
     
     if (payload.role !== 'planlama' && payload.role !== 'yonetici' && payload.role !== 'operator') {
-      console.log('❌ Forbidden role:', payload.role);
+      logger.log('❌ Forbidden role:', payload.role);
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     const body = await request.json();
-    console.log('📦 Request body:', body);
+    logger.log('📦 Request body:', body);
     
     const { order_id, order_type, materials } = body;
 
     if (!order_id || !order_type || !materials || !Array.isArray(materials)) {
-      console.log('❌ Missing required fields');
+      logger.log('❌ Missing required fields');
       return NextResponse.json({
         error: 'Missing required fields: order_id, order_type, materials'
       }, { status: 400 });
     }
 
-    console.log('✅ All required fields present');
-    console.log('📊 Materials count:', materials.length);
+    logger.log('✅ All required fields present');
+    logger.log('📊 Materials count:', materials.length);
 
     const supabase = await createClient();
-    console.log('✅ Supabase client created');
+    logger.log('✅ Supabase client created');
 
     // Rezervasyonları oluştur
     const reservations = [];
     
     for (const material of materials) {
-      console.log('Creating reservation for material:', material.material_id);
+      logger.log('Creating reservation for material:', material.material_id);
       
       try {
         // Veritabanına rezervasyon kaydet
@@ -64,7 +65,7 @@ export async function POST(request: NextRequest) {
           .single();
 
         if (dbError) {
-          console.log('Database error, using fallback:', dbError.message);
+          logger.log('Database error, using fallback:', dbError.message);
           throw new Error(dbError.message);
         }
 
@@ -76,10 +77,10 @@ export async function POST(request: NextRequest) {
         };
         
         reservations.push(reservation);
-        console.log('✅ Database reservation created:', reservation.id);
+        logger.log('✅ Database reservation created:', reservation.id);
         
       } catch (error) {
-        console.error('❌ Error creating reservation for material:', material.material_id, error);
+        logger.error('❌ Error creating reservation for material:', material.material_id, error);
         // Hata durumunda fallback rezervasyon oluştur
         const fallbackReservation = {
           id: `fallback-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
@@ -96,11 +97,11 @@ export async function POST(request: NextRequest) {
           unit: material.unit || 'adet'
         };
         reservations.push(fallbackReservation);
-        console.log('✅ Fallback reservation created:', fallbackReservation.id);
+        logger.log('✅ Fallback reservation created:', fallbackReservation.id);
       }
     }
 
-    console.log('✅ All reservations created:', reservations.length);
+    logger.log('✅ All reservations created:', reservations.length);
 
     return NextResponse.json({ 
       message: 'Rezervasyonlar başarıyla oluşturuldu',
@@ -108,8 +109,8 @@ export async function POST(request: NextRequest) {
     }, { status: 201 });
 
   } catch (error: any) {
-    console.error('❌ Reservation creation error:', error);
-    console.error('❌ Error details:', {
+    logger.error('❌ Reservation creation error:', error);
+    logger.error('❌ Error details:', {
       message: error.message,
       stack: error.stack
     });
@@ -122,111 +123,144 @@ export async function POST(request: NextRequest) {
 // Rezervasyonları listele
 export async function GET(request: NextRequest) {
   try {
-    console.log('🚀 Reservation GET request started');
-    
     const token = request.cookies.get('thunder_token')?.value;
     if (!token) {
-      console.log('❌ No token found');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    console.log('✅ Token found, verifying...');
     const payload = await verifyJWT(token);
-    console.log('✅ Token verified, role:', payload.role);
+    const supabase = await createClient();
 
     const { searchParams } = new URL(request.url);
     const order_id = searchParams.get('order_id');
-    console.log('📋 Order ID filter:', order_id);
 
-    // Veritabanından rezervasyonları getir
-    try {
-      const supabase = await createClient();
-      console.log('✅ Supabase client created for GET');
+    // Get reservations from BOM snapshots to see which materials are reserved for which orders
+    // First get all BOM snapshots
+    const { data: bomSnapshots, error: snapshotsError } = await supabase
+      .from('production_plan_bom_snapshot')
+      .select('plan_id, material_id, material_type, material_code, material_name, quantity_needed');
 
-      let query = supabase
-        .from('material_reservations')
-        .select('*');
-
-      if (order_id) {
-        query = query.eq('order_id', order_id);
-      }
-
-      const { data: dbReservations, error: dbError } = await query;
-
-      console.log('🔍 Database query result:', { 
-        dbReservations, 
-        dbError, 
-        order_id,
-        queryCount: dbReservations?.length || 0
-      });
-
-      if (dbError) {
-        console.log('❌ Database error, using mock data:', dbError.message);
-        throw new Error(dbError.message);
-      }
-
-      if (!dbReservations || dbReservations.length === 0) {
-        console.log('⚠️ No reservations found in database for order_id:', order_id);
-        console.log('📊 Total reservations in database:', await supabase.from('material_reservations').select('id', { count: 'exact' }));
-        throw new Error('No reservations found');
-      }
-
-      // Veritabanı verilerini işle
-      const processedReservations = (dbReservations || []).map(reservation => ({
-        ...reservation,
-        material_name: 'Material ' + reservation.material_id.slice(0, 8),
-        material_code: 'MAT-' + reservation.material_id.slice(0, 8).toUpperCase(),
-        unit: 'adet'
-      }));
-
-      console.log('✅ Database reservations returned:', processedReservations.length);
-      return NextResponse.json({ data: processedReservations });
-
-    } catch (error) {
-      console.log('Using fallback mock data due to error:', error);
-      
-      // Fallback mock data
-      const mockReservations = [
-        {
-          id: 'reservation-1',
-          order_id: order_id || 'test-order-001',
-          order_type: 'production_plan',
-          material_id: 'material-1',
-          material_type: 'raw',
-          reserved_quantity: 100,
-          consumed_quantity: 0,
-          status: 'active',
-          created_at: new Date().toISOString(),
-          material_name: 'Test Material',
-          material_code: 'TM-001',
-          unit: 'adet'
-        },
-        {
-          id: 'reservation-2',
-          order_id: order_id || 'test-order-002',
-          order_type: 'semi_production_plan',
-          material_id: 'material-2',
-          material_type: 'semi',
-          reserved_quantity: 50,
-          consumed_quantity: 25,
-          status: 'active',
-          created_at: new Date(Date.now() - 3600000).toISOString(),
-          material_name: 'Semi Product',
-          material_code: 'SP-001',
-          unit: 'adet'
-        }
-      ];
-
-      console.log('✅ Mock reservations returned:', mockReservations.length);
-      return NextResponse.json({ data: mockReservations });
+    if (snapshotsError || !bomSnapshots || bomSnapshots.length === 0) {
+      return NextResponse.json({ data: [] });
     }
 
-  } catch (error: any) {
-    console.error('❌ Reservation fetch error:', error);
-    console.error('❌ Error details:', {
-      message: error.message,
-      stack: error.stack
+    // Get unique plan IDs
+    const planIds = [...new Set(bomSnapshots.map(s => s.plan_id))];
+    
+    // Get production plans with orders - show all plans
+    const { data: plans } = await supabase
+      .from('production_plans')
+      .select('id, order_id, product_id, status, created_at')
+      .in('id', planIds);
+
+    if (!plans || plans.length === 0) {
+      return NextResponse.json({ data: [] });
+    }
+
+    // Get order details
+    const orderIds = [...new Set(plans.map(p => p.order_id))].filter(Boolean);
+    const { data: orders } = await supabase
+      .from('orders')
+      .select('id, order_number, customer_name')
+      .in('id', orderIds);
+
+    // Create a map of plan_id -> plan data
+    const planMap = new Map();
+    plans.forEach(plan => {
+      const order = orders?.find(o => o.id === plan.order_id);
+      planMap.set(plan.id, {
+        order_id: plan.order_id,
+        product_id: plan.product_id,
+        status: plan.status,
+        created_at: plan.created_at,
+        order
+      });
     });
+
+    // Get production log IDs to track consumption by plan
+    const productionLogIds = plans.map(p => p.id);
+    
+    // Get consumption data from stock_movements linked to production logs
+    const { data: stockMovements } = await supabase
+      .from('stock_movements')
+      .select('material_id, material_type, quantity, production_log_id')
+      .in('movement_type', ['uretim'])
+      .not('production_log_id', 'is', null);
+    
+    // Get production logs to map consumption to plans
+    const { data: productionLogs } = await supabase
+      .from('production_logs')
+      .select('id, plan_id')
+      .in('plan_id', productionLogIds);
+
+    // Create a map: plan_id -> material_id -> consumed quantity
+    const planConsumptionMap = new Map();
+    
+    if (stockMovements && productionLogs) {
+      const logToPlanMap = new Map(productionLogs.map(log => [log.id, log.plan_id]));
+      
+      for (const movement of stockMovements) {
+        if (movement.production_log_id) {
+          const planId = logToPlanMap.get(movement.production_log_id);
+          if (planId) {
+            const key = `${planId}-${movement.material_type}-${movement.material_id}`;
+            const consumed = Math.abs(parseFloat(movement.quantity));
+            if (planConsumptionMap.has(key)) {
+              planConsumptionMap.set(key, planConsumptionMap.get(key) + consumed);
+            } else {
+              planConsumptionMap.set(key, consumed);
+            }
+          }
+        }
+      }
+    }
+
+    const reservationsMap = new Map();
+
+    for (const snapshot of bomSnapshots) {
+      const planData = planMap.get(snapshot.plan_id);
+      if (!planData || !planData.order_id) continue;
+      
+      const key = `${planData.order_id}-${snapshot.material_id}`;
+      
+      // Get consumed quantity for this specific plan and material
+      const consumptionKey = `${snapshot.plan_id}-${snapshot.material_type}-${snapshot.material_id}`;
+      const consumedQuantity = planConsumptionMap.get(consumptionKey) || 0;
+      
+      if (reservationsMap.has(key)) {
+        const existing = reservationsMap.get(key);
+        existing.reserved_quantity += parseFloat(snapshot.quantity_needed);
+      } else {
+        reservationsMap.set(key, {
+          id: `${snapshot.plan_id}-${snapshot.material_id}`,
+          order_id: planData.order_id,
+          plan_id: snapshot.plan_id,
+          material_id: snapshot.material_id,
+          material_type: snapshot.material_type,
+          material_code: snapshot.material_code,
+          material_name: snapshot.material_name,
+          reserved_quantity: parseFloat(snapshot.quantity_needed),
+          consumed_quantity: consumedQuantity,
+          status: planData.status === 'tamamlandi' ? 'completed' : 'active',
+          created_at: planData.created_at || new Date().toISOString(),
+          order_info: planData.order,
+          unit: 'adet'
+        });
+      }
+    }
+
+    const reservations = Array.from(reservationsMap.values());
+
+    // Filter by order_id if provided
+    let filteredReservations = reservations;
+    if (order_id) {
+      filteredReservations = reservations.filter(r => r.order_id === order_id);
+    }
+
+    return NextResponse.json({ data: filteredReservations });
+
+  } catch (error: any) {
+    logger.error('Error fetching reservations:', error);
     return NextResponse.json({ 
       error: error.message || 'Rezervasyonlar getirilemedi'
     }, { status: 500 });

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { verifyJWT } from '@/lib/auth/jwt';
 
+import { logger } from '@/lib/utils/logger';
 export async function POST(request: NextRequest) {
   try {
     // Auth check
@@ -34,7 +35,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (createTableError) {
-      console.error('Table creation error:', createTableError);
+      logger.error('Table creation error:', createTableError);
       return NextResponse.json({ error: createTableError.message }, { status: 500 });
     }
 
@@ -48,7 +49,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (indexError) {
-      console.error('Index creation error:', indexError);
+      logger.error('Index creation error:', indexError);
       // Index hatası kritik değil, devam et
     }
 
@@ -66,7 +67,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (triggerError) {
-      console.error('Trigger function creation error:', triggerError);
+      logger.error('Trigger function creation error:', triggerError);
     }
 
     // Trigger'ı oluştur
@@ -81,7 +82,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (triggerCreateError) {
-      console.error('Trigger creation error:', triggerCreateError);
+      logger.error('Trigger creation error:', triggerCreateError);
     }
 
     return NextResponse.json({ 
@@ -90,7 +91,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Create semi_bom table error:', error);
+    logger.error('Create semi_bom table error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

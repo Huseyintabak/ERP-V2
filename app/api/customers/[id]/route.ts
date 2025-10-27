@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { verifyJWT } from '@/lib/auth/jwt';
 import { z } from 'zod';
 
+import { logger } from '@/lib/utils/logger';
 // Müşteri güncelleme şeması
 const customerUpdateSchema = z.object({
   name: z.string().min(1, 'Müşteri adı gerekli').optional(),
@@ -47,13 +48,13 @@ export async function GET(
       .single();
 
     if (error) {
-      console.error('Error fetching customer:', error);
+      logger.error('Error fetching customer:', error);
       return NextResponse.json({ error: 'Customer not found' }, { status: 404 });
     }
 
     return NextResponse.json({ customer });
   } catch (error: unknown) {
-    console.error('Customer fetch error:', error);
+    logger.error('Customer fetch error:', error);
     const errorMessage = error instanceof Error ? error.message : 'Failed to fetch customer';
     return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
@@ -110,13 +111,13 @@ export async function PUT(
       .single();
 
     if (error) {
-      console.error('Error updating customer:', error);
+      logger.error('Error updating customer:', error);
       return NextResponse.json({ error: 'Failed to update customer' }, { status: 500 });
     }
 
     return NextResponse.json({ customer });
   } catch (error: unknown) {
-    console.error('Customer update error:', error);
+    logger.error('Customer update error:', error);
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: 'Validation error', details: error.errors }, { status: 400 });
     }
@@ -170,13 +171,13 @@ export async function DELETE(
       .eq('id', id);
 
     if (error) {
-      console.error('Error deleting customer:', error);
+      logger.error('Error deleting customer:', error);
       return NextResponse.json({ error: 'Failed to delete customer' }, { status: 500 });
     }
 
     return NextResponse.json({ message: 'Customer deleted successfully' });
   } catch (error: unknown) {
-    console.error('Customer deletion error:', error);
+    logger.error('Customer deletion error:', error);
     const errorMessage = error instanceof Error ? error.message : 'Failed to delete customer';
     return NextResponse.json({ error: errorMessage }, { status: 500 });
   }

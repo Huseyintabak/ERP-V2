@@ -33,6 +33,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Download, FileSpreadsheet, FileText } from 'lucide-react';
 import { toast } from 'sonner';
+import { logger } from '@/lib/utils/logger';
 
 const exportSchema = z.object({
   type: z.enum(['raw', 'semi', 'finished', 'all'], {
@@ -111,7 +112,7 @@ export function ExcelExportDialog({ onExportComplete }: ExcelExportDialogProps) 
 
       setIsOpen(false);
     } catch (error: any) {
-      console.error('Export error:', error);
+      logger.error('Export error:', error);
       toast.error(error.message || 'Dışa aktarma hatası');
     } finally {
       setIsExporting(false);

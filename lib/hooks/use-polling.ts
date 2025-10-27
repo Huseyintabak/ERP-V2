@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useCallback, useState } from 'react';
+import { logger } from '@/lib/utils/logger';
 
 interface PollingConfig {
   interval?: number; // Polling interval in milliseconds (default: 5000 - 5 seconds)
@@ -40,13 +41,13 @@ export const usePolling = (
       const error = err instanceof Error ? err : new Error('Polling error');
       setError(error);
       onError?.(error);
-      console.error('Polling error:', error);
+      logger.error('Polling error:', error);
     }
   }, [fetchFunction, isActive, onError]);
 
   // Start polling
   const startPolling = useCallback(() => {
-    console.log('📊 Starting polling...');
+    logger.log('📊 Starting polling...');
     setIsActive(true);
     
     // Clear existing interval
@@ -63,7 +64,7 @@ export const usePolling = (
 
   // Stop polling
   const stopPolling = useCallback(() => {
-    console.log('📊 Stopping polling...');
+    logger.log('📊 Stopping polling...');
     setIsActive(false);
     
     if (intervalRef.current) {
@@ -74,7 +75,7 @@ export const usePolling = (
 
   // Manual refresh
   const refresh = useCallback(async () => {
-    console.log('📊 Manual refresh...');
+    logger.log('📊 Manual refresh...');
     await poll();
   }, [poll]);
 

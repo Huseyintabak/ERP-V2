@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { verifyJWT } from '@/lib/auth/jwt';
 
+import { logger } from '@/lib/utils/logger';
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ orderId: string }> }
@@ -68,7 +69,7 @@ export async function GET(
       .eq('product_id', order.product_id);
 
     if (bomError) {
-      console.error('BOM fetch error:', bomError);
+      logger.error('BOM fetch error:', bomError);
       // BOM bulunamadı, örnek veri döndür
       const sampleMaterials = [
         {
@@ -188,7 +189,7 @@ export async function GET(
     });
 
   } catch (error) {
-    console.error('Semi BOM Snapshot API error:', error);
+    logger.error('Semi BOM Snapshot API error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { verifyJWT } from '@/lib/auth/jwt';
 
+import { logger } from '@/lib/utils/logger';
 export async function POST(request: NextRequest) {
   try {
     // Auth check
@@ -26,7 +27,7 @@ export async function POST(request: NextRequest) {
     const { data, error } = await supabase.rpc('exec_sql', { sql_query: sql });
 
     if (error) {
-      console.error('SQL execution error:', error);
+      logger.error('SQL execution error:', error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
@@ -37,7 +38,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('SQL execution API error:', error);
+    logger.error('SQL execution API error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

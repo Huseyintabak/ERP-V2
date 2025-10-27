@@ -3,6 +3,7 @@ import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { verifyJWT } from '@/lib/auth/jwt';
 import { z } from 'zod';
 
+import { logger } from '@/lib/utils/logger';
 const warehouseZoneSchema = z.object({
   name: z.string().min(1, 'Zone adı boş olamaz.'),
   customer_id: z.string().uuid().nullable().optional(),
@@ -24,7 +25,7 @@ export async function GET(request: NextRequest) {
       .select('*, customers(id, name)');
 
     if (error) {
-      console.error('Error fetching warehouse zones:', error);
+      logger.error('Error fetching warehouse zones:', error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
@@ -64,7 +65,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ data: zonesWithCounts }, { status: 200 });
   } catch (error) {
-    console.error('Error in warehouse zones GET:', error);
+    logger.error('Error in warehouse zones GET:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -106,13 +107,13 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) {
-      console.error('Error creating warehouse zone:', error);
+      logger.error('Error creating warehouse zone:', error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
     return NextResponse.json({ data }, { status: 201 });
   } catch (error) {
-    console.error('Validation or processing error:', error);
+    logger.error('Validation or processing error:', error);
     return NextResponse.json({ error: 'Invalid request data' }, { status: 400 });
   }
 }
@@ -157,14 +158,14 @@ export async function DELETE(request: NextRequest) {
       .eq('id', zoneId);
 
     if (error) {
-      console.error('Error deleting warehouse zone:', error);
+      logger.error('Error deleting warehouse zone:', error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
     return NextResponse.json({ message: 'Zone deleted successfully' });
 
   } catch (error) {
-    console.error('Delete warehouse zone API error:', error);
+    logger.error('Delete warehouse zone API error:', error);
     return NextResponse.json({ 
       error: 'Internal server error' 
     }, { status: 500 });

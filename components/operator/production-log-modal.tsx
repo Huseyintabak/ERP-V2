@@ -21,6 +21,7 @@ import {
   Loader2
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { logger } from '@/lib/utils/logger';
 
 interface ProductionLogModalProps {
   task: any;
@@ -76,7 +77,7 @@ export function ProductionLogModal({ task, isOpen, onClose, onSuccess }: Product
         setLogs(data.data || []);
       }
     } catch (error) {
-      console.error('Error fetching logs:', error);
+      logger.error('Error fetching logs:', error);
     } finally {
       setFetchingLogs(false);
     }
@@ -92,7 +93,7 @@ export function ProductionLogModal({ task, isOpen, onClose, onSuccess }: Product
         setBomMaterials(data.materials || []);
       }
     } catch (error) {
-      console.error('Error fetching BOM materials:', error);
+      logger.error('Error fetching BOM materials:', error);
     }
   };
 
@@ -133,7 +134,7 @@ export function ProductionLogModal({ task, isOpen, onClose, onSuccess }: Product
       }
       
     } catch (error) {
-      console.error('Barcode submit error:', error);
+      logger.error('Barcode submit error:', error);
       toast.error(error instanceof Error ? error.message : 'Üretim kaydı oluşturulamadı');
     } finally {
       setLoading(false);

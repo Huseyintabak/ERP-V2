@@ -4,6 +4,7 @@ import { verifyJWT } from '@/lib/auth/jwt';
 import * as XLSX from 'xlsx';
 import { z } from 'zod';
 
+import { logger } from '@/lib/utils/logger';
 // Export configuration schema
 const exportConfigSchema = z.object({
   type: z.enum(['raw', 'semi', 'finished', 'bom', 'stock', 'production', 'audit']),
@@ -222,7 +223,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error: unknown) {
-    console.error('Advanced export error:', error);
+    logger.error('Advanced export error:', error);
     const errorMessage = error instanceof Error ? error.message : 'Export failed';
     return NextResponse.json({ error: errorMessage }, { status: 500 });
   }

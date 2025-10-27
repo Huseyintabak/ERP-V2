@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { verifyJWT } from '@/lib/auth/jwt';
 
+import { logger } from '@/lib/utils/logger';
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -82,7 +83,7 @@ export async function PATCH(
       .single();
 
     if (updateError) {
-      console.error('Error updating semi production order:', updateError);
+      logger.error('Error updating semi production order:', updateError);
       return NextResponse.json({ error: 'Failed to update order' }, { status: 500 });
     }
 
@@ -108,7 +109,7 @@ export async function PATCH(
           .eq('id', currentOrder.product_id);
 
         if (stockError) {
-          console.error('Error updating stock:', stockError);
+          logger.error('Error updating stock:', stockError);
           // Don't fail the request, just log the error
         }
       }
@@ -116,7 +117,7 @@ export async function PATCH(
 
     return NextResponse.json({ data: updatedOrder });
   } catch (error) {
-    console.error('Error in semi production order status update:', error);
+    logger.error('Error in semi production order status update:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { verifyJWT } from '@/lib/auth/jwt';
 
+import { logger } from '@/lib/utils/logger';
 export async function PUT(
   request: NextRequest,
   { params }: { params: { id: string } }
@@ -60,13 +61,13 @@ export async function PUT(
       .single();
 
     if (error) {
-      console.error('Error updating semi production order:', error);
+      logger.error('Error updating semi production order:', error);
       return NextResponse.json({ error: 'Failed to update order' }, { status: 500 });
     }
 
     return NextResponse.json({ data: order });
   } catch (error) {
-    console.error('Error in semi production orders PUT:', error);
+    logger.error('Error in semi production orders PUT:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -100,13 +101,13 @@ export async function DELETE(
       .eq('id', params.id);
 
     if (error) {
-      console.error('Error deleting semi production order:', error);
+      logger.error('Error deleting semi production order:', error);
       return NextResponse.json({ error: 'Failed to delete order' }, { status: 500 });
     }
 
     return NextResponse.json({ message: 'Order deleted successfully' });
   } catch (error) {
-    console.error('Error in semi production orders DELETE:', error);
+    logger.error('Error in semi production orders DELETE:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

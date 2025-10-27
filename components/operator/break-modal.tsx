@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
+import { logger } from '@/lib/utils/logger';
 
 interface BreakModalProps {
   isOpen: boolean;
@@ -43,7 +44,7 @@ export function BreakModal({ isOpen, onClose, onSuccess }: BreakModalProps) {
       onSuccess();
       onClose();
     } catch (error) {
-      console.error('Error starting break:', error);
+      logger.error('Error starting break:', error);
       toast.error(error instanceof Error ? error.message : 'Mola başlatılamadı');
     } finally {
       setLoading(false);

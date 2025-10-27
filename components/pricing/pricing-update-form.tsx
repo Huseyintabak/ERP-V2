@@ -20,7 +20,7 @@ import { DollarSign, TrendingUp, Calculator } from 'lucide-react';
 import { toast } from 'sonner';
 
 const pricingSchema = z.object({
-  salePrice: z.number().positive('Satış fiyatı 0'dan büyük olmalı'),
+  salePrice: z.number().positive(`Satış fiyatı 0'dan büyük olmalı`),
   costPrice: z.number().min(0, 'Maliyet negatif olamaz').optional(),
   profitMargin: z.number().min(0).max(100, 'Kar marjı 0-100 arası olmalı').optional(),
   notes: z.string().optional()

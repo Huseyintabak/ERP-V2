@@ -4,6 +4,7 @@ import { verifyJWT } from '@/lib/auth/jwt';
 import { z } from 'zod';
 import bcrypt from 'bcryptjs';
 
+import { logger } from '@/lib/utils/logger';
 // User schema for creation/update
 const userCreateSchema = z.object({
   name: z.string().min(1).max(255),
@@ -76,11 +77,32 @@ export async function GET(request: NextRequest) {
       query = query.eq('is_active', is_active === 'true');
     }
 
-    const { data: users, error, count } = await query
+    // Get count separately for pagination
+    let countQuery = supabase
+      .from('users')
+      .select('*', { count: 'exact', head: true });
+    
+    if (search) {
+      countQuery = countQuery.or(`name.ilike.%${search}%,email.ilike.%${search}%`);
+    }
+    if (role) {
+      countQuery = countQuery.eq('role', role);
+    }
+    if (is_active !== null) {
+      countQuery = countQuery.eq('is_active', is_active === 'true');
+    }
+    
+    const { count, error: countError } = await countQuery;
+    
+    if (countError) {
+      logger.error('Error counting users:', countError);
+    }
+
+    const { data: users, error } = await query
       .range((page - 1) * limit, page * limit - 1);
 
     if (error) {
-      console.error('Error fetching users:', error);
+      logger.error('Error fetching users:', error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
@@ -89,12 +111,12 @@ export async function GET(request: NextRequest) {
       pagination: {
         page,
         limit,
-        total: count,
+        total: count || 0,
         pages: Math.ceil((count || 0) / limit),
       },
     });
   } catch (error: any) {
-    console.error('Unexpected error fetching users:', error);
+    logger.error('Unexpected error fetching users:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
@@ -155,7 +177,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) {
-      console.error('Error creating user:', error);
+      logger.error('Error creating user:', error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
@@ -164,7 +186,7 @@ export async function POST(request: NextRequest) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: 'Invalid data', details: error.errors }, { status: 400 });
     }
-    console.error('Unexpected error creating user:', error);
+    logger.error('Unexpected error creating user:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

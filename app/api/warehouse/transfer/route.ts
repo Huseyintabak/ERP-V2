@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { verifyJWT } from '@/lib/auth/jwt';
 
+import { logger } from '@/lib/utils/logger';
 export async function POST(request: NextRequest) {
   try {
     // Authentication check
@@ -55,7 +56,7 @@ export async function POST(request: NextRequest) {
       .single();
     
     if (zoneError) {
-      console.error('Error fetching source zone:', zoneError);
+      logger.error('Error fetching source zone:', zoneError);
       return NextResponse.json({ error: zoneError.message }, { status: 500 });
     }
     
@@ -68,7 +69,7 @@ export async function POST(request: NextRequest) {
         .single();
       
       if (productError) {
-        console.error('Error checking product inventory:', productError);
+        logger.error('Error checking product inventory:', productError);
         return NextResponse.json({ error: productError.message }, { status: 500 });
       }
       
@@ -84,7 +85,7 @@ export async function POST(request: NextRequest) {
         .single();
 
       if (sourceError && sourceError.code !== 'PGRST116') {
-        console.error('Error checking source inventory:', sourceError);
+        logger.error('Error checking source inventory:', sourceError);
         return NextResponse.json({ error: sourceError.message }, { status: 500 });
       }
 
@@ -98,7 +99,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Call the transfer function (use admin client for RLS bypass)
-    console.log('🔄 Calling transfer_between_zones with:', {
+    logger.log('🔄 Calling transfer_between_zones with:', {
       from_zone: fromZoneId,
       to_zone: toZoneId,
       product: productId,
@@ -114,22 +115,22 @@ export async function POST(request: NextRequest) {
       user_id: payload.userId
     });
 
-    console.log('📊 Transfer function result:', { data, error });
+    logger.log('📊 Transfer function result:', { data, error });
 
     if (error) {
-      console.error('❌ Transfer function error:', error);
+      logger.error('❌ Transfer function error:', error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
     // Check if the function returned success
     if (!data || !data.success) {
-      console.error('❌ Transfer failed:', data);
+      logger.error('❌ Transfer failed:', data);
       return NextResponse.json({ 
         error: data?.error || 'Transfer failed' 
       }, { status: 400 });
     }
 
-    console.log('✅ Transfer completed successfully');
+    logger.log('✅ Transfer completed successfully');
 
     // Fetch updated inventory for both zones (use admin client for RLS bypass)
     const [sourceResult, destResult] = await Promise.all([
@@ -153,7 +154,7 @@ export async function POST(request: NextRequest) {
         .eq('material_id', productId)
     ]);
 
-    console.log('📦 Updated inventories:', {
+    logger.log('📦 Updated inventories:', {
       source: sourceResult.data,
       destination: destResult.data
     });
@@ -166,7 +167,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Zone transfer API error:', error);
+    logger.error('Zone transfer API error:', error);
     return NextResponse.json({ 
       error: 'Internal server error' 
     }, { status: 500 });
@@ -211,7 +212,7 @@ export async function GET(request: NextRequest) {
       .range(offset, offset + limit - 1);
 
     if (error) {
-      console.error('Error fetching transfer history:', error);
+      logger.error('Error fetching transfer history:', error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
@@ -231,7 +232,7 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Transfer history API error:', error);
+    logger.error('Transfer history API error:', error);
     return NextResponse.json({ 
       error: 'Internal server error' 
     }, { status: 500 });

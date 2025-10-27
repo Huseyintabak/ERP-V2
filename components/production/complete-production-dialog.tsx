@@ -17,6 +17,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CheckCircle, Package, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
+import { logger } from '@/lib/utils/logger';
 
 interface ProductionPlan {
   id: string;
@@ -66,7 +67,7 @@ export function CompleteProductionDialog({ plan, onComplete }: CompleteProductio
         });
       }
     } catch (error) {
-      console.error('Complete production error:', error);
+      logger.error('Complete production error:', error);
       toast.error('Bağlantı hatası', {
         description: 'Sunucuya bağlanılamadı.',
       });

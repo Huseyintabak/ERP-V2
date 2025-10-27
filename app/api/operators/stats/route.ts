@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { verifyJWT } from '@/lib/auth/jwt';
 
+import { logger } from '@/lib/utils/logger';
 export async function GET(request: NextRequest) {
   try {
     // Authentication check
@@ -34,7 +35,7 @@ export async function GET(request: NextRequest) {
       .eq('assigned_operator_id', operatorId);
 
     if (plansError) {
-      console.error('Error fetching production plans:', plansError);
+      logger.error('Error fetching production plans:', plansError);
       return NextResponse.json({ error: 'Failed to fetch production plans' }, { status: 500 });
     }
 
@@ -45,7 +46,7 @@ export async function GET(request: NextRequest) {
       .eq('operator_id', operatorId);
 
     if (logsError) {
-      console.error('Error fetching production logs:', logsError);
+      logger.error('Error fetching production logs:', logsError);
       return NextResponse.json({ error: 'Failed to fetch production logs' }, { status: 500 });
     }
 
@@ -56,7 +57,7 @@ export async function GET(request: NextRequest) {
       .eq('assigned_operator_id', operatorId);
 
     if (ordersError) {
-      console.error('Error fetching orders:', ordersError);
+      logger.error('Error fetching orders:', ordersError);
       return NextResponse.json({ error: 'Failed to fetch orders' }, { status: 500 });
     }
 
@@ -187,7 +188,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(stats);
 
   } catch (error) {
-    console.error('Operator stats API error:', error);
+    logger.error('Operator stats API error:', error);
     return NextResponse.json({ 
       error: 'Internal server error' 
     }, { status: 500 });

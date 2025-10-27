@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { verifyJWT } from '@/lib/auth/jwt';
 import { z } from 'zod';
 
+import { logger } from '@/lib/utils/logger';
 // Müşteri şeması
 const customerSchema = z.object({
   name: z.string().min(1, 'Müşteri adı gerekli'),
@@ -60,7 +61,7 @@ export async function GET(request: NextRequest) {
     const { data: customers, error, count } = await query;
 
     if (error) {
-      console.error('Error fetching customers:', error);
+      logger.error('Error fetching customers:', error);
       return NextResponse.json({ error: 'Failed to fetch customers' }, { status: 500 });
     }
 
@@ -74,7 +75,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error: unknown) {
-    console.error('Customers fetch error:', error);
+    logger.error('Customers fetch error:', error);
     const errorMessage = error instanceof Error ? error.message : 'Failed to fetch customers';
     return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
@@ -122,13 +123,13 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) {
-      console.error('Error creating customer:', error);
+      logger.error('Error creating customer:', error);
       return NextResponse.json({ error: 'Failed to create customer' }, { status: 500 });
     }
 
     return NextResponse.json({ customer }, { status: 201 });
   } catch (error: unknown) {
-    console.error('Customer creation error:', error);
+    logger.error('Customer creation error:', error);
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: 'Validation error', details: error.errors }, { status: 400 });
     }

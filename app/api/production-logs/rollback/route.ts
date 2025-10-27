@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { verifyJWT } from '@/lib/auth/jwt';
 
+import { logger } from '@/lib/utils/logger';
 export async function POST(request: NextRequest) {
   try {
     const token = request.cookies.get('thunder_token')?.value;
@@ -85,7 +86,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (rollbackError) {
-      console.error('Rollback error:', rollbackError);
+      logger.error('Rollback error:', rollbackError);
       return NextResponse.json({ error: rollbackError.message }, { status: 500 });
     }
 
@@ -96,7 +97,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error: any) {
-    console.error('Error in production log rollback:', error);
+    logger.error('Error in production log rollback:', error);
     return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 });
   }
 }

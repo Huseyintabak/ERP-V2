@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { z } from 'zod';
 
+import { logger } from '@/lib/utils/logger';
 // Validation schema
 const inventoryCountSchema = z.object({
   materialType: z.enum(['raw', 'semi', 'finished']),
@@ -107,7 +108,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.error('❌ Inventory count error:', error);
+    logger.error('❌ Inventory count error:', error);
     return NextResponse.json(
       { error: error.message || 'Envanter sayımı oluşturulamadı' },
       { status: 500 }
@@ -172,7 +173,7 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error: any) {
-    console.error('❌ Inventory count list error:', error);
+    logger.error('❌ Inventory count list error:', error);
     return NextResponse.json(
       { error: error.message || 'Envanter sayımları listelenemedi' },
       { status: 500 }

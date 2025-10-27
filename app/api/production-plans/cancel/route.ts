@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { verifyJWT } from '@/lib/auth/jwt';
 
+import { logger } from '@/lib/utils/logger';
 export async function POST(request: NextRequest) {
   try {
     const token = request.cookies.get('thunder_token')?.value;
@@ -82,12 +83,12 @@ export async function POST(request: NextRequest) {
     });
 
     if (cancelError) {
-      console.error('Cancel error:', cancelError);
-      console.error('Cancel error details:', JSON.stringify(cancelError, null, 2));
+      logger.error('Cancel error:', cancelError);
+      logger.error('Cancel error details:', JSON.stringify(cancelError, null, 2));
       return NextResponse.json({ error: cancelError.message }, { status: 500 });
     }
 
-    console.log('Cancel result:', cancelResult);
+    logger.log('Cancel result:', cancelResult);
 
     return NextResponse.json({ 
       success: true, 
@@ -96,7 +97,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error: any) {
-    console.error('Error in production plan cancel:', error);
+    logger.error('Error in production plan cancel:', error);
     return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 });
   }
 }

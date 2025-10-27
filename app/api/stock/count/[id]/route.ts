@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { verifyJWT } from '@/lib/auth/jwt';
 
+import { logger } from '@/lib/utils/logger';
 /**
  * PUT /api/stock/count/[id]/approve
  * Envanter sayımını onayla ve stok güncelle
@@ -90,7 +91,7 @@ export async function PUT(
     }
 
   } catch (error: any) {
-    console.error('❌ Inventory count action error:', error);
+    logger.error('❌ Inventory count action error:', error);
     return NextResponse.json(
       { error: error.message || 'İşlem hatası' },
       { status: 500 }
@@ -136,7 +137,7 @@ export async function GET(
     });
 
   } catch (error: any) {
-    console.error('❌ Inventory count detail error:', error);
+    logger.error('❌ Inventory count detail error:', error);
     return NextResponse.json(
       { error: error.message || 'Detay alınamadı' },
       { status: 500 }
@@ -171,7 +172,7 @@ export async function DELETE(
     });
 
   } catch (error: any) {
-    console.error('❌ Inventory count delete error:', error);
+    logger.error('❌ Inventory count delete error:', error);
     return NextResponse.json(
       { error: error.message || 'Silme hatası' },
       { status: 500 }

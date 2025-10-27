@@ -1,4 +1,5 @@
 import { SignJWT, jwtVerify } from 'jose';
+import { logger } from '@/lib/utils/logger';
 
 const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET!);
 
@@ -24,7 +25,7 @@ export async function verifyJWT(token: string): Promise<JWTPayload> {
       role: payload.role as 'yonetici' | 'planlama' | 'depo' | 'operator',
     };
   } catch (error: any) {
-    console.error('❌ JWT verify error:', error.message);
+    logger.error('❌ JWT verify error:', error.message);
     throw new Error('Invalid or expired token');
   }
 }

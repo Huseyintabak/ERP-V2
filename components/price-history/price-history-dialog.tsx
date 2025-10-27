@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { TrendingUp, TrendingDown, DollarSign, Calendar, User } from 'lucide-react';
 import { toast } from 'sonner';
+import { logger } from '@/lib/utils/logger';
 
 interface PriceHistoryEntry {
   id: string;
@@ -71,7 +72,7 @@ export function PriceHistoryDialog({
       );
       
       if (!response.ok) {
-        console.warn('Failed to fetch price history, using fallback');
+        logger.warn('Failed to fetch price history, using fallback');
         setHistory([]);
         return;
       }
@@ -79,7 +80,7 @@ export function PriceHistoryDialog({
       const data = await response.json();
       setHistory(data.data || []);
     } catch (error) {
-      console.error('Error fetching price history:', error);
+      logger.error('Error fetching price history:', error);
       setHistory([]);
     } finally {
       setLoading(false);
@@ -99,7 +100,7 @@ export function PriceHistoryDialog({
       const data = await response.json();
       setYearlyAverage(data.yearly_average || 0);
     } catch (error) {
-      console.error('Error fetching yearly average:', error);
+      logger.error('Error fetching yearly average:', error);
     }
   };
 
@@ -110,7 +111,7 @@ export function PriceHistoryDialog({
       );
       
       if (!response.ok) {
-        console.warn('Failed to fetch trend data, using fallback');
+        logger.warn('Failed to fetch trend data, using fallback');
         setTrendData([]);
         return;
       }
@@ -118,7 +119,7 @@ export function PriceHistoryDialog({
       const data = await response.json();
       setTrendData(data.trend_data || []);
     } catch (error) {
-      console.error('Error fetching trend data:', error);
+      logger.error('Error fetching trend data:', error);
       setTrendData([]);
     }
   };

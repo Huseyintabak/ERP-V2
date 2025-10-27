@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { verifyJWT } from '@/lib/auth/jwt';
 
+import { logger } from '@/lib/utils/logger';
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -52,7 +53,7 @@ export async function GET(
 
     return NextResponse.json(order);
   } catch (error) {
-    console.error('Error fetching order:', error);
+    logger.error('Error fetching order:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -94,7 +95,7 @@ export async function PUT(
 
     return NextResponse.json(order);
   } catch (error) {
-    console.error('Error updating order:', error);
+    logger.error('Error updating order:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -119,7 +120,7 @@ export async function DELETE(
     }
 
     // First, release reserved materials before deleting the order
-    console.log('🔄 Releasing reserved materials for order:', id);
+    logger.log('🔄 Releasing reserved materials for order:', id);
     
     // Get order items to release reservations
     const { data: orderItems } = await supabase
@@ -129,7 +130,7 @@ export async function DELETE(
 
     if (orderItems && orderItems.length > 0) {
       for (const item of orderItems) {
-        console.log(`🔍 Releasing reservations for: ${item.product_name} (${item.quantity} units)`);
+        logger.log(`🔍 Releasing reservations for: ${item.product_name} (${item.quantity} units)`);
 
         // Get BOM for this product
         const { data: bomItems, error: bomError } = await supabase
@@ -142,7 +143,7 @@ export async function DELETE(
           .eq('finished_product_id', item.product_id);
 
         if (bomError) {
-          console.error('❌ Error fetching BOM:', bomError);
+          logger.error('❌ Error fetching BOM:', bomError);
           continue;
         }
 
@@ -159,7 +160,7 @@ export async function DELETE(
               .single();
             
             if (materialError) {
-              console.error('❌ Error fetching material:', materialError);
+              logger.error('❌ Error fetching material:', materialError);
               continue;
             }
             
@@ -175,11 +176,11 @@ export async function DELETE(
                 .eq('id', bomItem.material_id);
 
               if (updateError) {
-                console.error('❌ Error releasing reserved quantity:', updateError);
+                logger.error('❌ Error releasing reserved quantity:', updateError);
                 continue;
               }
 
-              console.log('✅ Released', needed, 'units of', material.code, '(was reserved:', material.reserved_quantity, 'now:', newReservedQuantity, ')');
+              logger.log('✅ Released', needed, 'units of', material.code, '(was reserved:', material.reserved_quantity, 'now:', newReservedQuantity, ')');
             }
           }
         }
@@ -211,7 +212,7 @@ export async function DELETE(
         .in('plan_id', productionPlans.map(plan => plan.id));
 
       if (snapshotsError) {
-        console.error('Error deleting BOM snapshots:', snapshotsError);
+        logger.error('Error deleting BOM snapshots:', snapshotsError);
         return NextResponse.json({ 
           error: 'Failed to delete BOM snapshots', 
           details: snapshotsError.message 
@@ -225,7 +226,7 @@ export async function DELETE(
         .eq('order_id', id);
 
       if (plansError) {
-        console.error('Error deleting production plans:', plansError);
+        logger.error('Error deleting production plans:', plansError);
         return NextResponse.json({ 
           error: 'Failed to delete production plans', 
           details: plansError.message 
@@ -240,7 +241,7 @@ export async function DELETE(
       .eq('order_id', id);
 
     if (itemsError) {
-      console.error('Error deleting order items:', itemsError);
+      logger.error('Error deleting order items:', itemsError);
       return NextResponse.json({ 
         error: 'Failed to delete order items', 
         details: itemsError.message 
@@ -254,7 +255,7 @@ export async function DELETE(
       .eq('id', id);
 
     if (error) {
-      console.error('Delete error:', error);
+      logger.error('Delete error:', error);
       return NextResponse.json({ 
         error: 'Failed to delete order', 
         details: error.message 
@@ -263,7 +264,7 @@ export async function DELETE(
 
     return NextResponse.json({ message: 'Order deleted successfully' });
   } catch (error) {
-    console.error('Error deleting order:', error);
+    logger.error('Error deleting order:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

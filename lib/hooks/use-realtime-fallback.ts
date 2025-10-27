@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useRealtimeManager } from './use-realtime-manager';
+import { logger } from '@/lib/utils/logger';
 
 interface RealtimeFallbackConfig {
   maxErrors?: number;
@@ -42,13 +43,13 @@ export const useRealtimeFallback = (
 
     // Disable realtime if too many errors
     if (errorCount >= maxErrors) {
-      console.warn(`🔔 Too many realtime errors for ${table}, switching to fallback mode`);
+      logger.warn(`🔔 Too many realtime errors for ${table}, switching to fallback mode`);
       setIsRealtimeEnabled(false);
       
       // Start fallback polling
       if (fallbackFetch && !fallbackIntervalId) {
         const interval = setInterval(() => {
-          console.log(`🔔 Fallback polling for ${table}`);
+          logger.log(`🔔 Fallback polling for ${table}`);
           fallbackFetch();
         }, fallbackInterval);
         setFallbackIntervalId(interval);
@@ -82,7 +83,7 @@ export const useRealtimeFallback = (
 
   // Manual retry function
   const retryRealtime = useCallback(() => {
-    console.log(`🔔 Retrying realtime for ${table}`);
+    logger.log(`🔔 Retrying realtime for ${table}`);
     setErrorCount(0);
     setIsRealtimeEnabled(true);
     

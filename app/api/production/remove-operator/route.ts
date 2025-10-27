@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { verifyJWT } from '@/lib/auth/jwt';
 
+import { logger } from '@/lib/utils/logger';
 export async function POST(request: NextRequest) {
   try {
     const token = request.cookies.get('thunder_token')?.value;
@@ -31,7 +32,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (assignmentError) {
-      console.error('Error fetching assignment:', assignmentError);
+      logger.error('Error fetching assignment:', assignmentError);
       return NextResponse.json({ error: 'Operatör bu göreve atanmamış' }, { status: 404 });
     }
 
@@ -42,7 +43,7 @@ export async function POST(request: NextRequest) {
       .eq('id', assignment.id);
 
     if (removeError) {
-      console.error('Error removing assignment:', removeError);
+      logger.error('Error removing assignment:', removeError);
       return NextResponse.json({ error: removeError.message }, { status: 500 });
     }
 
@@ -54,7 +55,7 @@ export async function POST(request: NextRequest) {
       .in('status', ['assigned', 'active']);
 
     if (remainingError) {
-      console.error('Error checking remaining assignments:', remainingError);
+      logger.error('Error checking remaining assignments:', remainingError);
       return NextResponse.json({ error: remainingError.message }, { status: 500 });
     }
 
@@ -66,7 +67,7 @@ export async function POST(request: NextRequest) {
         .eq('id', taskId);
 
       if (planUpdateError) {
-        console.error('Error updating plan status:', planUpdateError);
+        logger.error('Error updating plan status:', planUpdateError);
         // Don't fail the whole operation for this
       }
     }
@@ -94,7 +95,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error: any) {
-    console.error('Error in remove operator:', error);
+    logger.error('Error in remove operator:', error);
     return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 });
   }
 }

@@ -3,6 +3,7 @@ import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { verifyJWT } from '@/lib/auth/jwt';
 import { z } from 'zod';
 
+import { logger } from '@/lib/utils/logger';
 const startTaskSchema = z.object({
   planId: z.string().uuid(),
   quantity: z.number().positive().optional(),
@@ -64,7 +65,7 @@ export async function POST(request: NextRequest) {
     }
 
   } catch (error) {
-    console.error('Production actions API error:', error);
+    logger.error('Production actions API error:', error);
     return NextResponse.json({ 
       error: 'Internal server error' 
     }, { status: 500 });
@@ -101,7 +102,7 @@ async function handleStartTask(supabase: any, adminSupabase: any, operatorId: st
       .eq('id', planId);
 
     if (updateError) {
-      console.error('Error starting task:', updateError);
+      logger.error('Error starting task:', updateError);
       return NextResponse.json({ error: 'Failed to start task' }, { status: 500 });
     }
 
@@ -155,7 +156,7 @@ async function handleCompleteTask(supabase: any, adminSupabase: any, operatorId:
       .eq('id', planId);
 
     if (updateError) {
-      console.error('Error completing task:', updateError);
+      logger.error('Error completing task:', updateError);
       return NextResponse.json({ error: 'Failed to complete task' }, { status: 500 });
     }
 
@@ -170,7 +171,7 @@ async function handleCompleteTask(supabase: any, adminSupabase: any, operatorId:
       });
 
     if (logError) {
-      console.error('Error creating production log:', logError);
+      logger.error('Error creating production log:', logError);
       // Don't fail the request, just log the error
     }
 
@@ -223,7 +224,7 @@ async function handlePauseTask(supabase: any, adminSupabase: any, operatorId: st
       .eq('id', planId);
 
     if (updateError) {
-      console.error('Error pausing task:', updateError);
+      logger.error('Error pausing task:', updateError);
       return NextResponse.json({ error: 'Failed to pause task' }, { status: 500 });
     }
 
@@ -258,7 +259,7 @@ async function handleBreak(supabase: any, adminSupabase: any, operatorId: string
       .eq('id', operatorId);
 
     if (updateError) {
-      console.error('Error updating operator status:', updateError);
+      logger.error('Error updating operator status:', updateError);
       return NextResponse.json({ error: 'Failed to start break' }, { status: 500 });
     }
 
@@ -273,7 +274,7 @@ async function handleBreak(supabase: any, adminSupabase: any, operatorId: string
         });
     } catch (breakLogError) {
       // Table might not exist yet, just log the error
-      console.log('Break log table not available:', breakLogError);
+      logger.log('Break log table not available:', breakLogError);
     }
 
     return NextResponse.json({ 

@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
+import { logger } from '@/lib/utils/logger';
 
 interface CompleteTaskModalProps {
   task: any;
@@ -46,7 +47,7 @@ export function CompleteTaskModal({ task, isOpen, onClose, onSuccess }: Complete
       onSuccess();
       onClose();
     } catch (error) {
-      console.error('Error completing task:', error);
+      logger.error('Error completing task:', error);
       toast.error(error instanceof Error ? error.message : 'Görev tamamlanamadı');
     } finally {
       setLoading(false);

@@ -10,6 +10,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Upload, Download, FileSpreadsheet, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
+import { logger } from '@/lib/utils/logger';
 
 interface BulkOrderImportDialogProps {
   onImportComplete?: () => void;
@@ -93,7 +94,7 @@ export function BulkOrderImportDialog({ onImportComplete }: BulkOrderImportDialo
       toast.success(`${parsedOrders.length} sipariş yüklendi`);
     } catch (error) {
       toast.error('Excel dosyası okunamadı');
-      console.error('Excel parse error:', error);
+      logger.error('Excel parse error:', error);
     }
   };
 

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { verifyJWT } from '@/lib/auth/jwt';
 
+import { logger } from '@/lib/utils/logger';
 export async function GET(request: NextRequest) {
   try {
     const token = request.cookies.get('thunder_token')?.value;
@@ -32,7 +33,7 @@ export async function GET(request: NextRequest) {
         });
 
         if (error) {
-          console.error('Error getting yearly average price:', error);
+          logger.error('Error getting yearly average price:', error);
           // Function bulunamadığında fallback olarak 0 döndür
           return NextResponse.json({ 
             yearly_average: 0,
@@ -50,7 +51,7 @@ export async function GET(request: NextRequest) {
           year: parseInt(year)
         });
       } catch (error) {
-        console.error('Error in yearly average price calculation:', error);
+        logger.error('Error in yearly average price calculation:', error);
         return NextResponse.json({ 
           yearly_average: 0,
           material_type: materialType,
@@ -71,7 +72,7 @@ export async function GET(request: NextRequest) {
         });
 
         if (error) {
-          console.error('Error getting price trend:', error);
+          logger.error('Error getting price trend:', error);
           // Function bulunamadığında fallback olarak boş array döndür
           return NextResponse.json({ 
             trend_data: [],
@@ -89,7 +90,7 @@ export async function GET(request: NextRequest) {
           months: parseInt(months)
         });
       } catch (error) {
-        console.error('Error in price trend calculation:', error);
+        logger.error('Error in price trend calculation:', error);
         return NextResponse.json({ 
           trend_data: [],
           material_type: materialType,
@@ -122,19 +123,19 @@ export async function GET(request: NextRequest) {
       const { data, error } = await query;
 
       if (error) {
-        console.error('Error fetching price history:', error);
+        logger.error('Error fetching price history:', error);
         // Tablo yapısı farklıysa boş array döndür
         return NextResponse.json({ data: [] });
       }
 
       return NextResponse.json({ data: data || [] });
     } catch (error) {
-      console.error('Error in price history query:', error);
+      logger.error('Error in price history query:', error);
       return NextResponse.json({ data: [] });
     }
 
   } catch (error: any) {
-    console.error('Price history API error:', error);
+    logger.error('Price history API error:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

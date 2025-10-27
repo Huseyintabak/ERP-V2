@@ -25,6 +25,7 @@ import { useSmartNotificationsUnified } from '@/lib/hooks/use-smart-notification
 import { formatDistanceToNow } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import { useRealtimeUnified } from '@/lib/hooks/use-realtime-unified';
+import { logger } from '@/lib/utils/logger';
 
 const getNotificationIcon = (type: string) => {
   switch (type) {
@@ -74,15 +75,15 @@ export default function NotificationBell() {
     retryRealtime: retryNotificationsRealtime
   } = useRealtimeUnified('notifications', 
     (newNotification) => {
-      console.log('🔔 Bell: New notification received:', newNotification);
+      logger.log('🔔 Bell: New notification received:', newNotification);
       refreshNotifications();
     },
     (updatedNotification) => {
-      console.log('🔔 Bell: Notification updated:', updatedNotification);
+      logger.log('🔔 Bell: Notification updated:', updatedNotification);
       refreshNotifications();
     },
     (deletedNotification) => {
-      console.log('🔔 Bell: Notification deleted:', deletedNotification);
+      logger.log('🔔 Bell: Notification deleted:', deletedNotification);
       refreshNotifications();
     },
     () => refreshNotifications(), // fallback fetch

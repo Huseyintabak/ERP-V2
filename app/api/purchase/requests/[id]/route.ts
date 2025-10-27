@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { verifyJWT } from '@/lib/auth/jwt';
 
+import { logger } from '@/lib/utils/logger';
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -96,7 +97,7 @@ export async function PATCH(
       .single();
 
     if (error) {
-      console.error('Error updating purchase request:', error);
+      logger.error('Error updating purchase request:', error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
@@ -164,7 +165,7 @@ export async function PATCH(
     return NextResponse.json({ data: transformedData });
 
   } catch (error) {
-    console.error('Update purchase request API error:', error);
+    logger.error('Update purchase request API error:', error);
     return NextResponse.json({ 
       error: 'Internal server error' 
     }, { status: 500 });
@@ -222,7 +223,7 @@ export async function DELETE(
       .eq('id', requestId);
 
     if (error) {
-      console.error('Error deleting purchase request:', error);
+      logger.error('Error deleting purchase request:', error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
@@ -232,7 +233,7 @@ export async function DELETE(
     });
 
   } catch (error) {
-    console.error('Delete purchase request API error:', error);
+    logger.error('Delete purchase request API error:', error);
     return NextResponse.json({ 
       error: 'Internal server error' 
     }, { status: 500 });

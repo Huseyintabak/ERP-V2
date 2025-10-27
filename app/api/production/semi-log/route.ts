@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { verifyJWT } from '@/lib/auth/jwt';
 
+import { logger } from '@/lib/utils/logger';
 export async function POST(request: NextRequest) {
   try {
     // Auth check
@@ -66,7 +67,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (logError) {
-      console.error('Semi production log creation error:', logError);
+      logger.error('Semi production log creation error:', logError);
       return NextResponse.json({ error: 'Log oluşturulamadı' }, { status: 500 });
     }
 
@@ -80,7 +81,7 @@ export async function POST(request: NextRequest) {
       .eq('id', order_id);
 
     if (updateError) {
-      console.error('Semi production order update error:', updateError);
+      logger.error('Semi production order update error:', updateError);
       // Log oluşturuldu ama sipariş güncellenemedi, hata döndürme
     }
 
@@ -95,7 +96,7 @@ export async function POST(request: NextRequest) {
         .eq('id', order_id);
 
       if (completeError) {
-        console.error('Semi production order completion error:', completeError);
+        logger.error('Semi production order completion error:', completeError);
       }
     }
 
@@ -108,7 +109,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Semi Production Log API error:', error);
+    logger.error('Semi Production Log API error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

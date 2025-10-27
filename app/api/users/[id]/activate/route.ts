@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { verifyJWT } from '@/lib/auth/jwt';
 
+import { logger } from '@/lib/utils/logger';
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -53,7 +54,7 @@ export async function PATCH(
       .eq('id', id);
 
     if (updateError) {
-      console.error('Error activating user:', updateError);
+      logger.error('Error activating user:', updateError);
       return NextResponse.json({ error: 'Failed to activate user' }, { status: 500 });
     }
 
@@ -68,7 +69,7 @@ export async function PATCH(
       },
     });
   } catch (error: unknown) {
-    console.error('Unexpected error activating user:', error);
+    logger.error('Unexpected error activating user:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json({ error: errorMessage }, { status: 500 });
   }

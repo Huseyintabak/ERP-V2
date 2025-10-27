@@ -30,6 +30,7 @@ import { usePolling } from '@/lib/hooks/use-polling';
 import { useAuthStore } from '@/stores/auth-store';
 import { TaskDetailPanel } from '@/components/operator/task-detail-panel';
 import { toast } from 'sonner';
+import { logger } from '@/lib/utils/logger';
 
 interface OperatorStats {
   // Personal Performance KPIs
@@ -187,7 +188,7 @@ export default function OperatorDashboardClient() {
       const data = await response.json();
       setStats(data);
     } catch (error) {
-      console.error('Operator Dashboard Stats fetch error:', error);
+      logger.error('Operator Dashboard Stats fetch error:', error);
     }
   }
 
@@ -225,7 +226,7 @@ export default function OperatorDashboardClient() {
 
       setAssignedTasks(allTasks);
     } catch (error) {
-      console.error('Assigned tasks fetch error:', error);
+      logger.error('Assigned tasks fetch error:', error);
     }
   }
 
@@ -263,7 +264,7 @@ export default function OperatorDashboardClient() {
 
       setActiveTasks(allTasks);
     } catch (error) {
-      console.error('Active tasks fetch error:', error);
+      logger.error('Active tasks fetch error:', error);
     }
   }
 
@@ -301,7 +302,7 @@ export default function OperatorDashboardClient() {
 
       setPausedTasks(allTasks);
     } catch (error) {
-      console.error('Paused tasks fetch error:', error);
+      logger.error('Paused tasks fetch error:', error);
     }
   }
 
@@ -346,7 +347,7 @@ export default function OperatorDashboardClient() {
         } catch (parseError) {
           errorMessage = `HTTP ${response.status}: ${response.statusText}`;
         }
-        console.error('Plan action error:', {
+        logger.error('Plan action error:', {
           status: response.status,
           statusText: response.statusText,
           action,
@@ -363,7 +364,7 @@ export default function OperatorDashboardClient() {
       fetchAllData();
       
     } catch (error) {
-      console.error(`Plan ${action} error:`, error);
+      logger.error(`Plan ${action} error:`, error);
       toast.error(error instanceof Error ? error.message : `${task.task_type === 'semi_production' ? 'Yarı mamul sipariş' : 'Plan'} ${action} edilemedi`);
     }
   };

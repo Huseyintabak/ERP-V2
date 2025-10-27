@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { verifyJWT } from '@/lib/auth/jwt';
 
+import { logger } from '@/lib/utils/logger';
 export async function POST(request: NextRequest) {
   try {
     const token = request.cookies.get('thunder_token')?.value;
@@ -31,7 +32,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (checkError && checkError.code !== 'PGRST116') {
-      console.error('Error checking existing assignment:', checkError);
+      logger.error('Error checking existing assignment:', checkError);
       return NextResponse.json({ error: checkError.message }, { status: 500 });
     }
 
@@ -48,7 +49,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (activeError && activeError.code !== 'PGRST116') {
-      console.error('Error checking active assignment:', activeError);
+      logger.error('Error checking active assignment:', activeError);
       return NextResponse.json({ error: activeError.message }, { status: 500 });
     }
 
@@ -64,7 +65,7 @@ export async function POST(request: NextRequest) {
       .in('status', ['assigned', 'active']);
 
     if (countError) {
-      console.error('Error counting current assignments:', countError);
+      logger.error('Error counting current assignments:', countError);
       return NextResponse.json({ error: countError.message }, { status: 500 });
     }
 
@@ -75,7 +76,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (planError) {
-      console.error('Error fetching plan data:', planError);
+      logger.error('Error fetching plan data:', planError);
       return NextResponse.json({ error: planError.message }, { status: 500 });
     }
 
@@ -100,7 +101,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (assignError) {
-      console.error('Error assigning operator:', assignError);
+      logger.error('Error assigning operator:', assignError);
       return NextResponse.json({ error: assignError.message }, { status: 500 });
     }
 
@@ -128,7 +129,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error: any) {
-    console.error('Error in assign operator:', error);
+    logger.error('Error in assign operator:', error);
     return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 });
   }
 }

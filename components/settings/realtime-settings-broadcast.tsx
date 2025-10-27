@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
+import { logger } from '@/lib/utils/logger';
 import { 
   Radio, 
   Settings, 
@@ -78,7 +79,7 @@ export default function RealtimeSettingsBroadcast() {
         setPendingUpdates(data.data.pending_updates || []);
       }
     } catch (error) {
-      console.error('Error fetching pending updates:', error);
+      logger.error('Error fetching pending updates:', error);
       setMessage({ type: 'error', text: 'Bekleyen güncellemeler yüklenemedi' });
     } finally {
       setLoading(false);

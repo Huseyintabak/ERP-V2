@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { orderSchema } from '@/types';
 
+import { logger } from '@/lib/utils/logger';
 // GET - List Orders
 export async function GET(request: NextRequest) {
   try {
@@ -63,10 +64,10 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    console.log('📝 Orders POST request body:', body);
+    logger.log('📝 Orders POST request body:', body);
     
     const validated = orderSchema.parse(body);
-    console.log('✅ Orders POST validated:', validated);
+    logger.log('✅ Orders POST validated:', validated);
     
     const userId = request.headers.get('x-user-id');
     if (!userId) {
@@ -130,9 +131,9 @@ export async function POST(request: NextRequest) {
       order: fullOrder,
     }, { status: 201 });
   } catch (error: any) {
-    console.error('❌ Orders POST error:', error);
+    logger.error('❌ Orders POST error:', error);
     if (error.name === 'ZodError') {
-      console.error('❌ Validation errors:', error.errors);
+      logger.error('❌ Validation errors:', error.errors);
       return NextResponse.json({ 
         error: 'Validation error', 
         details: error.errors 

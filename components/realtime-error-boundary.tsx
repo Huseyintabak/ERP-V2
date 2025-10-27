@@ -4,6 +4,7 @@ import { Component, ReactNode } from 'react';
 import { AlertCircle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { logger } from '@/lib/utils/logger';
 
 interface Props {
   children: ReactNode;
@@ -29,11 +30,11 @@ export class RealtimeErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: any) {
-    console.error('🔔 Realtime Error Boundary caught an error:', error, errorInfo);
+    logger.error('🔔 Realtime Error Boundary caught an error:', error, errorInfo);
     
     // WebSocket connection errors are usually recoverable
     if (error.message.includes('WebSocket') || error.message.includes('realtime')) {
-      console.log('🔔 WebSocket error detected, will attempt recovery');
+      logger.log('🔔 WebSocket error detected, will attempt recovery');
     }
   }
 

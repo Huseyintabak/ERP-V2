@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { verifyJWT } from '@/lib/auth/jwt';
 
+import { logger } from '@/lib/utils/logger';
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -58,7 +59,7 @@ export async function PATCH(
       .eq('id', id);
 
     if (updateError) {
-      console.error('Error deactivating user:', updateError);
+      logger.error('Error deactivating user:', updateError);
       return NextResponse.json({ error: 'Failed to deactivate user' }, { status: 500 });
     }
 
@@ -73,7 +74,7 @@ export async function PATCH(
       },
     });
   } catch (error: any) {
-    console.error('Unexpected error deactivating user:', error);
+    logger.error('Unexpected error deactivating user:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

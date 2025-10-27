@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { verifyJWT } from '@/lib/auth/jwt';
 
+import { logger } from '@/lib/utils/logger';
 export async function GET(request: NextRequest) {
   try {
     const token = request.cookies.get('thunder_token')?.value;
@@ -41,7 +42,7 @@ export async function GET(request: NextRequest) {
       .order('created_at', { ascending: false });
 
     if (error) {
-      console.error('Error fetching multi-operator tasks:', error);
+      logger.error('Error fetching multi-operator tasks:', error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
@@ -63,7 +64,7 @@ export async function GET(request: NextRequest) {
       .in('plan_id', planIds);
 
     if (assignmentError) {
-      console.error('Error fetching operator assignments:', assignmentError);
+      logger.error('Error fetching operator assignments:', assignmentError);
       return NextResponse.json({ error: assignmentError.message }, { status: 500 });
     }
 
@@ -102,7 +103,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ data: tasks });
 
   } catch (error: any) {
-    console.error('Error in multi-operator tasks:', error);
+    logger.error('Error in multi-operator tasks:', error);
     return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 });
   }
 }

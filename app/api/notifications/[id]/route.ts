@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { verifyJWT } from '@/lib/auth/jwt';
 
+import { logger } from '@/lib/utils/logger';
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -46,7 +47,7 @@ export async function GET(
 
     return NextResponse.json(notification);
   } catch (error) {
-    console.error('Error fetching notification:', error);
+    logger.error('Error fetching notification:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -71,7 +72,7 @@ export async function PATCH(
       const text = await request.text();
       requestBody = text ? JSON.parse(text) : {};
     } catch (parseError) {
-      console.error('JSON parse error:', parseError);
+      logger.error('JSON parse error:', parseError);
       return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
     }
 
@@ -107,7 +108,7 @@ export async function PATCH(
 
     return NextResponse.json(notification);
   } catch (error) {
-    console.error('Error updating notification:', error);
+    logger.error('Error updating notification:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -158,7 +159,7 @@ export async function PUT(
 
     return NextResponse.json(notification);
   } catch (error) {
-    console.error('Error updating notification:', error);
+    logger.error('Error updating notification:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -199,7 +200,7 @@ export async function DELETE(
 
     return NextResponse.json({ message: 'Notification deleted successfully' });
   } catch (error) {
-    console.error('Error deleting notification:', error);
+    logger.error('Error deleting notification:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

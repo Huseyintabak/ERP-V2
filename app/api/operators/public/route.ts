@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
 
+import { logger } from '@/lib/utils/logger';
 // GET - Public operatör listesi (login sayfası için)
 export async function GET() {
   try {
-    console.log('🔧 Public operators endpoint called');
+    logger.log('🔧 Public operators endpoint called');
     
     // Basit mock data döndür
     const operators = [
@@ -23,10 +24,10 @@ export async function GET() {
       }
     ];
 
-    console.log('✅ Returning mock operators:', operators);
+    logger.log('✅ Returning mock operators:', operators);
     return NextResponse.json(operators);
   } catch (error) {
-    console.error('❌ Public operators error:', error);
+    logger.error('❌ Public operators error:', error);
     return NextResponse.json(
       { error: 'Sunucu hatası' },
       { status: 500 }

@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { verifyJWT } from '@/lib/auth/jwt';
 import { z } from 'zod';
 
+import { logger } from '@/lib/utils/logger';
 // Notification schema - Database schema'sına uygun
 const notificationSchema = z.object({
   type: z.enum(['critical_stock', 'production_delay', 'order_update']),
@@ -17,17 +18,13 @@ const notificationSchema = z.object({
 // GET - List notifications for current user
 export async function GET(request: NextRequest) {
   try {
-    console.log('🔔 Notifications API called');
     const token = request.cookies.get('thunder_token')?.value;
-    console.log('🔔 Token exists:', !!token);
     
     if (!token) {
-      console.log('🔔 No token found, returning 401');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const payload = await verifyJWT(token);
-    console.log('🔔 JWT payload:', { userId: payload.userId, role: payload.role });
     const supabase = await createClient();
 
     const { searchParams } = new URL(request.url);
@@ -63,18 +60,10 @@ export async function GET(request: NextRequest) {
     const { data: notifications, error, count } = await query
       .range((page - 1) * limit, page * limit - 1);
 
-    console.log('🔔 Database query result:', { 
-      notificationsCount: notifications?.length, 
-      error: error?.message,
-      count 
-    });
-
     if (error) {
-      console.error('🔔 Error fetching notifications:', error);
+      logger.error('Error fetching notifications:', error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
-
-    console.log('🔔 Returning notifications:', notifications?.length || 0);
     return NextResponse.json({
       data: notifications || [],
       pagination: {
@@ -85,7 +74,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error: any) {
-    console.error('Unexpected error fetching notifications:', error);
+    logger.error('Unexpected error fetching notifications:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
@@ -120,7 +109,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) {
-      console.error('Error creating notification:', error);
+      logger.error('Error creating notification:', error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
@@ -129,7 +118,7 @@ export async function POST(request: NextRequest) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: 'Invalid data', details: error.errors }, { status: 400 });
     }
-    console.error('Unexpected error creating notification:', error);
+    logger.error('Unexpected error creating notification:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

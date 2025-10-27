@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { ProductionLogRollbackDialog } from '@/components/production/production-log-rollback-dialog';
+import { logger } from '@/lib/utils/logger';
 
 interface ProductionTask {
   id: string;
@@ -119,11 +120,11 @@ export function TaskDetailPanel({ task, onRefresh }: TaskDetailPanelProps) {
         const data = await response.json();
         setLogs(data.data || []);
       } else {
-        console.error('Logs fetch failed:', response.status, response.statusText);
+        logger.error('Logs fetch failed:', response.status, response.statusText);
         setLogs([]);
       }
     } catch (error) {
-      console.error('Failed to fetch logs:', error);
+      logger.error('Failed to fetch logs:', error);
       setLogs([]);
     } finally {
       setFetchingLogs(false);
@@ -140,30 +141,30 @@ export function TaskDetailPanel({ task, onRefresh }: TaskDetailPanelProps) {
       if (task.task_type === 'semi_production') {
         // Yarı mamul üretim siparişi için - product_id kullan
         url = `/api/bom/${task.product_id}`;
-        console.log('🔍 Fetching semi BOM for product:', task.product_id, 'URL:', url);
+        logger.log('🔍 Fetching semi BOM for product:', task.product_id, 'URL:', url);
         response = await fetch(url);
       } else {
         // Normal üretim planı için - direkt BOM API'sini çağır
         url = `/api/bom/${task.product_id}`;
-        console.log('🔍 Fetching normal BOM for product:', task.product_id, 'URL:', url);
+        logger.log('🔍 Fetching normal BOM for product:', task.product_id, 'URL:', url);
         response = await fetch(url);
       }
       
-      console.log('🔍 BOM response status:', response.status);
+      logger.log('🔍 BOM response status:', response.status);
       
       if (response.ok) {
         let data;
         try {
           const responseText = await response.text();
-          console.log('🔍 Raw response text (first 200 chars):', responseText.substring(0, 200));
+          logger.log('🔍 Raw response text (first 200 chars):', responseText.substring(0, 200));
           data = JSON.parse(responseText);
         } catch (parseError) {
-          console.error('JSON parse error:', parseError);
+          logger.error('JSON parse error:', parseError);
           setBomMaterials([]);
           return;
         }
         
-        console.log('🔍 BOM data received:', data);
+        logger.log('🔍 BOM data received:', data);
         
         // Yarımmamül ürünler için BOM verilerini işle
         if (task.task_type === 'semi_production') {
@@ -189,7 +190,7 @@ export function TaskDetailPanel({ task, onRefresh }: TaskDetailPanelProps) {
                 }
               }
             } catch (error) {
-              console.error('Error fetching stock for material:', material.material_id, error);
+              logger.error('Error fetching stock for material:', material.material_id, error);
             }
             
             return {
@@ -234,7 +235,7 @@ export function TaskDetailPanel({ task, onRefresh }: TaskDetailPanelProps) {
                 }
               }
             } catch (error) {
-              console.error('Error fetching stock for material:', material.material_id, error);
+              logger.error('Error fetching stock for material:', material.material_id, error);
             }
             
             return {
@@ -252,11 +253,11 @@ export function TaskDetailPanel({ task, onRefresh }: TaskDetailPanelProps) {
         }
       } else {
         const errorText = await response.text();
-        console.error('BOM fetch failed:', response.status, response.statusText, errorText);
+        logger.error('BOM fetch failed:', response.status, response.statusText, errorText);
         setBomMaterials([]);
       }
     } catch (error) {
-      console.error('Failed to fetch BOM:', error);
+      logger.error('Failed to fetch BOM:', error);
       setBomMaterials([]);
     }
   };
@@ -310,7 +311,7 @@ export function TaskDetailPanel({ task, onRefresh }: TaskDetailPanelProps) {
       onRefresh?.();
       
     } catch (error) {
-      console.error('Production log error:', error);
+      logger.error('Production log error:', error);
       toast.error(error instanceof Error ? error.message : '❌ Üretim kaydı oluşturulamadı!\n\n🔍 Problem: Bilinmeyen hata\n💡 Çözüm: Lütfen sistem yöneticisi ile iletişime geçin.');
     } finally {
       setLoading(false);
@@ -372,7 +373,7 @@ export function TaskDetailPanel({ task, onRefresh }: TaskDetailPanelProps) {
       toast.success('Malzeme rezervasyonu başarıyla oluşturuldu');
       onRefresh();
     } catch (error: any) {
-      console.error('Reservation creation error:', error);
+      logger.error('Reservation creation error:', error);
       toast.error(error.message || 'Rezervasyon oluşturulamadı');
     } finally {
       setCreatingReservation(false);

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { verifyJWT } from '@/lib/auth/jwt';
 
+import { logger } from '@/lib/utils/logger';
 export async function POST(request: NextRequest) {
   try {
     // Auth check
@@ -35,7 +36,7 @@ export async function POST(request: NextRequest) {
       .in('name', ['Çelik Levha', 'Alüminyum Profil', 'Vidalar']);
 
     if (rawError) {
-      console.error('Raw materials fetch error:', rawError);
+      logger.error('Raw materials fetch error:', rawError);
     }
 
     // BOM verilerini oluştur
@@ -76,7 +77,7 @@ export async function POST(request: NextRequest) {
         .select();
 
       if (bomInsertError) {
-        console.error('BOM insert error:', bomInsertError);
+        logger.error('BOM insert error:', bomInsertError);
         // Tablo yoksa, normal BOM tablosuna ekle
         const { data: normalBomInsert, error: normalBomError } = await supabase
           .from('bom')
@@ -84,7 +85,7 @@ export async function POST(request: NextRequest) {
           .select();
 
         if (normalBomError) {
-          console.error('Normal BOM insert error:', normalBomError);
+          logger.error('Normal BOM insert error:', normalBomError);
           return NextResponse.json({ error: 'BOM verileri eklenemedi' }, { status: 500 });
         }
         
@@ -93,7 +94,7 @@ export async function POST(request: NextRequest) {
         bomInsertResult = bomInsert;
       }
     } catch (error) {
-      console.error('BOM insert exception:', error);
+      logger.error('BOM insert exception:', error);
       return NextResponse.json({ error: 'BOM verileri eklenemedi' }, { status: 500 });
     }
 
@@ -104,7 +105,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Add semi BOM data error:', error);
+    logger.error('Add semi BOM data error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

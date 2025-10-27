@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { verifyJWT } from '@/lib/auth/jwt';
 import { z } from 'zod';
+import bcrypt from 'bcryptjs';
 
+import { logger } from '@/lib/utils/logger';
 // Company schema for multi-tenant support
 const companySchema = z.object({
   name: z.string().min(1, 'Şirket adı gerekli'),
@@ -137,7 +139,7 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error: unknown) {
-    console.error('Companies list error:', error);
+    logger.error('Companies list error:', error);
     const errorMessage = error instanceof Error ? error.message : 'Failed to fetch companies';
     return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
@@ -193,7 +195,6 @@ export async function POST(request: NextRequest) {
 
     // Create default admin user for the company
     const defaultPassword = 'Admin123!';
-    const bcrypt = require('bcryptjs');
     const hashedPassword = await bcrypt.hash(defaultPassword, 12);
 
     const { data: adminUser, error: userError } = await supabase
@@ -226,7 +227,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error: unknown) {
-    console.error('Company creation error:', error);
+    logger.error('Company creation error:', error);
     
     if (error instanceof z.ZodError) {
       return NextResponse.json({ 

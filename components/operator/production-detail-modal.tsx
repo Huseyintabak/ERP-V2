@@ -24,6 +24,7 @@ import {
 } from '@/components/ui/table';
 import { toast } from 'sonner';
 import { cn, formatDateTime } from '@/lib/utils';
+import { logger } from '@/lib/utils/logger';
 import {
   Play,
   Pause,
@@ -99,7 +100,7 @@ export default function ProductionDetailModal({
       const data = await response.json();
       setLogs(data.data || []);
     } catch (error) {
-      console.error('Error fetching logs:', error);
+      logger.error('Error fetching logs:', error);
     }
   };
 
@@ -160,7 +161,7 @@ export default function ProductionDetailModal({
       onUpdate();
 
     } catch (error: any) {
-      console.error('Error creating production log:', error);
+      logger.error('Error creating production log:', error);
       toast.error(error.message);
     } finally {
       setLoading(false);
@@ -191,7 +192,7 @@ export default function ProductionDetailModal({
       onClose();
 
     } catch (error: any) {
-      console.error('Error updating status:', error);
+      logger.error('Error updating status:', error);
       toast.error(error.message);
     } finally {
       setLoading(false);
@@ -218,7 +219,7 @@ export default function ProductionDetailModal({
       onUpdate();
 
     } catch (error: any) {
-      console.error('Error reversing log:', error);
+      logger.error('Error reversing log:', error);
       toast.error(error.message);
     } finally {
       setLoading(false);

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { verifyJWT } from '@/lib/auth/jwt';
 
+import { logger } from '@/lib/utils/logger';
 // GET - List BOM for a product
 export async function GET(request: NextRequest) {
   try {
@@ -45,13 +46,13 @@ export async function GET(request: NextRequest) {
       .eq('finished_product_id', productId);
 
     if (error) {
-      console.error('BOM fetch error:', error);
+      logger.error('BOM fetch error:', error);
       return NextResponse.json({ error: 'Failed to fetch BOM' }, { status: 500 });
     }
 
     return NextResponse.json({ data: bomItems });
   } catch (error: any) {
-    console.error('BOM API error:', error);
+    logger.error('BOM API error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -119,7 +120,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (error) {
-      console.error('BOM creation error:', error);
+      logger.error('BOM creation error:', error);
       // Eğer semi_bom tablosu yoksa, kullanıcıya bilgi ver
       if (error.message.includes('semi_bom') || error.message.includes('Could not find the table')) {
         return NextResponse.json({ 
@@ -131,7 +132,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ data: bomItem }, { status: 201 });
   } catch (error: any) {
-    console.error('BOM creation error:', error);
+    logger.error('BOM creation error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -202,13 +203,13 @@ export async function PUT(request: NextRequest) {
     }
 
     if (updateError) {
-      console.error('BOM update error:', updateError);
+      logger.error('BOM update error:', updateError);
       return NextResponse.json({ error: 'Failed to update BOM item' }, { status: 500 });
     }
 
     return NextResponse.json({ data: updateResult });
   } catch (error: any) {
-    console.error('BOM update error:', error);
+    logger.error('BOM update error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -272,13 +273,13 @@ export async function DELETE(request: NextRequest) {
     }
 
     if (deleteError) {
-      console.error('BOM delete error:', deleteError);
+      logger.error('BOM delete error:', deleteError);
       return NextResponse.json({ error: 'Failed to delete BOM item' }, { status: 500 });
     }
 
     return NextResponse.json({ message: 'BOM item deleted successfully' });
   } catch (error: any) {
-    console.error('BOM delete error:', error);
+    logger.error('BOM delete error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

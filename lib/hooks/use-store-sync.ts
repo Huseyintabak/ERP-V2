@@ -3,6 +3,7 @@ import { useAuthStore } from '@/stores/auth-store';
 import { useDashboardStats } from '@/stores/dashboard-stats-store';
 import { useStockActions } from '@/stores/stock-store';
 import { useOrderActions } from '@/stores/order-store';
+import { logger } from '@/lib/utils/logger';
 
 interface StoreSyncStatus {
   isSyncing: boolean;
@@ -66,7 +67,7 @@ export const useStoreSync = (options: StoreSyncOptions = {
       }));
 
       if (process.env.NODE_ENV === 'development') {
-        console.log(`[Store Sync] ${storeName} synced successfully`);
+        logger.log(`[Store Sync] ${storeName} synced successfully`);
       }
 
       return true;
@@ -82,7 +83,7 @@ export const useStoreSync = (options: StoreSyncOptions = {
         syncErrors: [...prev.syncErrors.filter(err => !err.includes(storeName)), errorMessage],
       }));
 
-      console.error(`[Store Sync Error] ${errorMessage}`, error);
+      logger.error(`[Store Sync Error] ${errorMessage}`, error);
       return false;
     }
   };
@@ -91,7 +92,7 @@ export const useStoreSync = (options: StoreSyncOptions = {
   const syncAllStores = async () => {
     if (!user) {
       if (process.env.NODE_ENV === 'development') {
-        console.log('[Store Sync] Skipping sync - no authenticated user');
+        logger.log('[Store Sync] Skipping sync - no authenticated user');
       }
       return;
     }
@@ -103,7 +104,7 @@ export const useStoreSync = (options: StoreSyncOptions = {
     }));
 
     if (process.env.NODE_ENV === 'development') {
-      console.log('[Store Sync] Starting full store sync...');
+      logger.log('[Store Sync] Starting full store sync...');
     }
 
     const syncPromises = [
@@ -144,7 +145,7 @@ export const useStoreSync = (options: StoreSyncOptions = {
       }));
 
       if (process.env.NODE_ENV === 'development') {
-        console.log(`[Store Sync] Completed: ${successCount}/${syncPromises.length} stores synced successfully`);
+        logger.log(`[Store Sync] Completed: ${successCount}/${syncPromises.length} stores synced successfully`);
       }
 
       // Reset retry count on successful sync
@@ -162,14 +163,14 @@ export const useStoreSync = (options: StoreSyncOptions = {
         retryCountRef.current += 1;
         
         if (process.env.NODE_ENV === 'development') {
-          console.log(`[Store Sync] Retrying in ${options.retryDelay}ms (attempt ${retryCountRef.current}/${options.retryAttempts})`);
+          logger.log(`[Store Sync] Retrying in ${options.retryDelay}ms (attempt ${retryCountRef.current}/${options.retryAttempts})`);
         }
 
         setTimeout(() => {
           syncAllStores();
         }, options.retryDelay);
       } else {
-        console.error('[Store Sync] Max retry attempts reached. Manual sync required.');
+        logger.error('[Store Sync] Max retry attempts reached. Manual sync required.');
       }
     }
   };
@@ -258,7 +259,7 @@ export const useStoreConflictDetector = () => {
       ]);
 
       if (process.env.NODE_ENV === 'development') {
-        console.warn(`[Store Conflict] ${store}.${field}:`, {
+        logger.warn(`[Store Conflict] ${store}.${field}:`, {
           local: localValue,
           server: serverValue,
         });
@@ -275,7 +276,7 @@ export const useStoreConflictDetector = () => {
     setConflicts(prev => prev.filter(c => !(c.store === store && c.field === field)));
     
     if (process.env.NODE_ENV === 'development') {
-      console.log(`[Store Conflict Resolved] ${store}.${field} - using ${useServerValue ? 'server' : 'local'} value`);
+      logger.log(`[Store Conflict Resolved] ${store}.${field} - using ${useServerValue ? 'server' : 'local'} value`);
     }
   };
 

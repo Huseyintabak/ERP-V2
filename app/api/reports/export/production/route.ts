@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import * as XLSX from 'xlsx';
 
+import { logger } from '@/lib/utils/logger';
 /**
  * GET /api/reports/export/production
  * Üretim raporunu Excel formatında export eder
@@ -97,7 +98,7 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error: any) {
-    console.error('❌ Production export error:', error);
+    logger.error('❌ Production export error:', error);
     return NextResponse.json(
       { error: error.message || 'Export hatası' },
       { status: 500 }

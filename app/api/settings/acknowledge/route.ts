@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { verifyJWT } from '@/lib/auth/jwt';
 
+import { logger } from '@/lib/utils/logger';
 export async function POST(request: NextRequest) {
   try {
     const token = request.cookies.get('thunder_token')?.value;
@@ -31,14 +32,14 @@ export async function POST(request: NextRequest) {
       });
 
     if (error) {
-      console.error('Error acknowledging update:', error);
+      logger.error('Error acknowledging update:', error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
     return NextResponse.json({ data: result });
 
   } catch (error: any) {
-    console.error('Error in acknowledge settings:', error);
+    logger.error('Error in acknowledge settings:', error);
     return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 });
   }
 }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { verifyJWT } from '@/lib/auth/jwt';
 
+import { logger } from '@/lib/utils/logger';
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ planId: string }> }
@@ -47,12 +48,12 @@ export async function GET(
       .eq('plan_id', planId);
 
     if (bomError) {
-      console.error('BOM snapshot fetch error:', bomError);
+      logger.error('BOM snapshot fetch error:', bomError);
       return NextResponse.json({ error: 'BOM snapshot alınamadı' }, { status: 500 });
     }
 
     if (!bomSnapshot || bomSnapshot.length === 0) {
-      console.log('No BOM snapshot found for plan:', planId);
+      logger.log('No BOM snapshot found for plan:', planId);
       // BOM snapshot yoksa, plan'dan ürün bilgisini al ve BOM'u direkt çek
       const { data: plan } = await supabase
         .from('production_plans')
@@ -61,13 +62,13 @@ export async function GET(
         .single();
       
       if (plan) {
-        console.log('Plan found, fetching BOM directly for product:', plan.product_id);
+        logger.log('Plan found, fetching BOM directly for product:', plan.product_id);
         // BOM'u direkt çek
         try {
           const bomResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/bom/${plan.product_id}`);
           if (bomResponse.ok) {
             const bomData = await bomResponse.json();
-            console.log('BOM data fetched directly:', bomData);
+            logger.log('BOM data fetched directly:', bomData);
             
             // Malzeme stok bilgilerini ekle
             const materials = await Promise.all(
@@ -116,7 +117,7 @@ export async function GET(
             });
           }
         } catch (error) {
-          console.error('Error fetching BOM directly:', error);
+          logger.error('Error fetching BOM directly:', error);
         }
       }
       
@@ -170,7 +171,7 @@ export async function GET(
     });
 
   } catch (error) {
-    console.error('BOM Snapshot API error:', error);
+    logger.error('BOM Snapshot API error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

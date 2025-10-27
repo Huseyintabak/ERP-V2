@@ -6,7 +6,8 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "check-params": "node scripts/check-dynamic-params.js"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

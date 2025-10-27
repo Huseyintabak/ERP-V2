@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { verifyJWT } from '@/lib/auth/jwt';
 import { z } from 'zod';
 
+import { logger } from '@/lib/utils/logger';
 // Settings schema
 const settingsSchema = z.object({
   default_operator_password: z.string().min(6).optional(),
@@ -39,7 +40,7 @@ export async function GET(request: NextRequest) {
       .order('key');
 
     if (error) {
-      console.error('Error fetching settings:', error);
+      logger.error('Error fetching settings:', error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
@@ -58,7 +59,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(settingsObject);
   } catch (error: any) {
-    console.error('Unexpected error fetching settings:', error);
+    logger.error('Unexpected error fetching settings:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
@@ -95,7 +96,7 @@ export async function POST(request: NextRequest) {
           });
 
         if (error) {
-          console.error(`Error updating setting ${key}:`, error);
+          logger.error(`Error updating setting ${key}:`, error);
           throw error;
         }
       }
@@ -108,7 +109,7 @@ export async function POST(request: NextRequest) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: 'Invalid data', details: error.errors }, { status: 400 });
     }
-    console.error('Unexpected error updating settings:', error);
+    logger.error('Unexpected error updating settings:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

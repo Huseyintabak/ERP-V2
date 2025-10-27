@@ -30,6 +30,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
+import { logger } from '@/lib/utils/logger';
 
 interface InventoryItem {
   id: string;
@@ -90,7 +91,7 @@ export function InventoryCountAutomation({
 
       setInventoryItems(items);
     } catch (error: any) {
-      console.error('Error loading inventory:', error);
+      logger.error('Error loading inventory:', error);
       toast.error(error.message || 'Envanter verisi yüklenirken hata oluştu');
     } finally {
       setLoading(false);
@@ -174,7 +175,7 @@ export function InventoryCountAutomation({
       setStep('review');
       toast.success('Excel dosyası başarıyla işlendi');
     } catch (error: any) {
-      console.error('Error processing Excel file:', error);
+      logger.error('Error processing Excel file:', error);
       toast.error('Excel dosyası işlenirken hata oluştu');
     } finally {
       setProcessing(false);
@@ -245,7 +246,7 @@ export function InventoryCountAutomation({
       setStep('complete');
       onComplete?.(inventoryItems);
     } catch (error: any) {
-      console.error('Error processing updates:', error);
+      logger.error('Error processing updates:', error);
       toast.error(error.message || 'Envanter güncellemeleri işlenirken hata oluştu');
     } finally {
       setProcessing(false);

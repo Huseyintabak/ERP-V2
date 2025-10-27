@@ -20,6 +20,7 @@ import {
 import { toast } from 'sonner';
 import { ReactFlow, Node, Edge, addEdge, Connection, useNodesState, useEdgesState, Controls, Background, MiniMap, EdgeLabelRenderer, getBezierPath, Handle } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
+import { logger } from '@/lib/utils/logger';
 
 interface BomNode {
   id: string;
@@ -293,7 +294,7 @@ export function BomVisualTree({
 
       setMaterials(allMaterials);
     } catch (error) {
-      console.error('Error loading materials:', error);
+      logger.error('Error loading materials:', error);
       toast.error('Malzemeler yüklenirken hata oluştu');
     } finally {
       setLoading(false);

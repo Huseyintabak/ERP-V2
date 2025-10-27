@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
+import { logger } from '@/lib/utils/logger';
 // GET - List Production Plans
 export async function GET(request: NextRequest) {
   try {
@@ -60,7 +61,7 @@ export async function GET(request: NextRequest) {
     const { data, error, count } = await query;
 
     if (error) {
-      console.error('❌ Production plans query error:', error);
+      logger.error('❌ Production plans query error:', error);
       throw error;
     }
 
@@ -115,7 +116,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error: any) {
-    console.error('❌ Production plans GET error:', error);
+    logger.error('❌ Production plans GET error:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

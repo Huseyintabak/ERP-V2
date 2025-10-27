@@ -4,6 +4,7 @@ import { verifyJWT } from '@/lib/auth/jwt';
 import * as XLSX from 'xlsx';
 import { z } from 'zod';
 
+import { logger } from '@/lib/utils/logger';
 // Advanced import result interface
 interface ImportResult {
   success: number;
@@ -521,7 +522,7 @@ export async function POST(request: NextRequest) {
 
   } catch (error: unknown) {
     result.summary.processingTime = Date.now() - startTime;
-    console.error('Advanced import error:', error);
+    logger.error('Advanced import error:', error);
     
     return NextResponse.json({ 
       error: 'Import işlemi başarısız',

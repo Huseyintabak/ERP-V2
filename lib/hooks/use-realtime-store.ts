@@ -4,6 +4,7 @@ import { useStockStore, type RawMaterial, type SemiFinishedProduct, type Finishe
 import { useOrderStore, type Order, type ProductionPlan } from '@/stores/order-store';
 import { useDashboardStatsStore } from '@/stores/dashboard-stats-store';
 import { useNotificationStore } from '@/stores/notification-store';
+import { logger } from '@/lib/utils/logger';
 
 // Real-time event handlers
 interface RealtimeHandlers {
@@ -41,7 +42,7 @@ export const useRealtimeStore = (handlers: RealtimeHandlers = {}) => {
           table: 'raw_materials',
         },
         (payload) => {
-          console.log('Raw material updated:', payload.new);
+          logger.log('Raw material updated:', payload.new);
           const material = payload.new as RawMaterial;
           stockActions.updateRawMaterial(material);
           
@@ -66,7 +67,7 @@ export const useRealtimeStore = (handlers: RealtimeHandlers = {}) => {
           table: 'raw_materials',
         },
         (payload) => {
-          console.log('Raw material added:', payload.new);
+          logger.log('Raw material added:', payload.new);
           const material = payload.new as RawMaterial;
           stockActions.updateRawMaterial(material);
           
@@ -95,7 +96,7 @@ export const useRealtimeStore = (handlers: RealtimeHandlers = {}) => {
           table: 'semi_finished_products',
         },
         (payload) => {
-          console.log('Semi finished product updated:', payload.new);
+          logger.log('Semi finished product updated:', payload.new);
           const product = payload.new as SemiFinishedProduct;
           stockActions.updateSemiFinishedProduct(product);
           
@@ -119,7 +120,7 @@ export const useRealtimeStore = (handlers: RealtimeHandlers = {}) => {
           table: 'semi_finished_products',
         },
         (payload) => {
-          console.log('Semi finished product added:', payload.new);
+          logger.log('Semi finished product added:', payload.new);
           const product = payload.new as SemiFinishedProduct;
           stockActions.updateSemiFinishedProduct(product);
           
@@ -148,7 +149,7 @@ export const useRealtimeStore = (handlers: RealtimeHandlers = {}) => {
           table: 'finished_products',
         },
         (payload) => {
-          console.log('Finished product updated:', payload.new);
+          logger.log('Finished product updated:', payload.new);
           const product = payload.new as FinishedProduct;
           stockActions.updateFinishedProduct(product);
           
@@ -172,7 +173,7 @@ export const useRealtimeStore = (handlers: RealtimeHandlers = {}) => {
           table: 'finished_products',
         },
         (payload) => {
-          console.log('Finished product added:', payload.new);
+          logger.log('Finished product added:', payload.new);
           const product = payload.new as FinishedProduct;
           stockActions.updateFinishedProduct(product);
           
@@ -201,7 +202,7 @@ export const useRealtimeStore = (handlers: RealtimeHandlers = {}) => {
           table: 'stock_movements',
         },
         (payload) => {
-          console.log('Stock movement added:', payload.new);
+          logger.log('Stock movement added:', payload.new);
           const movement = payload.new as StockMovement;
           stockActions.addStockMovement(movement);
           
@@ -233,7 +234,7 @@ export const useRealtimeStore = (handlers: RealtimeHandlers = {}) => {
           table: 'orders',
         },
         (payload) => {
-          console.log('Order updated:', payload.new);
+          logger.log('Order updated:', payload.new);
           const order = payload.new as Order;
           orderActions.updateOrder(order);
           
@@ -265,7 +266,7 @@ export const useRealtimeStore = (handlers: RealtimeHandlers = {}) => {
           table: 'orders',
         },
         (payload) => {
-          console.log('Order added:', payload.new);
+          logger.log('Order added:', payload.new);
           const order = payload.new as Order;
           orderActions.addOrder(order);
           
@@ -299,7 +300,7 @@ export const useRealtimeStore = (handlers: RealtimeHandlers = {}) => {
           table: 'production_plans',
         },
         (payload) => {
-          console.log('Production plan updated:', payload.new);
+          logger.log('Production plan updated:', payload.new);
           const plan = payload.new as ProductionPlan;
           orderActions.updateProductionPlan(plan);
           
@@ -329,7 +330,7 @@ export const useRealtimeStore = (handlers: RealtimeHandlers = {}) => {
           table: 'production_plans',
         },
         (payload) => {
-          console.log('Production plan added:', payload.new);
+          logger.log('Production plan added:', payload.new);
           const plan = payload.new as ProductionPlan;
           orderActions.addProductionPlan(plan);
           
@@ -361,7 +362,7 @@ export const useRealtimeStore = (handlers: RealtimeHandlers = {}) => {
           table: 'notifications',
         },
         (payload) => {
-          console.log('Notification added:', payload.new);
+          logger.log('Notification added:', payload.new);
           const notification = payload.new;
           notificationActions.addNotification(notification);
           
@@ -378,7 +379,10 @@ export const useRealtimeStore = (handlers: RealtimeHandlers = {}) => {
     // Cleanup function
     return () => {
       subscriptions.forEach(({ channel, table }) => {
-        console.log(`Unsubscribing from ${table} changes`);
+        // Only log in development
+        if (process.env.NODE_ENV === 'development') {
+          logger.log(`Unsubscribing from ${table} changes`);
+        }
         supabase.removeChannel(channel);
       });
       subscriptionsRef.current = [];
@@ -399,46 +403,46 @@ export const useRoleBasedRealtime = (userRole: string) => {
   // Add role-specific handlers
   if (userRole === 'yonetici') {
     handlers.onRawMaterialUpdate = (material) => {
-      console.log('Yönetici: Raw material updated', material);
+      logger.log('Yönetici: Raw material updated', material);
     };
     handlers.onOrderUpdate = (order) => {
-      console.log('Yönetici: Order updated', order);
+      logger.log('Yönetici: Order updated', order);
     };
   }
 
   if (userRole === 'planlama') {
     handlers.onProductionPlanUpdate = (plan) => {
-      console.log('Planlama: Production plan updated', plan);
+      logger.log('Planlama: Production plan updated', plan);
     };
     handlers.onOrderUpdate = (order) => {
-      console.log('Planlama: Order updated', order);
+      logger.log('Planlama: Order updated', order);
     };
   }
 
   if (userRole === 'depo') {
     handlers.onRawMaterialUpdate = (material) => {
-      console.log('Depo: Raw material updated', material);
+      logger.log('Depo: Raw material updated', material);
     };
     handlers.onSemiFinishedUpdate = (product) => {
-      console.log('Depo: Semi finished product updated', product);
+      logger.log('Depo: Semi finished product updated', product);
     };
     handlers.onFinishedProductUpdate = (product) => {
-      console.log('Depo: Finished product updated', product);
+      logger.log('Depo: Finished product updated', product);
     };
     handlers.onStockMovementAdd = (movement) => {
-      console.log('Depo: Stock movement added', movement);
+      logger.log('Depo: Stock movement added', movement);
     };
   }
 
   if (userRole === 'operator') {
     handlers.onProductionPlanUpdate = (plan) => {
-      console.log('Operator: Production plan updated', plan);
+      logger.log('Operator: Production plan updated', plan);
     };
   }
 
   // All roles get notifications
   handlers.onNotificationAdd = (notification) => {
-    console.log(`${userRole}: Notification received`, notification);
+    logger.log(`${userRole}: Notification received`, notification);
   };
 
   return useRealtimeStore(handlers);

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { verifyJWT } from '@/lib/auth/jwt';
 
+import { logger } from '@/lib/utils/logger';
 export async function GET(request: NextRequest) {
   try {
     // Authentication check
@@ -48,7 +49,7 @@ export async function GET(request: NextRequest) {
       .range(offset, offset + limit - 1);
 
     if (error) {
-      console.error('Error fetching purchase requests:', error);
+      logger.error('Error fetching purchase requests:', error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
@@ -98,7 +99,7 @@ export async function GET(request: NextRequest) {
             }
           }
         } catch (materialError) {
-          console.error('Error fetching material details:', materialError);
+          logger.error('Error fetching material details:', materialError);
         }
 
         return {
@@ -121,7 +122,7 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Purchase requests API error:', error);
+    logger.error('Purchase requests API error:', error);
     return NextResponse.json({ 
       error: 'Internal server error' 
     }, { status: 500 });
@@ -199,7 +200,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) {
-      console.error('Error creating purchase request:', error);
+      logger.error('Error creating purchase request:', error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
@@ -216,7 +217,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ data }, { status: 201 });
 
   } catch (error) {
-    console.error('Create purchase request API error:', error);
+    logger.error('Create purchase request API error:', error);
     return NextResponse.json({ 
       error: 'Internal server error' 
     }, { status: 500 });

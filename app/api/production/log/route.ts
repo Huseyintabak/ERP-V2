@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { verifyJWT } from '@/lib/auth/jwt';
 
+import { logger } from '@/lib/utils/logger';
 export async function POST(request: NextRequest) {
   try {
     // 1. Auth & Permission Check
@@ -86,7 +87,7 @@ export async function POST(request: NextRequest) {
       .eq('plan_id', plan_id);
 
     if (bomError) {
-      console.error('BOM snapshot fetch error:', bomError);
+      logger.error('BOM snapshot fetch error:', bomError);
       return NextResponse.json({ 
         error: '❌ Üretim yapılamadı!\n\n🔍 Problem: BOM bilgileri alınamadı\n💡 Çözüm: Lütfen sistem yöneticisi ile iletişime geçin.' 
       }, { status: 500 });
@@ -153,7 +154,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (logError) {
-      console.error('Production log insert error:', logError);
+      logger.error('Production log insert error:', logError);
       
       // Constraint hatası kontrolü
       if (logError.code === '23514' && logError.message.includes('quantity_check')) {
@@ -182,7 +183,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (updatedPlanError) {
-      console.error('Updated plan fetch error:', updatedPlanError);
+      logger.error('Updated plan fetch error:', updatedPlanError);
     }
 
     // Response hazırla
@@ -215,7 +216,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(response);
 
   } catch (error) {
-    console.error('Production Log API error:', error);
+    logger.error('Production Log API error:', error);
     return NextResponse.json({ 
       error: 'Internal server error' 
     }, { status: 500 });

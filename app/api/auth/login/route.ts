@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { comparePassword } from '@/lib/auth/password';
 import { signJWT } from '@/lib/auth/jwt';
 
+import { logger } from '@/lib/utils/logger';
 export async function POST(request: NextRequest) {
   try {
     const { email, password } = await request.json();
@@ -80,7 +81,7 @@ export async function POST(request: NextRequest) {
 
     return response;
   } catch (error) {
-    console.error('Login error:', error);
+    logger.error('Login error:', error);
     return NextResponse.json(
       { error: 'Sunucu hatası' },
       { status: 500 }

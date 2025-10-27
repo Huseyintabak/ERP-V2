@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
+import { logger } from '@/lib/utils/logger';
 // GET - Get BOM for a finished product
 export async function GET(
   request: NextRequest,
@@ -47,13 +48,13 @@ export async function GET(
 
     if (isSemiProduct) {
       // Yarımmamül ürün için semi_bom tablosunu kullan
-      console.log('Fetching semi BOM for product:', productId);
+      logger.log('Fetching semi BOM for product:', productId);
       const { data, error } = await supabase
         .from('semi_bom')
         .select('*')
         .eq('semi_product_id', productId);
       
-      console.log('Semi BOM fetch result:', { 
+      logger.log('Semi BOM fetch result:', { 
         data: data?.length, 
         error,
         productId,
@@ -63,32 +64,32 @@ export async function GET(
       bomError = error;
     } else {
       // Nihai ürün için bom tablosunu kullan
-      console.log('Fetching finished BOM for product:', productId);
+      logger.log('Fetching finished BOM for product:', productId);
       const { data, error } = await supabase
         .from('bom')
         .select('*')
         .eq('finished_product_id', productId);
       
-      console.log('Finished BOM fetch result:', { data: data?.length, error });
+      logger.log('Finished BOM fetch result:', { data: data?.length, error });
       bomRecords = data;
       bomError = error;
     }
 
     if (bomError) {
-      console.error('BOM fetch error:', bomError);
+      logger.error('BOM fetch error:', bomError);
       // Eğer semi_bom tablosu yoksa veya başka bir hata varsa, boş BOM döndür
       if (bomError.message.includes('semi_bom') || 
           bomError.message.includes('Could not find the table') ||
           bomError.message.includes('relation') ||
           bomError.message.includes('does not exist')) {
-        console.log('Semi BOM table not found or error, returning empty BOM');
+        logger.log('Semi BOM table not found or error, returning empty BOM');
         return NextResponse.json({
           product,
           materials: [],
         });
       }
       // Diğer hatalar için de boş BOM döndür (geçici çözüm)
-      console.log('BOM fetch error, returning empty BOM:', bomError.message);
+      logger.log('BOM fetch error, returning empty BOM:', bomError.message);
       return NextResponse.json({
         product,
         materials: [],
@@ -97,7 +98,7 @@ export async function GET(
 
     // Eğer bomRecords null veya boşsa, boş BOM döndür
     if (!bomRecords || bomRecords.length === 0) {
-      console.log('No BOM records found, returning empty BOM for product:', productId);
+      logger.log('No BOM records found, returning empty BOM for product:', productId);
       return NextResponse.json({
         product,
         materials: [],
@@ -171,7 +172,7 @@ export async function GET(
       }) || []
     );
 
-    console.log('BOM materials fetched:', {
+    logger.log('BOM materials fetched:', {
       productId,
       isSemiProduct,
       bomRecordsCount: bomRecords?.length || 0,

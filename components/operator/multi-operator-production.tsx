@@ -39,6 +39,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuthStore } from '@/stores/auth-store';
+import { logger } from '@/lib/utils/logger';
 
 interface Operator {
   id: string;
@@ -106,7 +107,7 @@ export function MultiOperatorProduction({ onTaskUpdate }: MultiOperatorProductio
         setProductionTasks(tasksData.data || []);
       }
     } catch (error) {
-      console.error('Error loading data:', error);
+      logger.error('Error loading data:', error);
       toast.error('Veri yüklenirken hata oluştu');
     } finally {
       setLoading(false);
@@ -144,7 +145,7 @@ export function MultiOperatorProduction({ onTaskUpdate }: MultiOperatorProductio
       loadData();
       onTaskUpdate?.(taskId, { assigned_operators: [...selectedTask?.assigned_operators || [], operatorId] });
     } catch (error: any) {
-      console.error('Error assigning operator:', error);
+      logger.error('Error assigning operator:', error);
       toast.error(error.message || 'Operatör ataması başarısız');
     }
   };
@@ -171,7 +172,7 @@ export function MultiOperatorProduction({ onTaskUpdate }: MultiOperatorProductio
       toast.success('Operatör görevden kaldırıldı');
       loadData();
     } catch (error: any) {
-      console.error('Error removing operator:', error);
+      logger.error('Error removing operator:', error);
       toast.error(error.message || 'Operatör kaldırma başarısız');
     }
   };
@@ -198,7 +199,7 @@ export function MultiOperatorProduction({ onTaskUpdate }: MultiOperatorProductio
       toast.success('Üretim başlatıldı');
       loadData();
     } catch (error: any) {
-      console.error('Error starting production:', error);
+      logger.error('Error starting production:', error);
       toast.error(error.message || 'Üretim başlatma başarısız');
     }
   };
@@ -225,7 +226,7 @@ export function MultiOperatorProduction({ onTaskUpdate }: MultiOperatorProductio
       toast.success('Üretim duraklatıldı');
       loadData();
     } catch (error: any) {
-      console.error('Error pausing production:', error);
+      logger.error('Error pausing production:', error);
       toast.error(error.message || 'Üretim duraklatma başarısız');
     }
   };

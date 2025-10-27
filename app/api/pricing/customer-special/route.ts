@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { z } from 'zod';
 
+import { logger } from '@/lib/utils/logger';
 // Validation schema
 const customerPricingSchema = z.object({
   customerId: z.string().uuid(),
@@ -93,7 +94,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.error('❌ Customer pricing error:', error);
+    logger.error('❌ Customer pricing error:', error);
     return NextResponse.json(
       { error: error.message || 'Özel fiyat oluşturulamadı' },
       { status: 500 }
@@ -137,7 +138,7 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error: any) {
-    console.error('❌ Customer pricing list error:', error);
+    logger.error('❌ Customer pricing list error:', error);
     return NextResponse.json(
       { error: error.message || 'Özel fiyatlar listelenemedi' },
       { status: 500 }
@@ -176,7 +177,7 @@ export async function DELETE(request: NextRequest) {
     });
 
   } catch (error: any) {
-    console.error('❌ Customer pricing delete error:', error);
+    logger.error('❌ Customer pricing delete error:', error);
     return NextResponse.json(
       { error: error.message || 'Özel fiyat silinemedi' },
       { status: 500 }

@@ -4,6 +4,7 @@ import { verifyJWT } from '@/lib/auth/jwt';
 import * as XLSX from 'xlsx';
 import { z } from 'zod';
 
+import { logger } from '@/lib/utils/logger';
 // Raw material import schema
 const rawMaterialImportSchema = z.object({
   code: z.string().min(1),
@@ -170,7 +171,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    console.log('Import completed:', {
+    logger.log('Import completed:', {
       success: results.success,
       errors: results.errors,
       totalRows: data.length,
@@ -183,7 +184,7 @@ export async function POST(request: NextRequest) {
       totalRows: data.length,
     });
   } catch (error: unknown) {
-    console.error('Import error:', error);
+    logger.error('Import error:', error);
     const errorMessage = error instanceof Error ? error.message : 'Import failed';
     return NextResponse.json({ error: errorMessage }, { status: 500 });
   }

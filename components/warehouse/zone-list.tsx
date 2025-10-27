@@ -40,6 +40,7 @@ import {
   X
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { logger } from '@/lib/utils/logger';
 
 interface WarehouseZone {
   id: string;
@@ -131,7 +132,7 @@ export function ZoneList({
         setZoneInventory(data.data || []);
       }
     } catch (error) {
-      console.error('Error fetching inventory:', error);
+      logger.error('Error fetching inventory:', error);
       toast.error('Ürünler yüklenirken hata oluştu');
     }
   };
@@ -257,7 +258,7 @@ export function ZoneList({
       resetForm();
       onTransferComplete();
     } catch (error: any) {
-      console.error('Transfer error:', error);
+      logger.error('Transfer error:', error);
       toast.error(error.message || 'Transfer sırasında hata oluştu');
     } finally {
       setLoading(false);

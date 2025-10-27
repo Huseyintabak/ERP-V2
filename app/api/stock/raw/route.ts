@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { rawMaterialSchema } from '@/types';
 
+import { logger } from '@/lib/utils/logger';
 // GET - List Raw Materials (with pagination & filtering)
 export async function GET(request: NextRequest) {
   try {
@@ -45,7 +46,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error: any) {
-    console.error('GET /api/stock/raw error:', error);
+    logger.error('GET /api/stock/raw error:', error);
     return NextResponse.json(
       { error: error.message || 'Sunucu hatası' },
       { status: 500 }
@@ -71,7 +72,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(data, { status: 201 });
   } catch (error: any) {
-    console.error('POST /api/stock/raw error:', error);
+    logger.error('POST /api/stock/raw error:', error);
     return NextResponse.json(
       { error: error.message || 'Oluşturma hatası' },
       { status: 400 }

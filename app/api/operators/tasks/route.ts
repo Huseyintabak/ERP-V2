@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { verifyJWT } from '@/lib/auth/jwt';
 
+import { logger } from '@/lib/utils/logger';
 export async function GET(request: NextRequest) {
   try {
     // Authentication check
@@ -21,7 +22,7 @@ export async function GET(request: NextRequest) {
     }
 
     const operatorId = payload.userId;
-    console.log('🔍 Operator ID from token:', operatorId);
+    logger.log('🔍 Operator ID from token:', operatorId);
     
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1');
@@ -30,7 +31,7 @@ export async function GET(request: NextRequest) {
     const sortBy = searchParams.get('sort') || 'created_at';
     const sortOrder = searchParams.get('order') || 'desc';
 
-    console.log('🔍 Query params:', { status, page, limit });
+    logger.log('🔍 Query params:', { status, page, limit });
 
     const supabase = await createClient();
 
@@ -39,8 +40,8 @@ export async function GET(request: NextRequest) {
       .from('production_plans')
       .select('id, assigned_operator_id, status');
     
-    console.log('📊 All production plans:', JSON.stringify(allPlans, null, 2));
-    console.log('📊 Total plans count:', allPlans?.length || 0);
+    logger.log('📊 All production plans:', JSON.stringify(allPlans, null, 2));
+    logger.log('📊 Total plans count:', allPlans?.length || 0);
 
     let query = supabase
       .from('production_plans')
@@ -63,7 +64,7 @@ export async function GET(request: NextRequest) {
       `, { count: 'exact' })
       .eq('assigned_operator_id', operatorId);
     
-    console.log('🔍 Filtering by assigned_operator_id:', operatorId);
+    logger.log('🔍 Filtering by assigned_operator_id:', operatorId);
 
     // Filter by status if provided
     if (status) {
@@ -86,12 +87,12 @@ export async function GET(request: NextRequest) {
     const { data, error, count } = await query;
 
     if (error) {
-      console.error('❌ Error fetching operator tasks:', error);
+      logger.error('❌ Error fetching operator tasks:', error);
       return NextResponse.json({ error: 'Failed to fetch tasks' }, { status: 500 });
     }
 
-    console.log('✅ Tasks found:', data?.length || 0);
-    console.log('📦 Tasks data:', JSON.stringify(data, null, 2));
+    logger.log('✅ Tasks found:', data?.length || 0);
+    logger.log('📦 Tasks data:', JSON.stringify(data, null, 2));
 
     return NextResponse.json({
       data: data || [],
@@ -104,7 +105,7 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Operator tasks API error:', error);
+    logger.error('Operator tasks API error:', error);
     return NextResponse.json({ 
       error: 'Internal server error' 
     }, { status: 500 });

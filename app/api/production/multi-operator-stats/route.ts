@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { verifyJWT } from '@/lib/auth/jwt';
 
+import { logger } from '@/lib/utils/logger';
 export async function GET(request: NextRequest) {
   try {
     const token = request.cookies.get('thunder_token')?.value;
@@ -23,7 +24,7 @@ export async function GET(request: NextRequest) {
     });
 
     if (error) {
-      console.error('Error fetching multi-operator stats:', error);
+      logger.error('Error fetching multi-operator stats:', error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
@@ -34,7 +35,7 @@ export async function GET(request: NextRequest) {
       .eq('is_active', true);
 
     if (operatorsError) {
-      console.error('Error fetching operators:', operatorsError);
+      logger.error('Error fetching operators:', operatorsError);
       return NextResponse.json({ error: operatorsError.message }, { status: 500 });
     }
 
@@ -50,7 +51,7 @@ export async function GET(request: NextRequest) {
       .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()); // Last 24 hours
 
     if (productionError) {
-      console.error('Error fetching recent production:', productionError);
+      logger.error('Error fetching recent production:', productionError);
     }
 
     const recentProductionTotal = recentProduction?.reduce((sum, log) => sum + (log.quantity_produced || 0), 0) || 0;
@@ -99,7 +100,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(result);
 
   } catch (error: any) {
-    console.error('Error in multi-operator stats:', error);
+    logger.error('Error in multi-operator stats:', error);
     return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 });
   }
 }

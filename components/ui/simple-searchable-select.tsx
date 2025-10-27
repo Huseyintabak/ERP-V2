@@ -90,11 +90,15 @@ export function SimpleSearchableSelect({
     };
   }, [open, inputRef]);
 
+  const id = React.useId();
+  const listboxId = `listbox-${id}`;
+
   return (
     <div className="relative">
       <div
         role="combobox"
         aria-expanded={open}
+        aria-controls={listboxId}
         className="w-full justify-between flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
         onClick={() => setOpen(!open)}
       >
@@ -131,7 +135,7 @@ export function SimpleSearchableSelect({
       </div>
 
       {open && (
-        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg">
+        <div id={listboxId} role="listbox" className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg">
           <div className="p-2 border-b">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />

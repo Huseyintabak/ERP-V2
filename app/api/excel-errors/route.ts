@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { verifyJWT } from '@/lib/auth/jwt';
 
+import { logger } from '@/lib/utils/logger';
 export async function GET(request: NextRequest) {
   try {
     const token = request.cookies.get('thunder_token')?.value;
@@ -79,7 +80,7 @@ export async function GET(request: NextRequest) {
     const { data: errors, error } = await query;
 
     if (error) {
-      console.error('Error fetching excel errors:', error);
+      logger.error('Error fetching excel errors:', error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
@@ -114,7 +115,7 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error: any) {
-    console.error('Error in excel errors:', error);
+    logger.error('Error in excel errors:', error);
     return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 });
   }
 }
@@ -164,7 +165,7 @@ export async function POST(request: NextRequest) {
       });
 
     if (error) {
-      console.error('Error logging excel error:', error);
+      logger.error('Error logging excel error:', error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
@@ -175,7 +176,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error: any) {
-    console.error('Error in excel error logging:', error);
+    logger.error('Error in excel error logging:', error);
     return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 });
   }
 }

@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useConnectionHealth } from './use-connection-health';
+import { logger } from '@/lib/utils/logger';
 
 interface RealtimeConfig {
   maxRetries?: number;
@@ -64,14 +65,17 @@ export const useRealtimeUnified = (
 
   // Reset connection completely
   const resetConnection = useCallback(() => {
-    console.log(`🔔 Resetting connection for ${table}`);
+    // Only log in development
+    if (process.env.NODE_ENV === 'development') {
+      logger.log(`🔔 Resetting connection for ${table}`);
+    }
     
     // Clear existing channel
     if (channelRef.current) {
       try {
         supabaseRef.current.removeChannel(channelRef.current);
       } catch (error) {
-        console.warn('Error removing channel:', error);
+        logger.warn('Error removing channel:', error);
       }
       channelRef.current = null;
     }
@@ -96,13 +100,13 @@ export const useRealtimeUnified = (
   const startFallback = useCallback(() => {
     if (!enableFallback || !fallbackFetch || fallbackIntervalRef.current) return;
 
-    console.log(`🔔 Starting fallback polling for ${table}`);
+    logger.log(`🔔 Starting fallback polling for ${table}`);
     setState(prev => ({ ...prev, isUsingFallback: true, isRealtimeEnabled: false }));
 
     fallbackIntervalRef.current = setInterval(() => {
       if (!isDestroyedRef.current && fallbackFetch) {
         fallbackFetch().catch(error => {
-          console.error(`Fallback fetch error for ${table}:`, error);
+          logger.error(`Fallback fetch error for ${table}:`, error);
         });
       }
     }, fallbackInterval);
@@ -120,7 +124,7 @@ export const useRealtimeUnified = (
   // Handle connection errors
   const handleError = useCallback((error: string) => {
     const now = Date.now();
-    console.error(`🔔 Realtime error for ${table}:`, error);
+    logger.error(`🔔 Realtime error for ${table}:`, error);
 
     setState(prev => ({
       ...prev,
@@ -132,7 +136,7 @@ export const useRealtimeUnified = (
 
     // If too many errors, switch to fallback
     if (state.retryCount >= maxRetries) {
-      console.warn(`🔔 Max retries reached for ${table}, switching to fallback`);
+      logger.warn(`🔔 Max retries reached for ${table}, switching to fallback`);
       startFallback();
       return;
     }
@@ -141,7 +145,7 @@ export const useRealtimeUnified = (
     const delay = Math.min(retryDelay * Math.pow(2, state.retryCount), 30000);
     retryTimeoutRef.current = setTimeout(() => {
       if (!isDestroyedRef.current) {
-        console.log(`🔔 Retrying connection for ${table} (attempt ${state.retryCount + 1})`);
+        logger.log(`🔔 Retrying connection for ${table} (attempt ${state.retryCount + 1})`);
         resetConnection();
         setupRealtime();
       }
@@ -157,7 +161,7 @@ export const useRealtimeUnified = (
       });
       return response.ok;
     } catch (error) {
-      console.log(`🔔 Connection health check failed for ${table}:`, error);
+      logger.log(`🔔 Connection health check failed for ${table}:`, error);
       return false;
     }
   }, [table]);
@@ -169,10 +173,10 @@ export const useRealtimeUnified = (
     try {
       // Check connection health before attempting WebSocket connection
       if (retryAttempt === 0) {
-        console.log(`🔔 Checking connection health for ${table}...`);
+        logger.log(`🔔 Checking connection health for ${table}...`);
         const isHealthy = await checkConnectionHealth();
         if (!isHealthy) {
-          console.log(`🔔 Connection health check failed for ${table}, switching to fallback`);
+          logger.log(`🔔 Connection health check failed for ${table}, switching to fallback`);
           startFallback();
           return;
         }
@@ -184,12 +188,12 @@ export const useRealtimeUnified = (
       // Progressive delay based on retry attempt
       const delay = Math.min(1000 * Math.pow(2, retryAttempt), 10000);
       if (retryAttempt > 0) {
-        console.log(`🔔 Retry attempt ${retryAttempt} for ${table}, waiting ${delay}ms...`);
+        logger.log(`🔔 Retry attempt ${retryAttempt} for ${table}, waiting ${delay}ms...`);
         await new Promise(resolve => setTimeout(resolve, delay));
       }
 
       const channelName = `${table}-unified-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-      console.log(`🔔 Setting up unified realtime for ${table} (${channelName}) - attempt ${retryAttempt + 1}`);
+      logger.log(`🔔 Setting up unified realtime for ${table} (${channelName}) - attempt ${retryAttempt + 1}`);
 
       const channel = supabaseRef.current
         .channel(channelName, {
@@ -209,7 +213,7 @@ export const useRealtimeUnified = (
           table: table
         }, (payload) => {
           if (!isDestroyedRef.current) {
-            console.log(`🔔 Unified INSERT for ${table}:`, payload);
+            logger.log(`🔔 Unified INSERT for ${table}:`, payload);
             onInsert?.(payload.new);
           }
         })
@@ -219,7 +223,7 @@ export const useRealtimeUnified = (
           table: table
         }, (payload) => {
           if (!isDestroyedRef.current) {
-            console.log(`🔔 Unified UPDATE for ${table}:`, payload);
+            logger.log(`🔔 Unified UPDATE for ${table}:`, payload);
             onUpdate?.(payload.new);
           }
         })
@@ -229,19 +233,19 @@ export const useRealtimeUnified = (
           table: table
         }, (payload) => {
           if (!isDestroyedRef.current) {
-            console.log(`🔔 Unified DELETE for ${table}:`, payload);
+            logger.log(`🔔 Unified DELETE for ${table}:`, payload);
             onDelete?.(payload.old);
           }
         })
         .subscribe((status, err) => {
           if (isDestroyedRef.current) return;
 
-          console.log(`🔔 Unified subscription status for ${table}: ${status}`, err ? `Error: ${err.message}` : '');
+          logger.log(`🔔 Unified subscription status for ${table}: ${status}`, err ? `Error: ${err.message}` : '');
 
           if (err) {
             // Handle specific WebSocket errors with retry logic
             if (err.message?.includes('WebSocket is closed before the connection is established')) {
-              console.log(`🔔 WebSocket closed early for ${table}, retrying...`);
+              logger.log(`🔔 WebSocket closed early for ${table}, retrying...`);
               
               if (retryAttempt < 5) {
                 setTimeout(() => {
@@ -250,7 +254,7 @@ export const useRealtimeUnified = (
                   }
                 }, 2000 * (retryAttempt + 1));
               } else {
-                console.log(`🔔 Max retries reached for ${table}, switching to fallback`);
+                logger.log(`🔔 Max retries reached for ${table}, switching to fallback`);
                 startFallback();
               }
               return;
@@ -267,11 +271,11 @@ export const useRealtimeUnified = (
               retryCount: 0
             }));
             stopFallback();
-            console.log(`✅ Realtime connected for ${table} after ${retryAttempt + 1} attempts`);
+            logger.log(`✅ Realtime connected for ${table} after ${retryAttempt + 1} attempts`);
           } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
             handleError(`Subscription ${status.toLowerCase()}`);
           } else if (status === 'CLOSED') {
-            console.log(`🔔 Connection closed for ${table}, will retry...`);
+            logger.log(`🔔 Connection closed for ${table}, will retry...`);
             setState(prev => ({
               ...prev,
               isConnected: false,
@@ -288,10 +292,10 @@ export const useRealtimeUnified = (
 
       channelRef.current = channel;
     } catch (error) {
-      console.error(`🔔 Error setting up realtime for ${table}:`, error);
+      logger.error(`🔔 Error setting up realtime for ${table}:`, error);
       
       if (retryAttempt < 3) {
-        console.log(`🔔 Setup error, retrying in ${2000 * (retryAttempt + 1)}ms...`);
+        logger.log(`🔔 Setup error, retrying in ${2000 * (retryAttempt + 1)}ms...`);
         setTimeout(() => {
           if (!isDestroyedRef.current) {
             setupRealtime(retryAttempt + 1);
@@ -320,7 +324,7 @@ export const useRealtimeUnified = (
 
   // Manual retry function
   const retryRealtime = useCallback(() => {
-    console.log(`🔔 Manual retry requested for ${table}`);
+    logger.log(`🔔 Manual retry requested for ${table}`);
     setState(prev => ({
       ...prev,
       retryCount: 0,
@@ -337,7 +341,7 @@ export const useRealtimeUnified = (
     if (state.isRealtimeEnabled && isHealthy) {
       setupRealtime();
     } else if (!isHealthy && state.isRealtimeEnabled) {
-      console.log(`🔔 Connection unhealthy for ${table}, switching to fallback`);
+      logger.log(`🔔 Connection unhealthy for ${table}, switching to fallback`);
       startFallback();
     }
 

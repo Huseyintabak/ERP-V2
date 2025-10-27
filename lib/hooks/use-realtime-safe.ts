@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { logger } from '@/lib/utils/logger';
 
 export const useRealtimeSafe = (
   table: string,
@@ -29,7 +30,7 @@ export const useRealtimeSafe = (
 
     const setupRealtime = () => {
       try {
-        console.log(`🔔 Setting up safe real-time subscription for table: ${table}`);
+        logger.log(`🔔 Setting up safe real-time subscription for table: ${table}`);
 
         channel = supabase
           .channel(`${table}-safe-${Date.now()}`, {
@@ -48,7 +49,7 @@ export const useRealtimeSafe = (
             schema: 'public',
             table: table
           }, (payload) => {
-            console.log('🔔 Safe real-time INSERT:', payload);
+            logger.log('🔔 Safe real-time INSERT:', payload);
             onInsert?.(payload.new);
           })
           .on('postgres_changes', {
@@ -56,7 +57,7 @@ export const useRealtimeSafe = (
             schema: 'public',
             table: table
           }, (payload) => {
-            console.log('🔔 Safe real-time UPDATE:', payload);
+            logger.log('🔔 Safe real-time UPDATE:', payload);
             onUpdate?.(payload.new);
           })
           .on('postgres_changes', {
@@ -64,26 +65,26 @@ export const useRealtimeSafe = (
             schema: 'public',
             table: table
           }, (payload) => {
-            console.log('🔔 Safe real-time DELETE:', payload);
+            logger.log('🔔 Safe real-time DELETE:', payload);
             onDelete?.(payload.old);
           })
           .subscribe((status, err) => {
-            console.log(`🔔 Safe real-time subscription status: ${status}`);
+            logger.log(`🔔 Safe real-time subscription status: ${status}`);
 
             if (err) {
-              console.error('🔔 Safe real-time subscription error:', err);
+              logger.error('🔔 Safe real-time subscription error:', err);
             }
 
             if (status === 'SUBSCRIBED') {
               setIsConnected(true);
               reconnectAttemptsRef.current = 0;
             } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-              console.warn(`🔔 Safe real-time connection lost for table: ${table}, status: ${status}`);
+              logger.warn(`🔔 Safe real-time connection lost for table: ${table}, status: ${status}`);
               setIsConnected(false);
 
               if (reconnectAttemptsRef.current < maxReconnectAttempts) {
                 reconnectAttemptsRef.current++;
-                console.log(`🔔 Attempting safe reconnect (${reconnectAttemptsRef.current}/${maxReconnectAttempts})...`);
+                logger.log(`🔔 Attempting safe reconnect (${reconnectAttemptsRef.current}/${maxReconnectAttempts})...`);
 
                 reconnectTimeoutRef.current = setTimeout(() => {
                   if (channel) {
@@ -92,12 +93,12 @@ export const useRealtimeSafe = (
                   setupRealtime();
                 }, Math.min(2000 * reconnectAttemptsRef.current, 10000));
               } else {
-                console.error('🔔 Max safe reconnection attempts reached, giving up');
+                logger.error('🔔 Max safe reconnection attempts reached, giving up');
               }
             }
           });
       } catch (error) {
-        console.error('🔔 Error setting up safe real-time subscription:', error);
+        logger.error('🔔 Error setting up safe real-time subscription:', error);
         setIsConnected(false);
       }
     };
@@ -105,7 +106,7 @@ export const useRealtimeSafe = (
     setupRealtime();
 
     return () => {
-      console.log(`🔔 Cleaning up safe real-time subscription for table: ${table}`);
+      logger.log(`🔔 Cleaning up safe real-time subscription for table: ${table}`);
 
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);

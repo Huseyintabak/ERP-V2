@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { verifyJWT } from '@/lib/auth/jwt';
 
+import { logger } from '@/lib/utils/logger';
 export async function GET(request: NextRequest) {
   try {
     // Auth check
@@ -51,7 +52,7 @@ export async function GET(request: NextRequest) {
       .limit(limit);
 
     if (logsError) {
-      console.error('Production logs fetch error:', logsError);
+      logger.error('Production logs fetch error:', logsError);
       return NextResponse.json({ error: 'Production logs alınamadı' }, { status: 500 });
     }
 
@@ -61,7 +62,7 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Production Logs API error:', error);
+    logger.error('Production Logs API error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

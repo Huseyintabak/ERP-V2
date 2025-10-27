@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { verifyJWT } from '@/lib/auth/jwt';
 
+import { logger } from '@/lib/utils/logger';
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -82,7 +83,7 @@ export async function PATCH(
 
     return NextResponse.json(plan);
   } catch (error) {
-    console.error('Error assigning operator:', error);
+    logger.error('Error assigning operator:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

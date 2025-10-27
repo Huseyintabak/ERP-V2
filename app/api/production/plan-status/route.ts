@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { verifyJWT } from '@/lib/auth/jwt';
 
+import { logger } from '@/lib/utils/logger';
 export async function POST(request: NextRequest) {
   try {
     // 1. Auth & Permission Check
@@ -131,7 +132,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (updateError) {
-      console.error('Plan update error:', updateError);
+      logger.error('Plan update error:', updateError);
       return NextResponse.json({ 
         error: 'Plan güncellenemedi' 
       }, { status: 500 });
@@ -145,7 +146,7 @@ export async function POST(request: NextRequest) {
         .eq('id', plan.order_id);
 
       if (orderUpdateError) {
-        console.error('Order update error:', orderUpdateError);
+        logger.error('Order update error:', orderUpdateError);
         // Plan güncellendi ama order güncellenemedi - warning olarak logla
       }
     }
@@ -167,7 +168,7 @@ export async function POST(request: NextRequest) {
           .eq('id', plan.assigned_operator_id);
 
         if (operatorUpdateError) {
-          console.error('Operator status update error:', operatorUpdateError);
+          logger.error('Operator status update error:', operatorUpdateError);
           // Kritik değil, devam et
         }
       }
@@ -188,7 +189,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(response);
 
   } catch (error) {
-    console.error('Plan Status API error:', error);
+    logger.error('Plan Status API error:', error);
     return NextResponse.json({ 
       error: 'Internal server error' 
     }, { status: 500 });
