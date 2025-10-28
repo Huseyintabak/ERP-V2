@@ -45,7 +45,7 @@ import { toast } from 'sonner';
 
 interface PurchaseRequest {
   id: string;
-  material_type: 'raw' | 'semi';
+  material_type: 'raw' | 'semi_finished' | 'finished';
   material_id: string;
   material_name: string;
   material_code: string;
@@ -53,7 +53,7 @@ interface PurchaseRequest {
   current_stock: number;
   requested_quantity: number;
   approved_quantity?: number;
-  status: 'pending' | 'approved' | 'rejected' | 'ordered' | 'received' | 'cancelled';
+  status: 'pending' | 'approved' | 'rejected' | 'ordered' | 'received' | 'cancelled' | 'beklemede' | 'iptal_edildi';
   priority: 'low' | 'normal' | 'high' | 'critical';
   notes?: string;
   created_at: string;
@@ -85,11 +85,13 @@ export function PurchaseRequestsTable({
   const getStatusBadge = (status: string) => {
     const statusMap = {
       'pending': { label: 'Bekliyor', variant: 'secondary' as const, icon: Clock },
+      'beklemede': { label: 'Bekliyor', variant: 'secondary' as const, icon: Clock },
       'approved': { label: 'Onaylandı', variant: 'default' as const, icon: CheckCircle },
       'rejected': { label: 'Reddedildi', variant: 'destructive' as const, icon: XCircle },
       'ordered': { label: 'Sipariş Verildi', variant: 'default' as const, icon: ShoppingCart },
       'received': { label: 'Teslim Alındı', variant: 'outline' as const, icon: Truck },
       'cancelled': { label: 'İptal Edildi', variant: 'destructive' as const, icon: XCircle },
+      'iptal_edildi': { label: 'İptal Edildi', variant: 'destructive' as const, icon: XCircle },
     };
     
     const config = statusMap[status as keyof typeof statusMap] || { 
@@ -218,7 +220,9 @@ export function PurchaseRequestsTable({
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline">
-                          {request.material_type === 'raw' ? 'Hammadde' : 'Yarı Mamul'}
+                          {request.material_type === 'raw' ? 'Hammadde' : 
+                           request.material_type === 'semi_finished' ? 'Yarı Mamul' : 
+                           request.material_type === 'finished' ? 'Nihai Ürün' : 'Bilinmeyen'}
                         </Badge>
                       </TableCell>
                       <TableCell>

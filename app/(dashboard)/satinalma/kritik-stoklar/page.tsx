@@ -28,7 +28,7 @@ import { useAuthStore } from '@/stores/auth-store';
 
 interface PurchaseRequest {
   id: string;
-  material_type: 'raw' | 'semi';
+  material_type: 'raw' | 'semi_finished' | 'finished';
   material_id: string;
   material_name: string;
   material_code: string;
@@ -36,7 +36,7 @@ interface PurchaseRequest {
   current_stock: number;
   requested_quantity: number;
   approved_quantity?: number;
-  status: 'pending' | 'approved' | 'rejected' | 'ordered' | 'received' | 'cancelled';
+  status: 'pending' | 'approved' | 'rejected' | 'ordered' | 'received' | 'cancelled' | 'beklemede' | 'iptal_edildi';
   priority: 'low' | 'normal' | 'high' | 'critical';
   notes?: string;
   created_at: string;

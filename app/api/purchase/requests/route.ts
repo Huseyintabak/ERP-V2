@@ -5,15 +5,33 @@ import { verifyJWT } from '@/lib/auth/jwt';
 import { logger } from '@/lib/utils/logger';
 export async function GET(request: NextRequest) {
   try {
-    // Authentication check
-    const token = request.cookies.get('thunder_token')?.value;
-    if (!token) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    // Authentication check - try x-user-id header first, then JWT token
+    const userId = request.headers.get('x-user-id');
+    let payload = null;
+
+    if (userId) {
+      // Use x-user-id header for authentication
+      const supabase = await createClient();
+      const { data: userData } = await supabase
+        .from('users')
+        .select('id, role')
+        .eq('id', userId)
+        .single();
+      
+      if (userData) {
+        payload = { id: userData.id, role: userData.role };
+      }
+    } else {
+      // Fallback to JWT token
+      const token = request.cookies.get('thunder_token')?.value;
+      if (!token) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+      payload = await verifyJWT(token);
     }
 
-    const payload = await verifyJWT(token);
     if (!payload) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+      return NextResponse.json({ error: 'Invalid authentication' }, { status: 401 });
     }
 
     // Only planlama, depo and yonetici can view purchase requests
@@ -33,7 +51,8 @@ export async function GET(request: NextRequest) {
     // Build query - just get purchase requests first
     let query = supabase
       .from('purchase_requests')
-      .select('*', { count: 'exact' });
+      .select('*', { count: 'exact' })
+      .neq('status', 'iptal_edildi'); // İptal edilen talepleri hariç tut
 
     // Apply filters
     if (status && status !== 'all') {
@@ -100,6 +119,10 @@ export async function GET(request: NextRequest) {
           }
         } catch (materialError) {
           logger.error('Error fetching material details:', materialError);
+          // Malzeme bulunamadığında daha açıklayıcı mesaj
+          materialName = `[Silinmiş ${request.material_type}]`;
+          materialCode = `[ID: ${request.material_id}]`;
+          materialUnit = 'pcs';
         }
 
         return {
@@ -131,15 +154,33 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    // Authentication check
-    const token = request.cookies.get('thunder_token')?.value;
-    if (!token) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    // Authentication check - try x-user-id header first, then JWT token
+    const userId = request.headers.get('x-user-id');
+    let payload = null;
+
+    if (userId) {
+      // Use x-user-id header for authentication
+      const supabase = await createClient();
+      const { data: userData } = await supabase
+        .from('users')
+        .select('id, role')
+        .eq('id', userId)
+        .single();
+      
+      if (userData) {
+        payload = { id: userData.id, role: userData.role };
+      }
+    } else {
+      // Fallback to JWT token
+      const token = request.cookies.get('thunder_token')?.value;
+      if (!token) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+      payload = await verifyJWT(token);
     }
 
-    const payload = await verifyJWT(token);
     if (!payload) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+      return NextResponse.json({ error: 'Invalid authentication' }, { status: 401 });
     }
 
     // Only planlama, depo and yonetici can create purchase requests
