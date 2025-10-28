@@ -34,6 +34,7 @@ import { Label } from '@/components/ui/label';
 import { Download, FileSpreadsheet, FileText } from 'lucide-react';
 import { toast } from 'sonner';
 import { logger } from '@/lib/utils/logger';
+import { useAuthStore } from '@/stores/auth-store';
 
 const exportSchema = z.object({
   type: z.enum(['raw', 'semi', 'finished', 'all'], {
@@ -53,6 +54,7 @@ interface ExcelExportDialogProps {
 export function ExcelExportDialog({ onExportComplete }: ExcelExportDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const { user } = useAuthStore();
 
   const form = useForm<ExportFormData>({
     resolver: zodResolver(exportSchema),
@@ -66,6 +68,10 @@ export function ExcelExportDialog({ onExportComplete }: ExcelExportDialogProps) 
     setIsExporting(true);
 
     try {
+      if (!user?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
+
       const params = new URLSearchParams({
         type: data.type,
         format: data.format,
@@ -73,6 +79,9 @@ export function ExcelExportDialog({ onExportComplete }: ExcelExportDialogProps) 
 
       const response = await fetch(`/api/stock/export?${params}`, {
         method: 'GET',
+        headers: {
+          'x-user-id': user.id
+        },
       });
 
       if (!response.ok) {
