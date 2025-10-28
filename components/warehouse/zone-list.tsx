@@ -41,6 +41,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { logger } from '@/lib/utils/logger';
+import { useAuthStore } from '@/stores/auth-store';
 
 interface WarehouseZone {
   id: string;
@@ -89,6 +90,7 @@ export function ZoneList({
   const [transferQuantity, setTransferQuantity] = useState('');
   const [zoneInventory, setZoneInventory] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const { user } = useAuthStore();
   
   // Multi-product transfer states
   const [isMultiProductMode, setIsMultiProductMode] = useState(false);
@@ -126,7 +128,15 @@ export function ZoneList({
         ? '/api/warehouse/zones/center/inventory'
         : `/api/warehouse/zones/${zoneId}/inventory`;
         
-      const response = await fetch(apiUrl);
+      if (!user?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
+
+      const response = await fetch(apiUrl, {
+        headers: {
+          'x-user-id': user.id
+        }
+      });
       if (response.ok) {
         const data = await response.json();
         setZoneInventory(data.data || []);
@@ -203,11 +213,18 @@ export function ZoneList({
     try {
       setLoading(true);
       
+      if (!user?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
+      
       if (isMultiProductMode) {
         // Multi-product transfer
         const response = await fetch('/api/warehouse/transfer-multi', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json',
+            'x-user-id': user.id
+          },
           body: JSON.stringify({
             fromZoneId: sourceZoneId,
             toZoneId: targetZoneId,
@@ -237,7 +254,10 @@ export function ZoneList({
         // Single product transfer
         const response = await fetch('/api/warehouse/transfer', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json',
+            'x-user-id': user.id
+          },
           body: JSON.stringify({
             fromZoneId: sourceZoneId,
             toZoneId: targetZoneId,

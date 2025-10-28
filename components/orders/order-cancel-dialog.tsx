@@ -69,7 +69,15 @@ export function OrderCancelDialog({
     if (!order || !user) return;
 
     try {
-      const response = await fetch(`/api/orders/cancel-permission?orderId=${order.id}`);
+      if (!user?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
+
+      const response = await fetch(`/api/orders/cancel-permission?orderId=${order.id}`, {
+        headers: {
+          'x-user-id': user.id
+        }
+      });
       const data = await response.json();
       setPermissionCheck(data);
     } catch (error) {
@@ -87,10 +95,15 @@ export function OrderCancelDialog({
     try {
       setIsCancelling(true);
 
+      if (!user?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
+
       const response = await fetch('/api/orders/cancel', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'x-user-id': user.id
         },
         body: JSON.stringify({
           orderId: order.id,

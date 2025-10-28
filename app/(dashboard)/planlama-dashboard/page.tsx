@@ -20,6 +20,7 @@ import {
   Users
 } from 'lucide-react';
 import { useRealtimeUnified } from '@/lib/hooks/use-realtime-unified';
+import { useAuthStore } from '@/stores/auth-store';
 // import { useMemoryLeakDetector } from '@/lib/hooks/use-memory-leak-detector';
 // import { usePerformanceMonitor } from '@/lib/hooks/use-performance-monitor';
 // import { useStoreSync } from '@/lib/hooks/use-store-sync';
@@ -51,6 +52,7 @@ interface PlanlamaStats {
 
 export default function PlanlamaDashboard() {
   const router = useRouter();
+  const { user } = useAuthStore();
   
   // Performance and memory monitoring - DISABLED FOR NOW
   // const memoryDetector = useMemoryLeakDetector('PlanlamaDashboard');
@@ -134,6 +136,9 @@ export default function PlanlamaDashboard() {
   async function fetchStats() {
     console.log('🔄 Planlama Dashboard: Fetching stats...');
     try {
+      if (!user?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
       const [
         raw, 
         semi, 
@@ -147,30 +152,80 @@ export default function PlanlamaDashboard() {
         movements
       ] = await Promise.all([
         // Stok sayıları ve rezerve miktarları için tüm veriler
-        fetch('/api/stock/raw?limit=1000').then(r => r.ok ? r.json() : { pagination: { total: 0 }, data: [] }),
-        fetch('/api/stock/semi?limit=1000').then(r => r.ok ? r.json() : { pagination: { total: 0 }, data: [] }),
-        fetch('/api/stock/finished?limit=1000').then(r => r.ok ? r.json() : { pagination: { total: 0 }, data: [] }),
+        fetch('/api/stock/raw?limit=1000', {
+          headers: {
+            'Content-Type': 'application/json',
+            'x-user-id': user.id
+          }
+        }).then(r => r.ok ? r.json() : { pagination: { total: 0 }, data: [] }),
+        fetch('/api/stock/semi?limit=1000', {
+          headers: {
+            'Content-Type': 'application/json',
+            'x-user-id': user.id
+          }
+        }).then(r => r.ok ? r.json() : { pagination: { total: 0 }, data: [] }),
+        fetch('/api/stock/finished?limit=1000', {
+          headers: {
+            'Content-Type': 'application/json',
+            'x-user-id': user.id
+          }
+        }).then(r => r.ok ? r.json() : { pagination: { total: 0 }, data: [] }),
         
         // Aktif üretim planları
-        fetch('/api/production/plans?status=planlandi,devam_ediyor&limit=1000').then(r => r.ok ? r.json() : { data: [] }),
+        fetch('/api/production/plans?status=planlandi,devam_ediyor&limit=1000', {
+          headers: {
+            'Content-Type': 'application/json',
+            'x-user-id': user.id
+          }
+        }).then(r => r.ok ? r.json() : { data: [] }),
         
         // Bekleyen siparişler
-        fetch('/api/orders?status=beklemede&limit=1000').then(r => r.ok ? r.json() : { data: [] }),
+        fetch('/api/orders?status=beklemede&limit=1000', {
+          headers: {
+            'Content-Type': 'application/json',
+            'x-user-id': user.id
+          }
+        }).then(r => r.ok ? r.json() : { data: [] }),
         
         // Bugün tamamlanan planlar
-        fetch('/api/production/plans?status=tamamlandi&limit=1000').then(r => r.ok ? r.json() : { data: [] }),
+        fetch('/api/production/plans?status=tamamlandi&limit=1000', {
+          headers: {
+            'Content-Type': 'application/json',
+            'x-user-id': user.id
+          }
+        }).then(r => r.ok ? r.json() : { data: [] }),
         
         // Tüm planlar (haftalık hesap için)
-        fetch('/api/production/plans?limit=1000').then(r => r.ok ? r.json() : { data: [] }),
+        fetch('/api/production/plans?limit=1000', {
+          headers: {
+            'Content-Type': 'application/json',
+            'x-user-id': user.id
+          }
+        }).then(r => r.ok ? r.json() : { data: [] }),
         
         // Operatörler
-        fetch('/api/operators').then(r => r.ok ? r.json() : []),
+        fetch('/api/operators', {
+          headers: {
+            'Content-Type': 'application/json',
+            'x-user-id': user.id
+          }
+        }).then(r => r.ok ? r.json() : []),
         
         // Rezervasyonlar
-        fetch('/api/stock/raw?limit=1000').then(r => r.ok ? r.json() : { data: [] }),
+        fetch('/api/stock/raw?limit=1000', {
+          headers: {
+            'Content-Type': 'application/json',
+            'x-user-id': user.id
+          }
+        }).then(r => r.ok ? r.json() : { data: [] }),
         
         // Son 7 günün hareketleri
-        fetch('/api/stock/movements?limit=1000').then(r => r.ok ? r.json() : { data: [] })
+        fetch('/api/stock/movements?limit=1000', {
+          headers: {
+            'Content-Type': 'application/json',
+            'x-user-id': user.id
+          }
+        }).then(r => r.ok ? r.json() : { data: [] })
       ]);
 
       // Bugün tamamlanan planlar

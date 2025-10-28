@@ -18,6 +18,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { DollarSign, TrendingUp, Calculator } from 'lucide-react';
 import { toast } from 'sonner';
+import { useAuthStore } from '@/stores/auth-store';
 
 const pricingSchema = z.object({
   salePrice: z.number().positive(`Satış fiyatı 0'dan büyük olmalı`),
@@ -52,6 +53,7 @@ export function PricingUpdateForm({
   onSuccess
 }: PricingUpdateFormProps) {
   const [loading, setLoading] = useState(false);
+  const { user } = useAuthStore();
 
   const {
     register,
@@ -84,9 +86,15 @@ export function PricingUpdateForm({
   const onSubmit = async (data: PricingFormData) => {
     setLoading(true);
     try {
+      if (!user?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
       const response = await fetch(`/api/stock/finished/${productId}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-user-id': user.id
+        },
         body: JSON.stringify({
           sale_price: data.salePrice,
           cost_price: data.costPrice || 0,

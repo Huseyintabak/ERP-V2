@@ -65,10 +65,15 @@ export function ProductionLogRollbackDialog({
     try {
       setIsRollingBack(true);
 
+      if (!user?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
+
       const response = await fetch('/api/production-logs/rollback', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'x-user-id': user.id
         },
         body: JSON.stringify({
           logId: log.id,

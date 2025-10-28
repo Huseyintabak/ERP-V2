@@ -10,6 +10,7 @@ import { Package, TrendingUp, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatDate, formatCurrency } from '@/lib/utils';
 import { useRealtimeUnified } from '@/lib/hooks/use-realtime-unified';
+import { useAuthStore } from '@/stores/auth-store';
 
 interface OrderItem {
   id: string;
@@ -44,12 +45,21 @@ export default function UretimYonetimPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedTab, setSelectedTab] = useState('active');
+  const { user } = useAuthStore();
   // toast from sonner is already imported
 
   const fetchOrders = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/orders');
+      if (!user?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
+      const response = await fetch('/api/orders', {
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-id': user.id
+        }
+      });
       const data = await response.json();
       
       if (response.ok) {
@@ -96,8 +106,15 @@ export default function UretimYonetimPage() {
 
   const handleApproveOrder = async (orderId: string) => {
     try {
+      if (!user?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
       const response = await fetch(`/api/orders/${orderId}/approve`, {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-id': user.id
+        }
       });
       const data = await response.json();
 

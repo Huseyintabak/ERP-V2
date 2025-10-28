@@ -41,6 +41,7 @@ import {
 import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
 import { tr } from 'date-fns/locale';
+import { useAuthStore } from '@/stores/auth-store';
 
 interface AuditLog {
   id: string;
@@ -93,6 +94,7 @@ export default function IslemGecmisiPage() {
     tables: [] as string[],
     actions: [] as string[],
   });
+  const { user } = useAuthStore();
 
   useEffect(() => {
     fetchAuditLogs();
@@ -101,6 +103,9 @@ export default function IslemGecmisiPage() {
   const fetchAuditLogs = async () => {
     setIsLoading(true);
     try {
+      if (!user?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
       const params = new URLSearchParams({
         page: pagination.page.toString(),
         limit: pagination.limit.toString(),
@@ -110,7 +115,12 @@ export default function IslemGecmisiPage() {
         if (value) params.set(key, value);
       });
 
-      const response = await fetch(`/api/audit-logs?${params.toString()}`);
+      const response = await fetch(`/api/audit-logs?${params.toString()}`, {
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-id': user.id
+        }
+      });
       
       if (!response.ok) {
         throw new Error('Audit logs yüklenemedi');

@@ -23,6 +23,7 @@ import {
 import { toast } from 'sonner';
 import { CostCalculationDialog } from '@/components/pricing/cost-calculation-dialog';
 import { BomVisualTree } from '@/components/bom/bom-visual-tree';
+import { useAuthStore } from '@/stores/auth-store';
 
 interface Product {
   id: string;
@@ -92,6 +93,7 @@ export default function BOMPage() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingBOM, setEditingBOM] = useState<BOMEntry | null>(null);
   const [showVisualTree, setShowVisualTree] = useState(true);
+  const { user } = useAuthStore();
 
   // Yeni BOM entry form state - array olarak değiştir
   const [newBOMEntries, setNewBOMEntries] = useState<Array<{
@@ -129,9 +131,13 @@ export default function BOMPage() {
 
   const fetchFinishedProducts = async () => {
     try {
+      if (!user?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
       const response = await fetch(`/api/stock/finished?limit=1000&t=${Date.now()}`, {
         headers: {
           'Content-Type': 'application/json',
+          'x-user-id': user.id
         },
         cache: 'no-store'
       });
@@ -157,9 +163,13 @@ export default function BOMPage() {
   const fetchRawMaterials = async () => {
     try {
       setMaterialsLoading(true);
+      if (!user?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
       const response = await fetch('/api/stock/raw?limit=1000', {
         headers: {
           'Content-Type': 'application/json',
+          'x-user-id': user.id
         }
       });
       
@@ -187,9 +197,13 @@ export default function BOMPage() {
   const fetchSemiFinishedProducts = async () => {
     try {
       setMaterialsLoading(true);
+      if (!user?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
       const response = await fetch(`/api/stock/semi?limit=1000&t=${Date.now()}`, {
         headers: {
           'Content-Type': 'application/json',
+          'x-user-id': user.id
         },
         cache: 'no-store'
       });
@@ -219,9 +233,13 @@ export default function BOMPage() {
     console.log('fetchBOMData called for product:', productId);
     try {
       setLoading(true);
+      if (!user?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
       const response = await fetch(`/api/bom/${productId}`, {
         headers: {
           'Content-Type': 'application/json',
+          'x-user-id': user.id
         }
       });
       
@@ -325,9 +343,15 @@ export default function BOMPage() {
     try {
       console.log('🔄 Otomatik maliyet hesaplanıyor...');
       
+      if (!user?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
       const response = await fetch('/api/pricing/calculate', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-user-id': user.id
+        },
         body: JSON.stringify({ productId })
       });
 
@@ -351,9 +375,15 @@ export default function BOMPage() {
     try {
       toast.info('Toplu maliyet hesaplama başlatılıyor...');
       
+      if (!user?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
       const response = await fetch('/api/pricing/calculate-all', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-user-id': user.id
+        }
       });
 
       const result = await response.json();
@@ -404,12 +434,16 @@ export default function BOMPage() {
     }
 
     try {
+      if (!user?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
       // Her malzeme için ayrı ayrı API çağrısı yap
       const promises = newBOMEntries.map(entry => 
         fetch('/api/bom', {
           method: 'POST',
           headers: { 
             'Content-Type': 'application/json',
+            'x-user-id': user.id
           },
           body: JSON.stringify({
             finished_product_id: selectedProduct.id,
@@ -458,10 +492,14 @@ export default function BOMPage() {
     if (!editingBOM) return;
 
     try {
+      if (!user?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
       const response = await fetch(`/api/bom?id=${editingBOM.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
+          'x-user-id': user.id
         },
         body: JSON.stringify({
           quantity_needed: quantity,
@@ -501,10 +539,14 @@ export default function BOMPage() {
     }
 
     try {
+      if (!user?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
       const response = await fetch(`/api/bom?id=${bomId}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
+          'x-user-id': user.id
         }
       });
 
@@ -550,7 +592,15 @@ export default function BOMPage() {
 
   const handleExportBOM = async () => {
     try {
-      const response = await fetch('/api/bom/export');
+      if (!user?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
+
+      const response = await fetch('/api/bom/export', {
+        headers: {
+          'x-user-id': user.id
+        }
+      });
       
       if (!response.ok) {
         throw new Error('Export failed');
@@ -575,10 +625,14 @@ export default function BOMPage() {
 
   const handleVisualTreeSave = async (bomData: any) => {
     try {
+      if (!user?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
       const response = await fetch(`/api/bom/${selectedProduct?.id}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'x-user-id': user.id
         },
         body: JSON.stringify({
           product_id: selectedProduct?.id,
@@ -587,7 +641,9 @@ export default function BOMPage() {
       });
 
       if (!response.ok) {
-        throw new Error('BOM kaydedilemedi');
+        const errorText = await response.text();
+        console.error('BOM save error:', response.status, errorText);
+        throw new Error(`BOM kaydedilemedi: ${response.status} - ${errorText}`);
       }
 
       toast.success('BOM başarıyla kaydedildi');
@@ -619,11 +675,18 @@ export default function BOMPage() {
       console.log('🚀 Starting import...');
       toast.info('Import işlemi başlatılıyor...');
 
+      if (!user?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
+
       const formData = new FormData();
       formData.append('file', file);
 
       const response = await fetch('/api/bom/import', {
         method: 'POST',
+        headers: {
+          'x-user-id': user.id
+        },
         body: formData,
       });
 

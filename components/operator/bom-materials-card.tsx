@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { AlertCircle, Package, Loader2 } from 'lucide-react';
 import { logger } from '@/lib/utils/logger';
+import { useAuthStore } from '@/stores/auth-store';
 
 interface BomMaterial {
   material_type: 'raw' | 'semi';
@@ -24,6 +25,7 @@ interface BomMaterialsCardProps {
 export function BomMaterialsCard({ planId, producedQuantity, plannedQuantity }: BomMaterialsCardProps) {
   const [materials, setMaterials] = useState<BomMaterial[]>([]);
   const [loading, setLoading] = useState(true);
+  const { user } = useAuthStore();
 
   useEffect(() => {
     if (planId) {
@@ -34,7 +36,14 @@ export function BomMaterialsCard({ planId, producedQuantity, plannedQuantity }: 
   const fetchBomMaterials = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`/api/bom/snapshot/${planId}`);
+      if (!user?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
+      const response = await fetch(`/api/bom/snapshot/${planId}`, {
+        headers: {
+          'x-user-id': user.id
+        }
+      });
       if (response.ok) {
         const data = await response.json();
         setMaterials(data.materials || []);

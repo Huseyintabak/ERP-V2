@@ -2,6 +2,149 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
 import { logger } from '@/lib/utils/logger';
+
+// POST - Save BOM for a product
+export async function POST(
+  request: NextRequest,
+  { params }: { params: Promise<{ productId: string }> }
+) {
+  try {
+    const { productId } = await params;
+    const userId = request.headers.get('x-user-id');
+    
+    if (!userId) {
+      return NextResponse.json({ error: 'User context required' }, { status: 401 });
+    }
+
+    const body = await request.json();
+    const { product_id, entries } = body;
+
+    logger.log('BOM save request:', {
+      product_id,
+      entries: entries?.length,
+      firstEntry: entries?.[0]
+    });
+
+    if (!product_id || !entries || !Array.isArray(entries)) {
+      return NextResponse.json({ error: 'Invalid request data' }, { status: 400 });
+    }
+
+    const supabase = await createClient();
+
+    // Ürün tipini belirle
+    let isSemiProduct = false;
+    const { data: finishedProduct } = await supabase
+      .from('finished_products')
+      .select('id')
+      .eq('id', product_id)
+      .single();
+
+    if (!finishedProduct) {
+      const { data: semiProduct } = await supabase
+        .from('semi_finished_products')
+        .select('id')
+        .eq('id', product_id)
+        .single();
+      
+      if (semiProduct) {
+        isSemiProduct = true;
+      } else {
+        return NextResponse.json({ error: 'Product not found' }, { status: 404 });
+      }
+    }
+
+    // Mevcut BOM kayıtlarını sil
+    if (isSemiProduct) {
+      const { error: deleteError } = await supabase
+        .from('semi_bom')
+        .delete()
+        .eq('semi_product_id', product_id);
+      
+      if (deleteError) {
+        logger.error('Error deleting existing semi BOM:', deleteError);
+      }
+    } else {
+      const { error: deleteError } = await supabase
+        .from('bom')
+        .delete()
+        .eq('finished_product_id', product_id);
+      
+      if (deleteError) {
+        logger.error('Error deleting existing BOM:', deleteError);
+      }
+    }
+
+    // Yeni BOM kayıtlarını ekle
+    const bomEntries = entries
+      .filter((entry: any) => {
+        // Geçerli veri kontrolü
+        return entry && 
+               entry.material_type && 
+               entry.material_id && 
+               (entry.quantity_needed || entry.quantity);
+      })
+      .map((entry: any) => {
+        const quantity = entry.quantity_needed || entry.quantity;
+        
+        logger.log('Processing BOM entry:', {
+          material_type: entry.material_type,
+          material_id: entry.material_id,
+          quantity,
+          isSemiProduct
+        });
+
+        if (isSemiProduct) {
+          return {
+            semi_product_id: product_id,
+            material_type: entry.material_type,
+            material_id: entry.material_id,
+            quantity: quantity
+          };
+        } else {
+          return {
+            finished_product_id: product_id,
+            material_type: entry.material_type,
+            material_id: entry.material_id,
+            quantity_needed: quantity
+          };
+        }
+      });
+
+    logger.log('Processed BOM entries:', {
+      originalCount: entries.length,
+      filteredCount: bomEntries.length,
+      entries: bomEntries
+    });
+
+    const tableName = isSemiProduct ? 'semi_bom' : 'bom';
+    const { data, error } = await supabase
+      .from(tableName)
+      .insert(bomEntries)
+      .select();
+
+    if (error) {
+      logger.error(`Error inserting ${tableName}:`, error);
+      return NextResponse.json({ error: `Failed to save BOM: ${error.message}` }, { status: 500 });
+    }
+
+    logger.log(`BOM saved successfully for product ${product_id}:`, {
+      isSemiProduct,
+      entriesCount: bomEntries.length,
+      tableName
+    });
+
+    return NextResponse.json({ 
+      success: true, 
+      message: 'BOM saved successfully',
+      data: data 
+    });
+
+  } catch (error: any) {
+    logger.error('BOM save error:', error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
+
 // GET - Get BOM for a finished product
 export async function GET(
   request: NextRequest,

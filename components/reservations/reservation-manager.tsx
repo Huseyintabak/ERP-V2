@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, Package, AlertTriangle, CheckCircle, Clock } from 'lucide-react';
 import { logger } from '@/lib/utils/logger';
+import { useAuthStore } from '@/stores/auth-store';
 
 interface Reservation {
   id: string;
@@ -44,17 +45,26 @@ export default function ReservationManager({ orderId, onReservationCreated }: Re
   const [filterOrderId, setFilterOrderId] = useState(orderId || '');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [autoRefresh, setAutoRefresh] = useState(true);
+  const { user } = useAuthStore();
 
   // Rezervasyonları getir
   const fetchReservations = async () => {
     try {
       setLoading(true);
+      if (!user?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
+
       const params = new URLSearchParams();
       if (filterOrderId) params.append('order_id', filterOrderId);
       
       logger.log('🔍 Fetching reservations with params:', params.toString());
       
-      const response = await fetch(`/api/reservations?${params.toString()}`);
+      const response = await fetch(`/api/reservations?${params.toString()}`, {
+        headers: {
+          'x-user-id': user.id
+        }
+      });
       logger.log('📡 API response status:', response.status);
       
       if (!response.ok) {

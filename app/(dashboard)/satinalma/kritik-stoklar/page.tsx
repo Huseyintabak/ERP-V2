@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { PurchaseRequestsTable } from '@/components/purchase/purchase-requests-table';
+import { useAuthStore } from '@/stores/auth-store';
 
 interface PurchaseRequest {
   id: string;
@@ -49,6 +50,7 @@ export default function KritikStoklarPage() {
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const { user } = useAuthStore();
   
   // Filters
   const [statusFilter, setStatusFilter] = useState('');
@@ -70,6 +72,9 @@ export default function KritikStoklarPage() {
   const fetchRequests = async () => {
     try {
       setLoading(true);
+      if (!user?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
       const params = new URLSearchParams({
         page: page.toString(),
         limit: '50',
@@ -77,7 +82,12 @@ export default function KritikStoklarPage() {
         ...(priorityFilter && priorityFilter !== 'all' && { priority: priorityFilter }),
       });
 
-      const response = await fetch(`/api/purchase/requests?${params}`);
+      const response = await fetch(`/api/purchase/requests?${params}`, {
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-id': user.id
+        }
+      });
       if (!response.ok) throw new Error('Failed to fetch purchase requests');
 
       const result = await response.json();
@@ -111,10 +121,14 @@ export default function KritikStoklarPage() {
 
   const handleUpdateRequest = async (requestId: string, updates: Partial<PurchaseRequest>) => {
     try {
+      if (!user?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
       const response = await fetch(`/api/purchase/requests/${requestId}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
+          'x-user-id': user.id
         },
         body: JSON.stringify(updates),
       });
@@ -138,8 +152,15 @@ export default function KritikStoklarPage() {
 
   const handleDeleteRequest = async (requestId: string) => {
     try {
+      if (!user?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
       const response = await fetch(`/api/purchase/requests/${requestId}`, {
         method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-id': user.id
+        }
       });
 
       if (!response.ok) throw new Error('Failed to delete request');

@@ -18,6 +18,7 @@ import { Switch } from '@/components/ui/switch';
 import { Loader2, Save, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { logger } from '@/lib/utils/logger';
+import { useAuthStore } from '@/stores/auth-store';
 
 const userSchema = z.object({
   name: z.string().min(1, 'Ad soyad gerekli').max(255, 'Ad soyad çok uzun'),
@@ -40,6 +41,7 @@ interface UserFormProps {
 export default function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const isEditing = !!user;
+  const { user: currentUser } = useAuthStore();
 
   const {
     register,
@@ -82,10 +84,15 @@ export default function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
         delete submitData.password;
       }
 
+      if (!currentUser?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
+
       const response = await fetch(url, {
         method,
         headers: {
           'Content-Type': 'application/json',
+          'x-user-id': currentUser.id
         },
         body: JSON.stringify(submitData),
       });

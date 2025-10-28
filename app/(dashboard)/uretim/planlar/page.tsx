@@ -98,7 +98,12 @@ export default function UretimPlanlariPage() {
 
   const fetchOperators = async () => {
     try {
-      const response = await fetch('/api/operators');
+      if (!user?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
+      const response = await fetch('/api/operators', {
+        headers: { 'x-user-id': user.id }
+      });
       const result = await response.json();
       
       if (!response.ok) throw new Error(result.error);
@@ -111,9 +116,15 @@ export default function UretimPlanlariPage() {
 
   const handleStartProduction = async (planId: string) => {
     try {
+      if (!user?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
       const response = await fetch(`/api/production/plans/${planId}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-user-id': user.id
+        },
         body: JSON.stringify({ 
           status: 'devam_ediyor',
           start_date: new Date().toISOString(),
@@ -134,9 +145,15 @@ export default function UretimPlanlariPage() {
 
   const handlePauseProduction = async (planId: string) => {
     try {
+      if (!user?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
       const response = await fetch(`/api/production/plans/${planId}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-user-id': user.id
+        },
         body: JSON.stringify({ status: 'duraklatildi' }),
       });
 
@@ -154,10 +171,14 @@ export default function UretimPlanlariPage() {
 
   const handleResumeProduction = async (planId: string) => {
     try {
+      if (!user?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
       const response = await fetch('/api/production/plan-status', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'x-user-id': user.id
         },
         body: JSON.stringify({
           plan_id: planId,
@@ -186,10 +207,14 @@ export default function UretimPlanlariPage() {
 
   const handleResume = async (planId: string) => {
     try {
+      if (!user?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
       const response = await fetch('/api/production/plan-status', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'x-user-id': user.id
         },
         body: JSON.stringify({
           plan_id: planId,
@@ -217,9 +242,15 @@ export default function UretimPlanlariPage() {
 
   const handleAssignOperator = async (planId: string, operatorId: string) => {
     try {
+      if (!user?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
       const response = await fetch(`/api/production/plans/${planId}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-user-id': user.id
+        },
         body: JSON.stringify({ assigned_operator_id: operatorId }),
       });
 

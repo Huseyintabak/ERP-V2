@@ -21,6 +21,7 @@ import {
 import { toast } from 'sonner';
 import { ProductionLogRollbackDialog } from '@/components/production/production-log-rollback-dialog';
 import { logger } from '@/lib/utils/logger';
+import { useAuthStore } from '@/stores/auth-store';
 
 interface ProductionTask {
   id: string;
@@ -93,6 +94,7 @@ export function TaskDetailPanel({ task, onRefresh }: TaskDetailPanelProps) {
   const [rollbackDialogOpen, setRollbackDialogOpen] = useState(false);
   const [selectedLog, setSelectedLog] = useState<ProductionLog | null>(null);
   const [creatingReservation, setCreatingReservation] = useState(false);
+  const { user } = useAuthStore();
 
   useEffect(() => {
     if (task) {
@@ -106,14 +108,26 @@ export function TaskDetailPanel({ task, onRefresh }: TaskDetailPanelProps) {
     
     setFetchingLogs(true);
     try {
+      if (!user?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
+
       let response;
       
       if (task.task_type === 'semi_production') {
         // Yarı mamul üretim siparişi için
-        response = await fetch(`/api/production/semi-logs?order_id=${task.id}`);
+        response = await fetch(`/api/production/semi-logs?order_id=${task.id}`, {
+          headers: {
+            'x-user-id': user.id
+          }
+        });
       } else {
         // Normal üretim planı için
-        response = await fetch(`/api/production/logs?plan_id=${task.id}`);
+        response = await fetch(`/api/production/logs?plan_id=${task.id}`, {
+          headers: {
+            'x-user-id': user.id
+          }
+        });
       }
       
       if (response.ok) {

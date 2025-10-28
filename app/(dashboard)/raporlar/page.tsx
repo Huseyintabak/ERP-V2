@@ -43,6 +43,7 @@ import {
   Filter,
   FileSpreadsheet
 } from 'lucide-react';
+import { useAuthStore } from '@/stores/auth-store';
 
 interface ProductionReport {
   date: string;
@@ -87,6 +88,7 @@ export default function RaporlarPage() {
   const [operatorData, setOperatorData] = useState<OperatorReport[]>([]);
   const [orderData, setOrderData] = useState<OrderReport[]>([]);
   const [loading, setLoading] = useState(true);
+  const { user } = useAuthStore();
 
   useEffect(() => {
     fetchReportData();
@@ -94,15 +96,32 @@ export default function RaporlarPage() {
 
   const fetchReportData = async () => {
     try {
+      if (!user?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
       // Gerçek API çağrıları
       const [plans, operators, rawMaterials, semiFinished, finishedProducts, orders, movements] = await Promise.all([
-        fetch('/api/production/plans?limit=1000').then(r => r.ok ? r.json() : { data: [] }),
-        fetch('/api/operators').then(r => r.ok ? r.json() : []),
-        fetch('/api/stock/raw?limit=1000').then(r => r.ok ? r.json() : { data: [] }),
-        fetch('/api/stock/semi?limit=1000').then(r => r.ok ? r.json() : { data: [] }),
-        fetch('/api/stock/finished?limit=1000').then(r => r.ok ? r.json() : { data: [] }),
-        fetch('/api/orders?limit=1000').then(r => r.ok ? r.json() : { data: [] }),
-        fetch('/api/stock/movements?limit=1000').then(r => r.ok ? r.json() : { data: [] })
+        fetch('/api/production/plans?limit=1000', {
+          headers: { 'x-user-id': user.id }
+        }).then(r => r.ok ? r.json() : { data: [] }),
+        fetch('/api/operators', {
+          headers: { 'x-user-id': user.id }
+        }).then(r => r.ok ? r.json() : []),
+        fetch('/api/stock/raw?limit=1000', {
+          headers: { 'x-user-id': user.id }
+        }).then(r => r.ok ? r.json() : { data: [] }),
+        fetch('/api/stock/semi?limit=1000', {
+          headers: { 'x-user-id': user.id }
+        }).then(r => r.ok ? r.json() : { data: [] }),
+        fetch('/api/stock/finished?limit=1000', {
+          headers: { 'x-user-id': user.id }
+        }).then(r => r.ok ? r.json() : { data: [] }),
+        fetch('/api/orders?limit=1000', {
+          headers: { 'x-user-id': user.id }
+        }).then(r => r.ok ? r.json() : { data: [] }),
+        fetch('/api/stock/movements?limit=1000', {
+          headers: { 'x-user-id': user.id }
+        }).then(r => r.ok ? r.json() : { data: [] })
       ]);
 
       // 1. PRODUCTION REPORT - Son 30 günün (1 ay) günlük üretim raporu
@@ -229,6 +248,9 @@ export default function RaporlarPage() {
 
   const exportReport = async (type: string) => {
     try {
+      if (!user?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
       let url = '';
       
       switch (type) {
@@ -260,7 +282,9 @@ export default function RaporlarPage() {
       }
 
       // Excel dosyasını indir
-      const response = await fetch(url);
+      const response = await fetch(url, {
+        headers: { 'x-user-id': user.id }
+      });
       
       if (!response.ok) {
         throw new Error('Export hatası');

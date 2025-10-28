@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
+import { useAuthStore } from './auth-store';
 
 // Types
 export interface RawMaterial {
@@ -222,23 +223,32 @@ export const useStockStore = create<StockStore>()(
         // Fetch Raw Materials
         fetchRawMaterials: async (filters?: StockFilters) => {
           const currentFilters = { ...get().filters.rawMaterials, ...filters };
-          
+          const { user } = useAuthStore.getState();
+
           set((state) => ({
             loading: { ...state.loading, rawMaterials: true },
             errors: { ...state.errors, rawMaterials: null },
             filters: { ...state.filters, rawMaterials: currentFilters },
           }));
-          
+
           try {
+            if (!user?.id) {
+              throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+            }
             const params = buildQueryParams(currentFilters);
-            const response = await fetch(`/api/stock/raw?${params}`);
-            
+            const response = await fetch(`/api/stock/raw?${params}`, {
+              headers: {
+                'Content-Type': 'application/json',
+                'x-user-id': user.id
+              }
+            });
+
             if (!response.ok) {
               throw new Error(`HTTP error! status: ${response.status}`);
             }
-            
+
             const result = await response.json();
-            
+
             set((state) => ({
               rawMaterials: result.data || [],
               loading: { ...state.loading, rawMaterials: false },
@@ -262,23 +272,32 @@ export const useStockStore = create<StockStore>()(
         // Fetch Semi Finished Products
         fetchSemiFinishedProducts: async (filters?: StockFilters) => {
           const currentFilters = filters || get().filters.semiFinishedProducts;
-          
+          const { user } = useAuthStore.getState();
+
           set((state) => ({
             loading: { ...state.loading, semiFinishedProducts: true },
             errors: { ...state.errors, semiFinishedProducts: null },
             filters: { ...state.filters, semiFinishedProducts: currentFilters },
           }));
-          
+
           try {
+            if (!user?.id) {
+              throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+            }
             const params = buildQueryParams(currentFilters);
-            const response = await fetch(`/api/stock/semi?${params}`);
-            
+            const response = await fetch(`/api/stock/semi?${params}`, {
+              headers: {
+                'Content-Type': 'application/json',
+                'x-user-id': user.id
+              }
+            });
+
             if (!response.ok) {
               throw new Error(`HTTP error! status: ${response.status}`);
             }
-            
+
             const result = await response.json();
-            
+
             set((state) => ({
               semiFinishedProducts: result.data || [],
               loading: { ...state.loading, semiFinishedProducts: false },
@@ -302,23 +321,32 @@ export const useStockStore = create<StockStore>()(
         // Fetch Finished Products
         fetchFinishedProducts: async (filters?: StockFilters) => {
           const currentFilters = filters || get().filters.finishedProducts;
-          
+          const { user } = useAuthStore.getState();
+
           set((state) => ({
             loading: { ...state.loading, finishedProducts: true },
             errors: { ...state.errors, finishedProducts: null },
             filters: { ...state.filters, finishedProducts: currentFilters },
           }));
-          
+
           try {
+            if (!user?.id) {
+              throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+            }
             const params = buildQueryParams(currentFilters);
-            const response = await fetch(`/api/stock/finished?${params}`);
-            
+            const response = await fetch(`/api/stock/finished?${params}`, {
+              headers: {
+                'Content-Type': 'application/json',
+                'x-user-id': user.id
+              }
+            });
+
             if (!response.ok) {
               throw new Error(`HTTP error! status: ${response.status}`);
             }
-            
+
             const result = await response.json();
-            
+
             set((state) => ({
               finishedProducts: result.data || [],
               loading: { ...state.loading, finishedProducts: false },
@@ -342,23 +370,32 @@ export const useStockStore = create<StockStore>()(
         // Fetch Stock Movements
         fetchStockMovements: async (filters?: StockFilters) => {
           const currentFilters = filters || get().filters.stockMovements;
-          
+          const { user } = useAuthStore.getState();
+
           set((state) => ({
             loading: { ...state.loading, stockMovements: true },
             errors: { ...state.errors, stockMovements: null },
             filters: { ...state.filters, stockMovements: currentFilters },
           }));
-          
+
           try {
+            if (!user?.id) {
+              throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+            }
             const params = buildQueryParams(currentFilters);
-            const response = await fetch(`/api/stock/movements?${params}`);
-            
+            const response = await fetch(`/api/stock/movements?${params}`, {
+              headers: {
+                'Content-Type': 'application/json',
+                'x-user-id': user.id
+              }
+            });
+
             if (!response.ok) {
               throw new Error(`HTTP error! status: ${response.status}`);
             }
-            
+
             const result = await response.json();
-            
+
             set((state) => ({
               stockMovements: result.data || [],
               loading: { ...state.loading, stockMovements: false },
@@ -381,37 +418,57 @@ export const useStockStore = create<StockStore>()(
         
         // Fetch Stats
         fetchStats: async () => {
+          const { user } = useAuthStore.getState();
+
           set((state) => ({
             loading: { ...state.loading, stats: true },
             errors: { ...state.errors, stats: null },
           }));
-          
+
           try {
+            if (!user?.id) {
+              throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+            }
             // Fetch all stock counts in parallel
             const [rawResponse, semiResponse, finishedResponse] = await Promise.all([
-              fetch('/api/stock/raw?limit=1'),
-              fetch('/api/stock/semi?limit=1'),
-              fetch('/api/stock/finished?limit=1'),
+              fetch('/api/stock/raw?limit=1', {
+                headers: {
+                  'Content-Type': 'application/json',
+                  'x-user-id': user.id
+                }
+              }),
+              fetch('/api/stock/semi?limit=1', {
+                headers: {
+                  'Content-Type': 'application/json',
+                  'x-user-id': user.id
+                }
+              }),
+              fetch('/api/stock/finished?limit=1', {
+                headers: {
+                  'Content-Type': 'application/json',
+                  'x-user-id': user.id
+                }
+              }),
             ]);
-            
+
             const [rawResult, semiResult, finishedResult] = await Promise.all([
               rawResponse.json(),
               semiResponse.json(),
               finishedResponse.json(),
             ]);
-            
+
             // Calculate stats
             const rawTotal = rawResult.pagination?.total || 0;
             const semiTotal = semiResult.pagination?.total || 0;
             const finishedTotal = finishedResult.pagination?.total || 0;
-            
+
             // Calculate total stock value (simplified - using unit prices)
             const totalStockValue = 0; // This would need to be calculated from actual data
-            
+
             // Count critical and low stock items
             const criticalItems = 0; // This would need to be calculated from actual data
             const lowStockItems = 0; // This would need to be calculated from actual data
-            
+
             set((state) => ({
               stats: {
                 totalRawMaterials: rawTotal,

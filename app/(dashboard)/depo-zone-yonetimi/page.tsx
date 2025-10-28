@@ -33,6 +33,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { ZoneList } from '@/components/warehouse/zone-list';
+import { useAuthStore } from '@/stores/auth-store';
 
 interface WarehouseZone {
   id: string;
@@ -73,6 +74,7 @@ export default function DepoZoneYonetimiPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const { user } = useAuthStore();
   
   // Dialog states
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -104,9 +106,13 @@ export default function DepoZoneYonetimiPage() {
   const fetchZones = async () => {
     try {
       setLoading(true);
+      if (!user?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
       const response = await fetch('/api/warehouse/zones', {
         headers: {
           'Content-Type': 'application/json',
+          'x-user-id': user.id
         }
       });
       
@@ -143,9 +149,13 @@ export default function DepoZoneYonetimiPage() {
 
   const fetchCustomers = async () => {
     try {
+      if (!user?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
       const response = await fetch('/api/customers', {
         headers: {
           'Content-Type': 'application/json',
+          'x-user-id': user.id
         }
       });
       
@@ -168,9 +178,13 @@ export default function DepoZoneYonetimiPage() {
 
   const fetchZoneInventory = async (zoneId: string) => {
     try {
+      if (!user?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
       const response = await fetch(`/api/warehouse/zones/${zoneId}/inventory`, {
         headers: {
           'Content-Type': 'application/json',
+          'x-user-id': user.id
         }
       });
       
@@ -195,9 +209,13 @@ export default function DepoZoneYonetimiPage() {
 
   const fetchCenterInventory = async () => {
     try {
+      if (!user?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
       const response = await fetch('/api/warehouse/zones/center/inventory', {
         headers: {
           'Content-Type': 'application/json',
+          'x-user-id': user.id
         }
       });
       
@@ -231,10 +249,14 @@ export default function DepoZoneYonetimiPage() {
     }
 
     try {
+      if (!user?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
       const response = await fetch('/api/warehouse/zones', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'x-user-id': user.id
         },
         body: JSON.stringify({
           name: newZoneName.trim(),

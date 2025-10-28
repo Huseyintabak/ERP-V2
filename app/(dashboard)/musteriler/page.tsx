@@ -67,9 +67,14 @@ export default function MusterilerPage() {
   const fetchCustomers = async () => {
     try {
       setLoading(true);
+      if (!user?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
+
       const response = await fetch('/api/customers', {
         headers: {
           'Content-Type': 'application/json',
+          'x-user-id': user.id
         }
       });
       
@@ -95,10 +100,15 @@ export default function MusterilerPage() {
 
   const handleDelete = async (customerId: string) => {
     try {
+      if (!user?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
+
       const response = await fetch(`/api/customers/${customerId}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
+          'x-user-id': user.id
         }
       });
 

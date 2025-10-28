@@ -25,6 +25,7 @@ import {
 import { toast } from 'sonner';
 import { cn, formatDateTime } from '@/lib/utils';
 import { logger } from '@/lib/utils/logger';
+import { useAuthStore } from '@/stores/auth-store';
 import {
   Play,
   Pause,
@@ -80,6 +81,7 @@ export default function ProductionDetailModal({
   const [loading, setLoading] = useState(false);
   const [barcodeInput, setBarcodeInput] = useState('');
   const [lastScannedBarcode, setLastScannedBarcode] = useState('');
+  const { user } = useAuthStore();
 
   // Barkod okutma hook'u
   useBarcode((scannedBarcode) => {
@@ -95,7 +97,15 @@ export default function ProductionDetailModal({
 
   const fetchProductionLogs = async () => {
     try {
-      const response = await fetch(`/api/production/logs?plan_id=${production.id}`);
+      if (!user?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
+
+      const response = await fetch(`/api/production/logs?plan_id=${production.id}`, {
+        headers: {
+          'x-user-id': user.id
+        }
+      });
       if (!response.ok) throw new Error('Failed to fetch logs');
       const data = await response.json();
       setLogs(data.data || []);
@@ -131,10 +141,15 @@ export default function ProductionDetailModal({
     try {
       setLoading(true);
       
+      if (!user?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
+
       const response = await fetch('/api/production/logs', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'x-user-id': user.id
         },
         body: JSON.stringify({
           plan_id: production.id,
@@ -172,10 +187,15 @@ export default function ProductionDetailModal({
     try {
       setLoading(true);
       
+      if (!user?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
+
       const response = await fetch(`/api/production/plans/${production.id}/status`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
+          'x-user-id': user.id
         },
         body: JSON.stringify({
           status: newStatus,
@@ -205,8 +225,16 @@ export default function ProductionDetailModal({
     try {
       setLoading(true);
       
+      if (!user?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
+
       const response = await fetch(`/api/production/logs/${logId}`, {
         method: 'DELETE',
+        headers: {
+          'x-user-id': user.id
+        }
+      });
       });
 
       if (!response.ok) {

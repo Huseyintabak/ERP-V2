@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { logger } from '@/lib/utils/logger';
+import { useAuthStore } from '@/stores/auth-store';
 
 interface BreakModalProps {
   isOpen: boolean;
@@ -19,14 +20,20 @@ export function BreakModal({ isOpen, onClose, onSuccess }: BreakModalProps) {
   const [breakType, setBreakType] = useState<'lunch' | 'rest' | 'other'>('rest');
   const [duration, setDuration] = useState(15);
   const [loading, setLoading] = useState(false);
+  const { user } = useAuthStore();
 
   const handleBreak = async () => {
     setLoading(true);
     try {
+      if (!user?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
+
       const response = await fetch('/api/production/actions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'x-user-id': user.id
         },
         body: JSON.stringify({
           action: 'break',

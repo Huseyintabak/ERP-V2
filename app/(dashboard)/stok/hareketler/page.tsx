@@ -31,6 +31,7 @@ import {
   Plus
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useAuthStore } from '@/stores/auth-store';
 
 interface StockMovement {
   id: string;
@@ -55,6 +56,7 @@ export default function StokHareketleriPage() {
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const { user } = useAuthStore();
   
   // Filters
   const [materialTypeFilter, setMaterialTypeFilter] = useState('');
@@ -76,6 +78,9 @@ export default function StokHareketleriPage() {
   const fetchMovements = async () => {
     try {
       setLoading(true);
+      if (!user?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
       const params = new URLSearchParams({
         page: page.toString(),
         limit: '50',
@@ -83,7 +88,12 @@ export default function StokHareketleriPage() {
         ...(movementTypeFilter && movementTypeFilter !== 'all' && { movementType: movementTypeFilter }),
       });
 
-      const response = await fetch(`/api/stock/movements?${params}`);
+      const response = await fetch(`/api/stock/movements?${params}`, {
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-id': user.id
+        }
+      });
       if (!response.ok) throw new Error('Failed to fetch stock movements');
 
       const result = await response.json();

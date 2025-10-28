@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
 import { logger } from '@/lib/utils/logger';
+import { useAuthStore } from '@/stores/auth-store';
 import { 
   Database, 
   Trash2, 
@@ -49,6 +50,7 @@ export default function SystemMaintenance() {
   const [healthStatus, setHealthStatus] = useState<string>('unknown');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error' | 'info', text: string } | null>(null);
+  const { user } = useAuthStore();
   
   // Cleanup parameters
   const [auditDays, setAuditDays] = useState(90);
@@ -57,7 +59,15 @@ export default function SystemMaintenance() {
   const fetchMetrics = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/system/maintenance?action=metrics');
+      if (!user?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
+
+      const response = await fetch('/api/system/maintenance?action=metrics', {
+        headers: {
+          'x-user-id': user.id
+        }
+      });
       const data = await response.json();
       
       if (data.data) {
@@ -73,7 +83,15 @@ export default function SystemMaintenance() {
   const fetchHealth = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/system/maintenance?action=health');
+      if (!user?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
+
+      const response = await fetch('/api/system/maintenance?action=health', {
+        headers: {
+          'x-user-id': user.id
+        }
+      });
       const data = await response.json();
       
       if (data.data) {
@@ -90,7 +108,15 @@ export default function SystemMaintenance() {
   const updateStats = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/system/maintenance?action=stats');
+      if (!user?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
+
+      const response = await fetch('/api/system/maintenance?action=stats', {
+        headers: {
+          'x-user-id': user.id
+        }
+      });
       const data = await response.json();
       
       if (data.data?.success) {
@@ -109,9 +135,16 @@ export default function SystemMaintenance() {
   const cleanAuditLogs = async () => {
     try {
       setLoading(true);
+      if (!user?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
+
       const response = await fetch('/api/system/maintenance', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-user-id': user.id
+        },
         body: JSON.stringify({
           action: 'clean_audit_logs',
           params: { days: auditDays }
@@ -139,9 +172,16 @@ export default function SystemMaintenance() {
   const cleanNotifications = async () => {
     try {
       setLoading(true);
+      if (!user?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
+
       const response = await fetch('/api/system/maintenance', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-user-id': user.id
+        },
         body: JSON.stringify({
           action: 'clean_notifications',
           params: { days: notificationDays }
@@ -169,9 +209,16 @@ export default function SystemMaintenance() {
   const fullCleanup = async () => {
     try {
       setLoading(true);
+      if (!user?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
+
       const response = await fetch('/api/system/maintenance', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-user-id': user.id
+        },
         body: JSON.stringify({
           action: 'full_cleanup',
           params: { 

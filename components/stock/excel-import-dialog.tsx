@@ -35,6 +35,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Upload, Download, CheckCircle, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { logger } from '@/lib/utils/logger';
+import { useAuthStore } from '@/stores/auth-store';
 
 const importSchema = z.object({
   type: z.enum(['raw', 'semi', 'finished'], {
@@ -67,6 +68,7 @@ export function ExcelImportDialog({ onImportComplete }: ExcelImportDialogProps) 
   const [isImporting, setIsImporting] = useState(false);
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
   const [progress, setProgress] = useState(0);
+  const { user } = useAuthStore();
 
   const form = useForm<ImportFormData>({
     resolver: zodResolver(importSchema),
@@ -81,6 +83,10 @@ export function ExcelImportDialog({ onImportComplete }: ExcelImportDialogProps) 
     setImportResult(null);
 
     try {
+      if (!user?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
+
       const formData = new FormData();
       formData.append('file', data.file);
       formData.append('type', data.type);
@@ -92,6 +98,9 @@ export function ExcelImportDialog({ onImportComplete }: ExcelImportDialogProps) 
 
       const response = await fetch('/api/stock/import', {
         method: 'POST',
+        headers: {
+          'x-user-id': user.id
+        },
         body: formData,
       });
 
@@ -133,7 +142,15 @@ export function ExcelImportDialog({ onImportComplete }: ExcelImportDialogProps) 
 
   const downloadTemplate = async (type: string) => {
     try {
-      const response = await fetch(`/api/stock/export?type=${type}&format=xlsx`);
+      if (!user?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
+
+      const response = await fetch(`/api/stock/export?type=${type}&format=xlsx`, {
+        headers: {
+          'x-user-id': user.id
+        }
+      });
       
       if (!response.ok) {
         throw new Error('Template download failed');

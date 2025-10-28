@@ -43,6 +43,7 @@ import { format, parseISO } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { logger } from '@/lib/utils/logger';
+import { useAuthStore } from '@/stores/auth-store';
 
 interface AuditLog {
   id: string;
@@ -71,6 +72,7 @@ export function AuditLogViewer({ onExport }: AuditLogViewerProps) {
   const [loading, setLoading] = useState(false);
   const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const { user } = useAuthStore();
   
   // Filters
   const [filters, setFilters] = useState({
@@ -93,6 +95,10 @@ export function AuditLogViewer({ onExport }: AuditLogViewerProps) {
     try {
       setLoading(true);
       
+      if (!user?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
+      
       const queryParams = new URLSearchParams({
         page: currentPage.toString(),
         limit: filters.limit,
@@ -105,7 +111,11 @@ export function AuditLogViewer({ onExport }: AuditLogViewerProps) {
         ...(filters.dateTo && { dateTo: filters.dateTo }),
       });
 
-      const response = await fetch(`/api/audit-logs?${queryParams}`);
+      const response = await fetch(`/api/audit-logs?${queryParams}`, {
+        headers: {
+          'x-user-id': user.id
+        }
+      });
       if (!response.ok) {
         throw new Error('Audit log verisi yüklenemedi');
       }

@@ -26,6 +26,7 @@ import { Badge } from '@/components/ui/badge';
 import { ArrowRightLeft, Package, AlertTriangle, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { logger } from '@/lib/utils/logger';
+import { useAuthStore } from '@/stores/auth-store';
 
 interface WarehouseZone {
   id: string;
@@ -76,6 +77,7 @@ export function ZoneTransferDialog({
 }: ZoneTransferDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const { user } = useAuthStore();
   
   // Form state
   const [fromZoneId, setFromZoneId] = useState(selectedZoneId || '');
@@ -131,7 +133,15 @@ export function ZoneTransferDialog({
 
   const fetchZoneInventory = async (zoneId: string) => {
     try {
-      const response = await fetch(`/api/warehouse/zones/${zoneId}/inventory`);
+      if (!user?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
+
+      const response = await fetch(`/api/warehouse/zones/${zoneId}/inventory`, {
+        headers: {
+          'x-user-id': user.id
+        }
+      });
       if (!response.ok) throw new Error('Failed to fetch inventory');
       
       const result = await response.json();
@@ -202,10 +212,15 @@ export function ZoneTransferDialog({
       setIsLoading(true);
       
       try {
+        if (!user?.id) {
+          throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+        }
+
         const response = await fetch('/api/warehouse/transfer-multi', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'x-user-id': user.id
           },
           body: JSON.stringify({
             fromZoneId,
@@ -263,10 +278,15 @@ export function ZoneTransferDialog({
       setIsLoading(true);
       
       try {
+        if (!user?.id) {
+          throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+        }
+
         const response = await fetch('/api/warehouse/transfer', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'x-user-id': user.id
           },
           body: JSON.stringify({
             fromZoneId,

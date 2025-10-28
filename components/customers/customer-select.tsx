@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/select';
 import { Loader2 } from 'lucide-react';
 import { logger } from '@/lib/utils/logger';
+import { useAuthStore } from '@/stores/auth-store';
 
 interface Customer {
   id: string;
@@ -34,13 +35,18 @@ export function CustomerSelect({
 }: CustomerSelectProps) {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const { user } = useAuthStore();
 
   useEffect(() => {
     const fetchCustomers = async () => {
       try {
+        if (!user?.id) {
+          throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+        }
         const response = await fetch('/api/customers?limit=1000', {
           headers: {
             'Content-Type': 'application/json',
+            'x-user-id': user.id
           }
         });
         
@@ -65,7 +71,7 @@ export function CustomerSelect({
     };
 
     fetchCustomers();
-  }, []);
+  }, [user?.id]);
 
   if (isLoading) {
     return (

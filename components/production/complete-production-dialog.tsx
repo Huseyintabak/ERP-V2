@@ -18,6 +18,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CheckCircle, Package, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import { logger } from '@/lib/utils/logger';
+import { useAuthStore } from '@/stores/auth-store';
 
 interface ProductionPlan {
   id: string;
@@ -37,15 +38,21 @@ interface CompleteProductionDialogProps {
 export function CompleteProductionDialog({ plan, onComplete }: CompleteProductionDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const { user } = useAuthStore();
 
   const handleComplete = async () => {
     setIsLoading(true);
     
     try {
+      if (!user?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
+
       const response = await fetch('/api/production/complete', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'x-user-id': user.id
         },
         body: JSON.stringify({ 
           productionPlanId: plan.id 

@@ -112,7 +112,15 @@ export default function OperatorlerPage() {
   const fetchOperators = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/operators');
+      if (!user?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
+      const response = await fetch('/api/operators', {
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-id': user.id
+        }
+      });
       if (!response.ok) throw new Error('Failed to fetch operators');
       const data = await response.json();
       setOperators(data);
@@ -126,10 +134,14 @@ export default function OperatorlerPage() {
 
   const handleAddOperator = async (data: OperatorFormData) => {
     try {
+      if (!user?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
       const response = await fetch('/api/operators', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'x-user-id': user.id
         },
         body: JSON.stringify(data),
       });
@@ -167,8 +179,15 @@ export default function OperatorlerPage() {
     if (!confirm('Bu operatörü silmek istediğinizden emin misiniz?')) return;
 
     try {
+      if (!user?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
       const response = await fetch(`/api/operators/${operatorId}`, {
         method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-id': user.id
+        }
       });
 
       if (!response.ok) {

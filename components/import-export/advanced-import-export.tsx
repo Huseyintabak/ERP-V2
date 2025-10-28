@@ -62,6 +62,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { logger } from '@/lib/utils/logger';
+import { useAuthStore } from '@/stores/auth-store';
 
 interface ImportResult {
   success: number;
@@ -119,6 +120,7 @@ export default function AdvancedImportExport() {
     template: false,
   });
   const [progress, setProgress] = useState(0);
+  const { user } = useAuthStore();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -133,6 +135,11 @@ export default function AdvancedImportExport() {
   const handleImport = async () => {
     if (!selectedFile) {
       toast.error('Lütfen bir dosya seçin');
+      return;
+    }
+
+    if (!user?.id) {
+      toast.error('Kullanıcı kimlik doğrulaması gerekli');
       return;
     }
 
@@ -153,6 +160,9 @@ export default function AdvancedImportExport() {
 
       const response = await fetch('/api/import-export/advanced-import', {
         method: 'POST',
+        headers: {
+          'x-user-id': user.id
+        },
         body: formData,
       });
 
@@ -183,6 +193,11 @@ export default function AdvancedImportExport() {
   };
 
   const handleExport = async () => {
+    if (!user?.id) {
+      toast.error('Kullanıcı kimlik doğrulaması gerekli');
+      return;
+    }
+
     setIsLoading(true);
 
     try {
@@ -190,6 +205,7 @@ export default function AdvancedImportExport() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'x-user-id': user.id
         },
         body: JSON.stringify(exportConfig),
       });

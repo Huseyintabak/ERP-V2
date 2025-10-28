@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { logger } from '@/lib/utils/logger';
+import { useAuthStore } from '@/stores/auth-store';
 
 interface StartTaskModalProps {
   task: any;
@@ -18,16 +19,22 @@ interface StartTaskModalProps {
 export function StartTaskModal({ task, isOpen, onClose, onSuccess }: StartTaskModalProps) {
   const [quantity, setQuantity] = useState(task?.planned_quantity || 1);
   const [loading, setLoading] = useState(false);
+  const { user } = useAuthStore();
 
   const handleStart = async () => {
     if (!task) return;
 
     setLoading(true);
     try {
+      if (!user?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
+
       const response = await fetch('/api/production/actions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'x-user-id': user.id
         },
         body: JSON.stringify({
           action: 'start',

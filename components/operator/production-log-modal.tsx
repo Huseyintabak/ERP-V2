@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { logger } from '@/lib/utils/logger';
+import { useAuthStore } from '@/stores/auth-store';
 
 interface ProductionLogModalProps {
   task: any;
@@ -53,6 +54,7 @@ export function ProductionLogModal({ task, isOpen, onClose, onSuccess }: Product
   const [loading, setLoading] = useState(false);
   const [fetchingLogs, setFetchingLogs] = useState(false);
   const [scanning, setScanning] = useState(false);
+  const { user } = useAuthStore();
 
   // Progress hesaplama
   const progress = task ? Math.round((task.produced_quantity / task.planned_quantity) * 100) : 0;
@@ -71,7 +73,15 @@ export function ProductionLogModal({ task, isOpen, onClose, onSuccess }: Product
     
     setFetchingLogs(true);
     try {
-      const response = await fetch(`/api/production/logs?plan_id=${task.id}&limit=10`);
+      if (!user?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
+
+      const response = await fetch(`/api/production/logs?plan_id=${task.id}&limit=10`, {
+        headers: {
+          'x-user-id': user.id
+        }
+      });
       if (response.ok) {
         const data = await response.json();
         setLogs(data.data || []);
@@ -87,7 +97,15 @@ export function ProductionLogModal({ task, isOpen, onClose, onSuccess }: Product
     if (!task?.id) return;
     
     try {
-      const response = await fetch(`/api/bom/snapshot/${task.id}`);
+      if (!user?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
+
+      const response = await fetch(`/api/bom/snapshot/${task.id}`, {
+        headers: {
+          'x-user-id': user.id
+        }
+      });
       if (response.ok) {
         const data = await response.json();
         setBomMaterials(data.materials || []);
@@ -104,9 +122,16 @@ export function ProductionLogModal({ task, isOpen, onClose, onSuccess }: Product
     setScanning(true);
     
     try {
+      if (!user?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
+
       const response = await fetch('/api/production/log', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-user-id': user.id
+        },
         body: JSON.stringify({
           plan_id: task.id,
           barcode_scanned: barcode.trim(),

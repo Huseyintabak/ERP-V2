@@ -26,6 +26,7 @@ import { SimpleSearchableSelect, type SearchableSelectOption } from '@/component
 import { Badge } from '@/components/ui/badge';
 import { ClipboardList, AlertTriangle, CheckCircle, TrendingUp, TrendingDown } from 'lucide-react';
 import { toast } from 'sonner';
+import { useAuthStore } from '@/stores/auth-store';
 
 const countSchema = z.object({
   materialType: z.enum(['raw', 'semi', 'finished']),
@@ -59,6 +60,7 @@ export function InventoryCountDialog({
   const [materialsLoading, setMaterialsLoading] = useState(false);
   const [materials, setMaterials] = useState<Material[]>([]);
   const [selectedMaterial, setSelectedMaterial] = useState<Material | null>(null);
+  const { user } = useAuthStore();
 
   const {
     register,
@@ -109,13 +111,21 @@ export function InventoryCountDialog({
   const loadMaterials = async (type: 'raw' | 'semi' | 'finished') => {
     setMaterialsLoading(true);
     try {
+      if (!user?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
       const endpoints = {
         raw: '/api/stock/raw?limit=1000',
         semi: '/api/stock/semi?limit=1000',
         finished: '/api/stock/finished?limit=1000'
       };
 
-      const response = await fetch(endpoints[type]);
+      const response = await fetch(endpoints[type], {
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-id': user.id
+        }
+      });
       const result = await response.json();
 
       if (!response.ok) throw new Error(result.error);
@@ -132,9 +142,15 @@ export function InventoryCountDialog({
   const onSubmit = async (data: CountFormData) => {
     setLoading(true);
     try {
+      if (!user?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
       const response = await fetch('/api/stock/count', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-user-id': user.id
+        },
         body: JSON.stringify(data)
       });
 

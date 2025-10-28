@@ -11,6 +11,7 @@ import { Upload, Download, FileSpreadsheet, CheckCircle, XCircle, AlertCircle } 
 import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
 import { logger } from '@/lib/utils/logger';
+import { useAuthStore } from '@/stores/auth-store';
 
 interface BulkOrderImportDialogProps {
   onImportComplete?: () => void;
@@ -42,6 +43,7 @@ export function BulkOrderImportDialog({ onImportComplete }: BulkOrderImportDialo
   const [importResults, setImportResults] = useState<ImportResult[]>([]);
   const [showResults, setShowResults] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { user } = useAuthStore();
 
   const downloadTemplate = () => {
     const templateData = [
@@ -143,10 +145,17 @@ export function BulkOrderImportDialog({ onImportComplete }: BulkOrderImportDialo
       const order = importData[i];
       
       try {
+        if (!user?.id) {
+          throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+        }
+
         // Önce müşteriyi bul veya oluştur
         const customerResponse = await fetch('/api/customers', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json',
+            'x-user-id': user.id
+          },
           body: JSON.stringify({
             name: order.customer_name,
             email: `${order.customer_name.toLowerCase().replace(/\s+/g, '.')}@example.com`,
@@ -161,7 +170,11 @@ export function BulkOrderImportDialog({ onImportComplete }: BulkOrderImportDialo
           customerId = customerData.data.id;
         } else {
           // Müşteri zaten varsa, mevcut müşteriyi bul
-          const searchResponse = await fetch(`/api/customers?search=${encodeURIComponent(order.customer_name)}`);
+          const searchResponse = await fetch(`/api/customers?search=${encodeURIComponent(order.customer_name)}`, {
+            headers: {
+              'x-user-id': user.id
+            }
+          });
           const searchData = await searchResponse.json();
           if (searchData.data && searchData.data.length > 0) {
             customerId = searchData.data[0].id;
@@ -171,7 +184,11 @@ export function BulkOrderImportDialog({ onImportComplete }: BulkOrderImportDialo
         }
 
         // Ürünü bul
-        const productResponse = await fetch(`/api/stock/finished?search=${encodeURIComponent(order.product_code)}`);
+        const productResponse = await fetch(`/api/stock/finished?search=${encodeURIComponent(order.product_code)}`, {
+          headers: {
+            'x-user-id': user.id
+          }
+        });
         const productData = await productResponse.json();
         
         if (!productData.data || productData.data.length === 0) {
@@ -183,7 +200,11 @@ export function BulkOrderImportDialog({ onImportComplete }: BulkOrderImportDialo
         // Operatörü bul (eğer belirtilmişse)
         let assignedOperatorId = undefined;
         if (order.assigned_operator) {
-          const operatorResponse = await fetch(`/api/operators?search=${encodeURIComponent(order.assigned_operator)}`);
+          const operatorResponse = await fetch(`/api/operators?search=${encodeURIComponent(order.assigned_operator)}`, {
+            headers: {
+              'x-user-id': user.id
+            }
+          });
           const operatorData = await operatorResponse.json();
           
           if (operatorData.data && operatorData.data.length > 0) {
@@ -194,7 +215,10 @@ export function BulkOrderImportDialog({ onImportComplete }: BulkOrderImportDialo
         // Siparişi oluştur
         const orderResponse = await fetch('/api/orders', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json',
+            'x-user-id': user.id
+          },
           body: JSON.stringify({
             customer_name: order.customer_name,
             customer_id: customerId,

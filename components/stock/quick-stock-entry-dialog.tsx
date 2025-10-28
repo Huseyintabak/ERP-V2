@@ -11,6 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { TrendingUp, TrendingDown } from 'lucide-react';
 import { logger } from '@/lib/utils/logger';
+import { useAuthStore } from '@/stores/auth-store';
 
 interface Props {
   open: boolean;
@@ -25,6 +26,7 @@ export function QuickStockEntryDialog({ open, onClose, type }: Props) {
   const [quantity, setQuantity] = useState('');
   const [description, setDescription] = useState('');
   const [loading, setLoading] = useState(false);
+  const { user } = useAuthStore();
 
   // SearchableSelect için material options'ı hazırla
   const materialOptions: SearchableSelectOption[] = materials.map((material) => ({
@@ -42,12 +44,20 @@ export function QuickStockEntryDialog({ open, onClose, type }: Props) {
 
   const fetchMaterials = async () => {
     try {
+      if (!user?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
+
       const endpoint = 
         materialType === 'raw' ? '/api/stock/raw?limit=1000' :
         materialType === 'semi' ? '/api/stock/semi?limit=1000' :
         '/api/stock/finished?limit=1000';
       
-      const response = await fetch(endpoint);
+      const response = await fetch(endpoint, {
+        headers: {
+          'x-user-id': user.id
+        }
+      });
       const result = await response.json();
       setMaterials(result.data || []);
     } catch (error) {
@@ -66,9 +76,16 @@ export function QuickStockEntryDialog({ open, onClose, type }: Props) {
 
     setLoading(true);
     try {
+      if (!user?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
+
       const response = await fetch('/api/stock/movements', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-user-id': user.id
+        },
         body: JSON.stringify({
           material_type: materialType,
           material_id: selectedMaterialId,

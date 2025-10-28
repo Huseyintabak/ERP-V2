@@ -160,7 +160,17 @@ export function Sidebar() {
   const [openMenus, setOpenMenus] = useState<string[]>([]);
 
   const handleLogout = async () => {
-    await fetch('/api/auth/logout', { method: 'POST' });
+    if (!user?.id) {
+      logout();
+      window.location.href = '/login';
+      return;
+    }
+    await fetch('/api/auth/logout', { 
+      method: 'POST',
+      headers: {
+        'x-user-id': user.id
+      }
+    });
     logout();
     window.location.href = '/login';
   };

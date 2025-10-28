@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Calculator, TrendingUp, TrendingDown, AlertCircle, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import { useAuthStore } from '@/stores/auth-store';
 
 interface CostCalculationDialogProps {
   productId: string;
@@ -70,13 +71,20 @@ export function CostCalculationDialog({
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<CostCalculationResult | null>(null);
+  const { user } = useAuthStore();
 
   const handleCalculate = async () => {
     setLoading(true);
     try {
+      if (!user?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
       const response = await fetch('/api/pricing/calculate', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-user-id': user.id
+        },
         body: JSON.stringify({ productId })
       });
 

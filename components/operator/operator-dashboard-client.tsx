@@ -181,7 +181,15 @@ export default function OperatorDashboardClient() {
     if (!operatorId) return;
     
     try {
-      const response = await fetch('/api/operators/stats');
+      if (!user?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
+
+      const response = await fetch('/api/operators/stats', {
+        headers: {
+          'x-user-id': user.id
+        }
+      });
       if (!response.ok) {
         throw new Error('Failed to fetch stats');
       }
@@ -196,10 +204,18 @@ export default function OperatorDashboardClient() {
     if (!operatorId) return;
     
     try {
+      if (!user?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
+
       // Hem normal üretim hem yarı mamul üretim siparişlerini çek
       const [productionResponse, semiResponse] = await Promise.all([
-        fetch('/api/operators/tasks?status=planlandi'),
-        fetch('/api/operators/semi-tasks?status=planlandi')
+        fetch('/api/operators/tasks?status=planlandi', {
+          headers: { 'x-user-id': user.id }
+        }),
+        fetch('/api/operators/semi-tasks?status=planlandi', {
+          headers: { 'x-user-id': user.id }
+        })
       ]);
 
       const productionData = productionResponse.ok ? await productionResponse.json() : { data: [] };
@@ -234,10 +250,18 @@ export default function OperatorDashboardClient() {
     if (!operatorId) return;
     
     try {
+      if (!user?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
+
       // Hem normal üretim hem yarı mamul üretim siparişlerini çek
       const [productionResponse, semiResponse] = await Promise.all([
-        fetch('/api/operators/tasks?status=devam_ediyor'),
-        fetch('/api/operators/semi-tasks?status=devam_ediyor')
+        fetch('/api/operators/tasks?status=devam_ediyor', {
+          headers: { 'x-user-id': user.id }
+        }),
+        fetch('/api/operators/semi-tasks?status=devam_ediyor', {
+          headers: { 'x-user-id': user.id }
+        })
       ]);
 
       const productionData = productionResponse.ok ? await productionResponse.json() : { data: [] };
@@ -272,10 +296,18 @@ export default function OperatorDashboardClient() {
     if (!operatorId) return;
     
     try {
+      if (!user?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
+
       // Hem normal üretim hem yarı mamul üretim siparişlerini çek
       const [productionResponse, semiResponse] = await Promise.all([
-        fetch('/api/operators/tasks?status=duraklatildi'),
-        fetch('/api/operators/semi-tasks?status=duraklatildi')
+        fetch('/api/operators/tasks?status=duraklatildi', {
+          headers: { 'x-user-id': user.id }
+        }),
+        fetch('/api/operators/semi-tasks?status=duraklatildi', {
+          headers: { 'x-user-id': user.id }
+        })
       ]);
 
       const productionData = productionResponse.ok ? await productionResponse.json() : { data: [] };
@@ -310,6 +342,10 @@ export default function OperatorDashboardClient() {
   // Plan status actions - Hem normal üretim hem yarı mamul üretim
   const handlePlanAction = async (task: ProductionTask, action: 'accept' | 'pause' | 'resume' | 'complete') => {
     try {
+      if (!user?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
+
       let response;
       
       if (task.task_type === 'semi_production') {
@@ -322,6 +358,7 @@ export default function OperatorDashboardClient() {
           method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',
+            'x-user-id': user.id
           },
           body: JSON.stringify({ status }),
         });
@@ -331,6 +368,7 @@ export default function OperatorDashboardClient() {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'x-user-id': user.id
           },
           body: JSON.stringify({
             plan_id: task.id,

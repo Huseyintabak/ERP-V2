@@ -41,6 +41,7 @@ import {
 import { Plus, Search, Edit, Trash2, Eye, EyeOff, UserPlus } from 'lucide-react';
 import { toast } from 'sonner';
 import { useUserStore } from '@/stores/user-store';
+import { useAuthStore } from '@/stores/auth-store';
 import UserForm from '@/components/users/user-form';
 
 export default function KullanicilarPage() {
@@ -51,6 +52,7 @@ export default function KullanicilarPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const { user } = useAuthStore();
 
   const {
     users,
@@ -79,7 +81,15 @@ export default function KullanicilarPage() {
       if (filters.role) params.set('role', filters.role);
       if (filters.is_active !== null) params.set('is_active', filters.is_active);
 
-      const response = await fetch(`/api/users?${params.toString()}`);
+      if (!user?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
+
+      const response = await fetch(`/api/users?${params.toString()}`, {
+        headers: {
+          'x-user-id': user.id
+        }
+      });
       
       if (!response.ok) {
         throw new Error('Kullanıcılar yüklenemedi');
@@ -132,8 +142,15 @@ export default function KullanicilarPage() {
     if (!deleteUserId) return;
 
     try {
+      if (!user?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
+
       const response = await fetch(`/api/users/${deleteUserId}`, {
         method: 'DELETE',
+        headers: {
+          'x-user-id': user.id
+        }
       });
 
       if (!response.ok) {

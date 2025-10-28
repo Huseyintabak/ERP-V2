@@ -94,14 +94,22 @@ export function MultiOperatorProduction({ onTaskUpdate }: MultiOperatorProductio
       setLoading(true);
       
       // Load operators
-      const operatorsResponse = await fetch('/api/operators');
+      const operatorsResponse = await fetch('/api/operators', {
+        headers: {
+          'x-user-id': user.id
+        }
+      });
       if (operatorsResponse.ok) {
         const operatorsData = await operatorsResponse.json();
         setOperators(operatorsData.data || []);
       }
 
       // Load production tasks
-      const tasksResponse = await fetch('/api/production/multi-operator-tasks');
+      const tasksResponse = await fetch('/api/production/multi-operator-tasks', {
+        headers: {
+          'x-user-id': user.id
+        }
+      });
       if (tasksResponse.ok) {
         const tasksData = await tasksResponse.json();
         setProductionTasks(tasksData.data || []);
@@ -125,10 +133,15 @@ export function MultiOperatorProduction({ onTaskUpdate }: MultiOperatorProductio
   // Assign operator to task
   const assignOperator = async (taskId: string, operatorId: string) => {
     try {
+      if (!user?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
+
       const response = await fetch('/api/production/assign-operator', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'x-user-id': user.id
         },
         body: JSON.stringify({
           taskId,
@@ -153,10 +166,15 @@ export function MultiOperatorProduction({ onTaskUpdate }: MultiOperatorProductio
   // Remove operator from task
   const removeOperator = async (taskId: string, operatorId: string) => {
     try {
+      if (!user?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
+
       const response = await fetch('/api/production/remove-operator', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'x-user-id': user.id
         },
         body: JSON.stringify({
           taskId,
@@ -180,10 +198,15 @@ export function MultiOperatorProduction({ onTaskUpdate }: MultiOperatorProductio
   // Start production for operator
   const startProduction = async (taskId: string, operatorId: string) => {
     try {
+      if (!user?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
+
       const response = await fetch('/api/production/start-multi', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'x-user-id': user.id
         },
         body: JSON.stringify({
           taskId,
@@ -207,10 +230,15 @@ export function MultiOperatorProduction({ onTaskUpdate }: MultiOperatorProductio
   // Pause production for operator
   const pauseProduction = async (taskId: string, operatorId: string) => {
     try {
+      if (!user?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
+
       const response = await fetch('/api/production/pause-multi', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'x-user-id': user.id
         },
         body: JSON.stringify({
           taskId,

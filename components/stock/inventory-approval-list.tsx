@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/table';
 import { CheckCircle, XCircle, AlertTriangle, TrendingUp, TrendingDown, Eye } from 'lucide-react';
 import { toast } from 'sonner';
+import { useAuthStore } from '@/stores/auth-store';
 
 interface InventoryCount {
   id: string;
@@ -48,6 +49,7 @@ export function InventoryApprovalList() {
   const [actionLoading, setActionLoading] = useState(false);
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
+  const { user } = useAuthStore();
 
   useEffect(() => {
     fetchPendingCounts();
@@ -56,7 +58,15 @@ export function InventoryApprovalList() {
   const fetchPendingCounts = async () => {
     setLoading(true);
     try {
-      const response = await fetch('/api/stock/count?status=pending&limit=100');
+      if (!user?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
+      const response = await fetch('/api/stock/count?status=pending&limit=100', {
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-id': user.id
+        }
+      });
       const result = await response.json();
 
       if (!response.ok) throw new Error(result.error);
@@ -76,9 +86,15 @@ export function InventoryApprovalList() {
 
     setActionLoading(true);
     try {
+      if (!user?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
       const response = await fetch(`/api/stock/count/${countId}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-user-id': user.id
+        },
         body: JSON.stringify({ action: 'approve', autoAdjust })
       });
 
@@ -106,9 +122,15 @@ export function InventoryApprovalList() {
 
     setActionLoading(true);
     try {
+      if (!user?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
       const response = await fetch(`/api/stock/count/${selectedCount.id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-user-id': user.id
+        },
         body: JSON.stringify({ action: 'reject', reason: rejectReason })
       });
 

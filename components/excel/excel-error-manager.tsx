@@ -12,6 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { logger } from '@/lib/utils/logger';
+import { useAuthStore } from '@/stores/auth-store';
 import { 
   AlertTriangle, 
   CheckCircle, 
@@ -70,6 +71,7 @@ export default function ExcelErrorManager() {
   const [stats, setStats] = useState<ErrorStats | null>(null);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error' | 'info', text: string } | null>(null);
+  const { user } = useAuthStore();
   
   // Filtreler
   const [filters, setFilters] = useState({
@@ -97,13 +99,20 @@ export default function ExcelErrorManager() {
   const fetchErrors = async () => {
     try {
       setLoading(true);
+      if (!user?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
       const params = new URLSearchParams();
       
       Object.entries(filters).forEach(([key, value]) => {
         if (value && value !== 'all') params.append(key, value.toString());
       });
 
-      const response = await fetch(`/api/excel-errors?${params}`);
+      const response = await fetch(`/api/excel-errors?${params}`, {
+        headers: {
+          'x-user-id': user.id
+        }
+      });
       const data = await response.json();
       
       if (data.data) {
@@ -120,7 +129,14 @@ export default function ExcelErrorManager() {
 
   const fetchStats = async () => {
     try {
-      const response = await fetch('/api/excel-errors/stats');
+      if (!user?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
+      const response = await fetch('/api/excel-errors/stats', {
+        headers: {
+          'x-user-id': user.id
+        }
+      });
       const data = await response.json();
       
       if (data.data?.success) {
@@ -134,9 +150,15 @@ export default function ExcelErrorManager() {
   const resolveError = async (errorId: string, notes: string) => {
     try {
       setLoading(true);
+      if (!user?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
       const response = await fetch('/api/excel-errors/resolve', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-user-id': user.id
+        },
         body: JSON.stringify({
           error_id: errorId,
           resolution_notes: notes

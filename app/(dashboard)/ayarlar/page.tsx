@@ -19,6 +19,7 @@ import {
   CheckCircle
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useAuthStore } from '@/stores/auth-store';
 
 interface SystemSettings {
   default_operator_password: string;
@@ -34,6 +35,7 @@ interface SystemSettings {
 
 export default function AyarlarPage() {
   const router = useRouter();
+  const { user } = useAuthStore();
   const [settings, setSettings] = useState<SystemSettings>({
     default_operator_password: '',
     critical_stock_threshold: 10,
@@ -55,7 +57,15 @@ export default function AyarlarPage() {
   const fetchSettings = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch('/api/settings');
+      if (!user?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
+      const response = await fetch('/api/settings', {
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-id': user.id
+        }
+      });
       if (response.ok) {
         const data = await response.json();
         setSettings(data);
@@ -71,9 +81,15 @@ export default function AyarlarPage() {
   const handleSaveSettings = async () => {
     setIsSaving(true);
     try {
+      if (!user?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
       const response = await fetch('/api/settings', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-user-id': user.id
+        },
         body: JSON.stringify(settings),
       });
 

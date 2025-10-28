@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
+import { useAuthStore } from './auth-store';
 
 // Types
 export interface Order {
@@ -222,6 +223,7 @@ export const useOrderStore = create<OrderStore>()(
         // Fetch Orders
         fetchOrders: async (filters?: OrderFilters) => {
           const currentFilters = filters || get().filters.orders;
+          const { user } = useAuthStore.getState();
           
           set((state) => ({
             loading: { ...state.loading, orders: true },
@@ -230,8 +232,16 @@ export const useOrderStore = create<OrderStore>()(
           }));
           
           try {
+            if (!user?.id) {
+              throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+            }
             const params = buildQueryParams(currentFilters);
-            const response = await fetch(`/api/orders?${params}`);
+            const response = await fetch(`/api/orders?${params}`, {
+              headers: {
+                'Content-Type': 'application/json',
+                'x-user-id': user.id
+              }
+            });
             
             if (!response.ok) {
               throw new Error(`HTTP error! status: ${response.status}`);
@@ -262,6 +272,7 @@ export const useOrderStore = create<OrderStore>()(
         // Fetch Production Plans
         fetchProductionPlans: async (filters?: ProductionFilters) => {
           const currentFilters = filters || get().filters.productionPlans;
+          const { user } = useAuthStore.getState();
           
           set((state) => ({
             loading: { ...state.loading, productionPlans: true },
@@ -270,8 +281,16 @@ export const useOrderStore = create<OrderStore>()(
           }));
           
           try {
+            if (!user?.id) {
+              throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+            }
             const params = buildQueryParams(currentFilters);
-            const response = await fetch(`/api/production/plans?${params}`);
+            const response = await fetch(`/api/production/plans?${params}`, {
+              headers: {
+                'Content-Type': 'application/json',
+                'x-user-id': user.id
+              }
+            });
             
             if (!response.ok) {
               throw new Error(`HTTP error! status: ${response.status}`);
@@ -301,19 +320,49 @@ export const useOrderStore = create<OrderStore>()(
         
         // Fetch Stats
         fetchStats: async () => {
+          const { user } = useAuthStore.getState();
+          
           set((state) => ({
             loading: { ...state.loading, stats: true },
             errors: { ...state.errors, stats: null },
           }));
           
           try {
+            if (!user?.id) {
+              throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+            }
             // Fetch orders with different status filters
             const [allOrdersResponse, pendingResponse, approvedResponse, inProductionResponse, completedResponse] = await Promise.all([
-              fetch('/api/orders?limit=1000'),
-              fetch('/api/orders?status=beklemede&limit=1000'),
-              fetch('/api/orders?status=onaylandi&limit=1000'),
-              fetch('/api/orders?status=uretimde&limit=1000'),
-              fetch('/api/orders?status=tamamlandi&limit=1000'),
+              fetch('/api/orders?limit=1000', {
+                headers: {
+                  'Content-Type': 'application/json',
+                  'x-user-id': user.id
+                }
+              }),
+              fetch('/api/orders?status=beklemede&limit=1000', {
+                headers: {
+                  'Content-Type': 'application/json',
+                  'x-user-id': user.id
+                }
+              }),
+              fetch('/api/orders?status=onaylandi&limit=1000', {
+                headers: {
+                  'Content-Type': 'application/json',
+                  'x-user-id': user.id
+                }
+              }),
+              fetch('/api/orders?status=uretimde&limit=1000', {
+                headers: {
+                  'Content-Type': 'application/json',
+                  'x-user-id': user.id
+                }
+              }),
+              fetch('/api/orders?status=tamamlandi&limit=1000', {
+                headers: {
+                  'Content-Type': 'application/json',
+                  'x-user-id': user.id
+                }
+              }),
             ]);
             
             const [allOrdersResult, pendingResult, approvedResult, inProductionResult, completedResult] = await Promise.all([
@@ -448,13 +497,21 @@ export const useOrderStore = create<OrderStore>()(
         
         // Business logic
         approveOrder: async (orderId: string) => {
+          const { user } = useAuthStore.getState();
+          
           // Optimistic update
           get().actions.optimisticUpdateOrder(orderId, { status: 'onaylandi' });
           
           try {
+            if (!user?.id) {
+              throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+            }
             const response = await fetch(`/api/orders/${orderId}`, {
               method: 'PATCH',
-              headers: { 'Content-Type': 'application/json' },
+              headers: { 
+                'Content-Type': 'application/json',
+                'x-user-id': user.id
+              },
               body: JSON.stringify({ status: 'onaylandi' }),
             });
             
@@ -472,10 +529,18 @@ export const useOrderStore = create<OrderStore>()(
         },
         
         startProduction: async (orderId: string, planId: string) => {
+          const { user } = useAuthStore.getState();
+          
           try {
+            if (!user?.id) {
+              throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+            }
             const response = await fetch(`/api/production/plans/${planId}`, {
               method: 'PATCH',
-              headers: { 'Content-Type': 'application/json' },
+              headers: { 
+                'Content-Type': 'application/json',
+                'x-user-id': user.id
+              },
               body: JSON.stringify({ 
                 status: 'devam_ediyor',
                 start_date: new Date().toISOString(),
@@ -495,10 +560,18 @@ export const useOrderStore = create<OrderStore>()(
         },
         
         completeProduction: async (planId: string, producedQuantity: number) => {
+          const { user } = useAuthStore.getState();
+          
           try {
+            if (!user?.id) {
+              throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+            }
             const response = await fetch('/api/production/complete', {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers: { 
+                'Content-Type': 'application/json',
+                'x-user-id': user.id
+              },
               body: JSON.stringify({ 
                 productionPlanId: planId,
                 producedQuantity,
@@ -532,13 +605,21 @@ export const useOrderStore = create<OrderStore>()(
         },
         
         cancelOrder: async (orderId: string, reason: string) => {
+          const { user } = useAuthStore.getState();
+          
           // Optimistic update
           get().actions.optimisticUpdateOrder(orderId, { status: 'iptal' });
           
           try {
+            if (!user?.id) {
+              throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+            }
             const response = await fetch(`/api/orders/${orderId}`, {
               method: 'PATCH',
-              headers: { 'Content-Type': 'application/json' },
+              headers: { 
+                'Content-Type': 'application/json',
+                'x-user-id': user.id
+              },
               body: JSON.stringify({ 
                 status: 'iptal',
                 notes: reason,
