@@ -51,8 +51,15 @@ export default function HammaddelerPage() {
     if (!confirm('Bu hammaddeyi silmek istediğinize emin misiniz?')) return;
 
     try {
+      if (!user?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
+
       const response = await fetch(`/api/stock/raw/${id}`, {
         method: 'DELETE',
+        headers: {
+          'x-user-id': user.id
+        }
       });
 
       if (!response.ok) {
@@ -70,6 +77,10 @@ export default function HammaddelerPage() {
   const handleFormSubmit = async (data: RawMaterialFormData) => {
     setIsSaving(true);
     try {
+      if (!user?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
+
       const url = editingMaterial
         ? `/api/stock/raw/${editingMaterial.id}`
         : '/api/stock/raw';
@@ -78,7 +89,10 @@ export default function HammaddelerPage() {
 
       const response = await fetch(url, {
         method,
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-user-id': user.id
+        },
         body: JSON.stringify(data),
       });
 

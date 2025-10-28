@@ -51,8 +51,15 @@ export default function YariMamullerPage() {
     if (!confirm('Bu yarı mamulli silmek istediğinize emin misiniz?')) return;
 
     try {
+      if (!user?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
+
       const response = await fetch(`/api/stock/semi/${id}`, {
         method: 'DELETE',
+        headers: {
+          'x-user-id': user.id
+        }
       });
 
       if (!response.ok) {
@@ -70,6 +77,10 @@ export default function YariMamullerPage() {
   const handleFormSubmit = async (data: SemiFinishedProductFormData) => {
     setIsSaving(true);
     try {
+      if (!user?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
+
       const url = editingMaterial
         ? `/api/stock/semi/${editingMaterial.id}`
         : '/api/stock/semi';
@@ -78,7 +89,10 @@ export default function YariMamullerPage() {
 
       const response = await fetch(url, {
         method,
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-user-id': user.id
+        },
         body: JSON.stringify(data),
       });
 

@@ -244,8 +244,15 @@ export default function YariMamulUretimPage() {
     }
 
     try {
+      if (!user?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
+
       const response = await fetch(`/api/production/semi-orders/${orderId}`, {
         method: 'DELETE',
+        headers: {
+          'x-user-id': user.id
+        }
       });
 
       if (response.ok) {
@@ -269,6 +276,10 @@ export default function YariMamulUretimPage() {
     }
 
     try {
+      if (!user?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
+
       const url = editingOrder 
         ? `/api/production/semi-orders/${editingOrder.id}`
         : '/api/production/semi-orders';
@@ -279,6 +290,7 @@ export default function YariMamulUretimPage() {
         method,
         headers: {
           'Content-Type': 'application/json',
+          'x-user-id': user.id
         },
         body: JSON.stringify(formData),
       });

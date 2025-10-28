@@ -11,6 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
 import { Loader2, Save, X } from 'lucide-react';
+import { useAuthStore } from '@/stores/auth-store';
 
 const customerSchema = z.object({
   name: z.string().min(1, 'Müşteri adı gerekli'),
@@ -31,6 +32,7 @@ interface CustomerFormProps {
 }
 
 export function CustomerForm({ customer, onSuccess, onCancel }: CustomerFormProps) {
+  const { user } = useAuthStore();
   const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm<CustomerFormData>({
@@ -49,6 +51,10 @@ export function CustomerForm({ customer, onSuccess, onCancel }: CustomerFormProp
   const onSubmit = async (data: CustomerFormData) => {
     setIsLoading(true);
     try {
+      if (!user?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
+
       const url = customer?.id ? `/api/customers/${customer.id}` : '/api/customers';
       const method = customer?.id ? 'PUT' : 'POST';
 
@@ -56,6 +62,7 @@ export function CustomerForm({ customer, onSuccess, onCancel }: CustomerFormProp
         method,
         headers: {
           'Content-Type': 'application/json',
+          'x-user-id': user.id
         },
         body: JSON.stringify(data),
       });

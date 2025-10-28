@@ -20,12 +20,14 @@ import { toast } from 'sonner';
 import { useState, useEffect } from 'react';
 import { Plus, Trash2, Users } from 'lucide-react';
 import { logger } from '@/lib/utils/logger';
+import { useAuthStore } from '@/stores/auth-store';
 
 interface Props {
   onSuccess: () => void;
 }
 
 export function OrderForm({ onSuccess }: Props) {
+  const { user } = useAuthStore();
   const [finishedProducts, setFinishedProducts] = useState<any[]>([]);
   const [operators, setOperators] = useState<any[]>([]);
   const [customers, setCustomers] = useState<any[]>([]);
@@ -112,9 +114,16 @@ export function OrderForm({ onSuccess }: Props) {
     try {
       logger.log('📦 API\'ye gönderilecek data:', data);
 
+      if (!user?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
+
       const response = await fetch('/api/orders', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-user-id': user.id
+        },
         body: JSON.stringify(data),
       });
 

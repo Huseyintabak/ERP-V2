@@ -51,8 +51,15 @@ export default function NihaiUrunlerPage() {
     if (!confirm('Bu nihai ürünü silmek istediğinize emin misiniz?')) return;
 
     try {
+      if (!user?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
+
       const response = await fetch(`/api/stock/finished/${id}`, {
         method: 'DELETE',
+        headers: {
+          'x-user-id': user.id
+        }
       });
 
       if (!response.ok) {
@@ -70,6 +77,10 @@ export default function NihaiUrunlerPage() {
   const handleFormSubmit = async (data: FinishedProductFormData) => {
     setIsSaving(true);
     try {
+      if (!user?.id) {
+        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+      }
+
       const url = editingProduct
         ? `/api/stock/finished/${editingProduct.id}`
         : '/api/stock/finished';
@@ -78,7 +89,10 @@ export default function NihaiUrunlerPage() {
 
       const response = await fetch(url, {
         method,
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-user-id': user.id
+        },
         body: JSON.stringify(data),
       });
 
