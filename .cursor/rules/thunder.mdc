@@ -1,0 +1,153 @@
+---
+alwaysApply: true
+---
+
+# 🚀 Thunder ERP - Canlı Ortam Geliştirme Kuralları
+
+**⚠️ KRİTİK UYARI: Bu proje artık CANLI ORTAMDA çalışıyor!**
+
+## 🛡️ TEMEL GÜVENLİK KURALLARI
+
+### 1. **VERİ KORUMA** 🔒
+```bash
+❌ ASLA YAPMA:
+- Canlı veriyi silme
+- Mevcut tabloları DROP etme
+- Kritik verileri güncelleme
+- Bulk DELETE işlemleri
+
+✅ GÜVENLİ YAKLAŞIM:
+- Soft delete kullan
+- Backup al
+- Test ortamında dene
+- Rollback planı hazırla
+```
+
+### 2. **DATABASE DEĞİŞİKLİKLERİ** 🗄️
+```sql
+❌ TEHLİKELİ:
+DROP TABLE users;
+ALTER TABLE orders DROP COLUMN customer_id;
+DELETE FROM stock_movements;
+
+✅ GÜVENLİ:
+-- Migration ile yeni kolon ekle
+ALTER TABLE orders ADD COLUMN new_field VARCHAR(255) DEFAULT '';
+-- Soft delete
+UPDATE orders SET is_deleted = true WHERE id = ?;
+-- Backup ile güncelleme
+UPDATE stock_movements SET status = 'archived' WHERE created_at < ?;
+```
+
+### 3. **API DEĞİŞİKLİKLERİ** 🔌
+```typescript
+❌ BREAKING CHANGES:
+// Mevcut endpoint'i değiştirme
+GET /api/orders → POST /api/orders
+
+✅ BACKWARD COMPATIBILITY:
+// Yeni versiyon ekle
+GET /api/v2/orders
+// Mevcut endpoint'i koru
+GET /api/orders (deprecated)
+```
+
+## 📊 CANLI VERİ KORUMA LİSTESİ
+
+### **Kritik Tablolar** ⚠️
+```sql
+-- ASLA SİLME/GÜNCELLEME YAPMA:
+users                    -- Kullanıcı hesapları
+customers               -- Müşteri verileri
+orders                  -- Sipariş geçmişi
+order_items             -- Sipariş kalemleri
+raw_materials           -- Hammadde stokları
+semi_finished_products  -- Yarı mamul stokları
+finished_products       -- Nihai ürün stokları
+stock_movements         -- Stok hareketleri
+audit_logs              -- Audit kayıtları
+price_history           -- Fiyat geçmişi
+zone_inventories        -- Depo zone stokları
+```
+
+### **Güvenli İşlemler** ✅
+```sql
+-- Bu işlemler güvenli:
+INSERT INTO new_table...     -- Yeni kayıt ekleme
+UPDATE status = 'active'     -- Status güncelleme
+SELECT ...                   -- Veri okuma
+CREATE INDEX ...             -- Index ekleme
+```
+
+## 🔍 CODE REVIEW CHECKLIST
+
+### **Her PR'da Kontrol Et** ✅
+- [ ] **Breaking Change:** Mevcut API'ler bozuldu mu?
+- [ ] **Data Safety:** Canlı veri etkileniyor mu?
+- [ ] **Error Handling:** Hata durumları handle ediliyor mu?
+- [ ] **Logging:** Önemli işlemler loglanıyor mu?
+- [ ] **Performance:** Query'ler optimize mi?
+- [ ] **Security:** SQL injection koruması var mı?
+- [ ] **Rollback:** Geri alma planı hazır mı?
+- [ ] **Testing:** Test coverage yeterli mi?
+
+### **Red Flags** 🚩
+```typescript
+// Bu pattern'ları ASLA kullanma:
+DELETE FROM users;                    // Bulk delete
+DROP TABLE orders;                   // Table drop
+ALTER TABLE DROP COLUMN;             // Column drop
+UPDATE * SET field = value;          // Bulk update
+eval(userInput);                     // Code injection
+```
+
+## 🚨 ACİL DURUM PROSEDÜRÜ
+
+### **Sistem Çöktüğünde** 💥
+```bash
+# 1. Hızlı rollback
+git revert <commit-hash>
+npm run deploy:rollback
+
+# 2. Database restore
+psql thunder_erp < backup_latest.sql
+
+# 3. Servisleri yeniden başlat
+pm2 restart all
+
+# 4. Monitor et
+pm2 logs
+```
+
+## ⚡ HIZLI REFERANS
+
+### **Güvenli Komutlar** ✅
+```bash
+# Backup
+pg_dump thunder_erp > backup.sql
+
+# Migration
+npx supabase migration up
+
+# Deploy
+npm run build && npm run deploy
+
+# Rollback
+git revert HEAD && npm run deploy
+```
+
+### **Tehlikeli Komutlar** ❌
+```bash
+# ASLA ÇALIŞTIRMA:
+DROP DATABASE thunder_erp;
+rm -rf /var/www/thunder-erp;
+killall node;
+```
+
+## 🎯 HEDEF
+**Sıfır downtime, sıfır veri kaybı, maksimum güvenlik!**
+
+---
+
+**📅 Son Güncelleme:** 2025-01-27  
+**🔄 Versiyon:** 1.0.0 Production Ready
