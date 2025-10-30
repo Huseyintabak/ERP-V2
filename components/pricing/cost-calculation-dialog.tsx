@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -71,7 +71,20 @@ export function CostCalculationDialog({
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<CostCalculationResult | null>(null);
+  const [usdRate, setUsdRate] = useState<number | null>(null);
   const { user } = useAuthStore();
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const r = await fetch('/api/exchange/usd', { cache: 'no-store' });
+        if (r.ok) {
+          const d = await r.json();
+          if (d?.rate) setUsdRate(Number(d.rate));
+        }
+      } catch {}
+    })();
+  }, []);
 
   const handleCalculate = async () => {
     setLoading(true);
@@ -106,6 +119,17 @@ export function CostCalculationDialog({
     setOpen(isOpen);
     if (isOpen && !result) {
       handleCalculate();
+    }
+    if (isOpen && !usdRate) {
+      (async () => {
+        try {
+          const r = await fetch('/api/exchange/usd', { cache: 'no-store' });
+          if (r.ok) {
+            const d = await r.json();
+            if (d?.rate) setUsdRate(Number(d.rate));
+          }
+        } catch {}
+      })();
     }
   };
 
@@ -158,9 +182,16 @@ export function CostCalculationDialog({
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="bg-blue-50 rounded-lg p-4">
                 <p className="text-sm text-gray-600">Toplam Maliyet</p>
-                <p className="text-2xl font-bold text-blue-700">
-                  ₺{result.calculation.total_cost.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}
-                </p>
+                <div className="text-2xl font-bold text-blue-700 flex items-center gap-2">
+                  <span>
+                    ₺{result.calculation.total_cost.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}
+                  </span>
+                  {usdRate ? (
+                    <span className="text-base font-semibold text-gray-700">
+                      · ${ (result.calculation.total_cost / usdRate).toLocaleString('en-US', { minimumFractionDigits: 2 }) }
+                    </span>
+                  ) : null}
+                </div>
                 <p className="text-xs text-gray-500 mt-1">
                   {result.calculation.item_count} malzeme
                 </p>

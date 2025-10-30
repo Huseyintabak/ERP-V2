@@ -94,6 +94,7 @@ export default function BOMPage() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingBOM, setEditingBOM] = useState<BOMEntry | null>(null);
   const [showVisualTree, setShowVisualTree] = useState(true);
+  const [usdRate, setUsdRate] = useState<number | null>(null);
   const { user } = useAuthStore();
 
   // Yeni BOM entry form state - array olarak değiştir
@@ -111,6 +112,16 @@ export default function BOMPage() {
     fetchFinishedProducts();
     fetchRawMaterials();
     fetchSemiFinishedProducts();
+    // Fetch USD rate (TCMB via our API)
+    (async () => {
+      try {
+        const r = await fetch('/api/exchange/usd', { cache: 'no-store' });
+        if (r.ok) {
+          const d = await r.json();
+          if (d?.rate) setUsdRate(Number(d.rate));
+        }
+      } catch {}
+    })();
   }, []);
 
   // Nihai + Yarı mamulleri birleştir
@@ -857,16 +868,19 @@ export default function BOMPage() {
                     <div className="text-sm text-muted-foreground">
                       {product.code} • {product.unit}
                     </div>
-                  <div className="text-sm font-medium text-green-600">
-                    ₺{(() => {
-                      if (product.product_type === 'semi') {
-                        return (product.unit_cost || 0).toFixed(2);
-                      }
-                      // finished product: show cost_price if available
-                      const fp = product as unknown as FinishedProduct;
-                      return ((fp.cost_price ?? 0)).toFixed(2);
-                    })()}
-                  </div>
+                    <div className="text-sm font-medium text-green-600">
+                      {(() => {
+                        const tl = (() => {
+                          if (product.product_type === 'semi') return product.unit_cost || 0;
+                          const fp = product as unknown as FinishedProduct;
+                          return fp.cost_price ?? 0;
+                        })();
+                        const usd = usdRate ? (tl / usdRate) : null;
+                        return usd
+                          ? `₺${tl.toFixed(2)} · $${usd.toFixed(2)}`
+                          : `₺${tl.toFixed(2)}`;
+                      })()}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -959,12 +973,29 @@ export default function BOMPage() {
                 <div className="bg-muted/50 p-4 rounded-lg">
                   <div className="flex justify-between items-center">
                     <span className="font-medium">Toplam Maliyet:</span>
-                    <span className="text-lg font-bold text-green-600">
-                      ₺{bomData.materials.reduce((total, entry) => {
-                        const unitPrice = entry.material.unit_price || entry.material.unit_cost || 0;
-                        return total + (unitPrice * entry.quantity_needed);
-                      }, 0).toFixed(2)}
-                    </span>
+                    <div className="text-right">
+                      <div className="text-lg font-bold text-green-600">
+                        {(() => {
+                          const tl = bomData.materials.reduce((total, entry) => {
+                            const unitPrice = entry.material.unit_price || entry.material.unit_cost || 0;
+                            return total + (unitPrice * entry.quantity_needed);
+                          }, 0);
+                          return `₺${tl.toFixed(2)}`;
+                        })()}
+                      </div>
+                      {usdRate ? (
+                        <div className="text-xs text-muted-foreground">
+                          {(() => {
+                            const tl = bomData.materials.reduce((total, entry) => {
+                              const unitPrice = entry.material.unit_price || entry.material.unit_cost || 0;
+                              return total + (unitPrice * entry.quantity_needed);
+                            }, 0);
+                            const usd = tl / usdRate;
+                            return `$ ${usd.toFixed(2)} @ ${usdRate.toFixed(4)}`;
+                          })()}
+                        </div>
+                      ) : null}
+                    </div>
                   </div>
                 </div>
 
