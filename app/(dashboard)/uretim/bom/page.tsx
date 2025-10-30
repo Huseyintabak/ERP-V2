@@ -41,6 +41,7 @@ interface FinishedProduct {
   code: string;
   unit: string;
   sale_price: number;
+  cost_price?: number;
 }
 
 interface BOMEntry {
@@ -118,12 +119,10 @@ export default function BOMPage() {
       ...finishedProducts.map(p => ({
         ...p,
         product_type: 'finished' as const,
-        unit_cost: p.sale_price
       })),
       ...semiFinishedProducts.map(p => ({
         ...p,
         product_type: 'semi' as const,
-        sale_price: p.unit_cost
       }))
     ];
     setAllProducts(combined);
@@ -236,11 +235,12 @@ export default function BOMPage() {
       if (!user?.id) {
         throw new Error('Kullanıcı kimlik doğrulaması gerekli');
       }
-      const response = await fetch(`/api/bom/${productId}`, {
+      const response = await fetch(`/api/bom/${productId}?t=${Date.now()}`, {
         headers: {
           'Content-Type': 'application/json',
           'x-user-id': user.id
-        }
+        },
+        cache: 'no-store'
       });
       
       console.log('BOM API response:', response.status, response.ok);
@@ -857,9 +857,16 @@ export default function BOMPage() {
                     <div className="text-sm text-muted-foreground">
                       {product.code} • {product.unit}
                     </div>
-                    <div className="text-sm font-medium text-green-600">
-                      ₺{(product.sale_price || product.unit_cost || 0).toFixed(2)}
-                    </div>
+                  <div className="text-sm font-medium text-green-600">
+                    ₺{(() => {
+                      if (product.product_type === 'semi') {
+                        return (product.unit_cost || 0).toFixed(2);
+                      }
+                      // finished product: show cost_price if available
+                      const fp = product as unknown as FinishedProduct;
+                      return ((fp.cost_price ?? 0)).toFixed(2);
+                    })()}
+                  </div>
                   </div>
                 ))}
               </div>
@@ -1198,7 +1205,7 @@ export default function BOMPage() {
                 <Input
                   type="number"
                   min="0.01"
-                  step="0.01"
+                  step={editingBOM.material_type === 'raw' ? '0.001' : '0.01'}
                   defaultValue={editingBOM.quantity_needed}
                   id="edit-quantity"
                   placeholder="0.00"

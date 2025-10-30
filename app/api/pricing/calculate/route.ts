@@ -19,25 +19,8 @@ export async function POST(request: NextRequest) {
 
     const supabase = await createClient();
 
-    // calculate_bom_cost function'ını çağır
-    const { data: costData, error: costError } = await supabase
-      .rpc('calculate_bom_cost', { p_product_id: productId });
-
-    if (costError) throw costError;
-
-    if (!costData || costData.length === 0) {
-      return NextResponse.json({
-        productId,
-        total_cost: 0,
-        raw_material_cost: 0,
-        semi_finished_cost: 0,
-        item_count: 0,
-        breakdown: [],
-        message: 'Bu ürün için BOM bulunamadı'
-      });
-    }
-
-    const result = costData[0];
+    // Not: DB'deki calculate_bom_cost fonksiyonu bom_items tablosunu kullanıyor olabilir.
+    // Burada doğrudan bom/semi_bom üzerinden hesaplayacağız.
 
     // Ürün bilgilerini al (önce finished, sonra semi)
     let product: any = null;
@@ -70,14 +53,108 @@ export async function POST(request: NextRequest) {
       productType = 'semi';
     }
 
-    // Kar marjı hesapla
-    const totalCost = parseFloat(result.total_cost || '0');
+    // BOM maliyeti hesapla (finished => bom, semi => semi_bom)
+    let rawMaterialCost = 0;
+    let semiFinishedCost = 0;
+    let totalCost = 0;
+    let itemCount = 0;
+    let breakdown: any[] = [];
+
+    if (productType === 'semi') {
+      // semi_bom üzerinden hesap
+      const { data: rows, error } = await supabase
+        .from('semi_bom')
+        .select('material_type, material_id, quantity, unit')
+        .eq('semi_product_id', productId);
+
+      if (error) throw error;
+
+      itemCount = rows?.length || 0;
+
+      for (const r of rows || []) {
+        if (r.material_type === 'raw') {
+          const { data: rm } = await supabase
+            .from('raw_materials')
+            .select('id, code, name, unit, unit_price')
+            .eq('id', r.material_id)
+            .single();
+          const unitCost = Number(rm?.unit_price || 0);
+          const lineCost = Number(r.quantity || 0) * unitCost;
+          rawMaterialCost += lineCost;
+          breakdown.push({
+            type: 'raw', id: rm?.id, code: rm?.code, name: rm?.name,
+            quantity: Number(r.quantity || 0), unit: rm?.unit || r.unit || 'adet',
+            unit_cost: unitCost, total_cost: lineCost,
+          });
+        } else if (r.material_type === 'semi') {
+          const { data: sp } = await supabase
+            .from('semi_finished_products')
+            .select('id, code, name, unit, unit_cost')
+            .eq('id', r.material_id)
+            .single();
+          const unitCost = Number(sp?.unit_cost || 0);
+          const lineCost = Number(r.quantity || 0) * unitCost;
+          semiFinishedCost += lineCost;
+          breakdown.push({
+            type: 'semi', id: sp?.id, code: sp?.code, name: sp?.name,
+            quantity: Number(r.quantity || 0), unit: sp?.unit || r.unit || 'adet',
+            unit_cost: unitCost, total_cost: lineCost,
+          });
+        }
+      }
+    } else {
+      // finished products: bom üzerinden hesap
+      const { data: rows, error } = await supabase
+        .from('bom')
+        .select('material_type, material_id, quantity_needed')
+        .eq('finished_product_id', productId);
+
+      if (error) throw error;
+
+      itemCount = rows?.length || 0;
+
+      for (const r of rows || []) {
+        if (r.material_type === 'raw') {
+          const { data: rm } = await supabase
+            .from('raw_materials')
+            .select('id, code, name, unit, unit_price')
+            .eq('id', r.material_id)
+            .single();
+          const unitCost = Number(rm?.unit_price || 0);
+          const qty = Number(r.quantity_needed || 0);
+          const lineCost = qty * unitCost;
+          rawMaterialCost += lineCost;
+          breakdown.push({
+            type: 'raw', id: rm?.id, code: rm?.code, name: rm?.name,
+            quantity: qty, unit: rm?.unit || 'adet', unit_cost: unitCost, total_cost: lineCost,
+          });
+        } else if (r.material_type === 'semi') {
+          const { data: sp } = await supabase
+            .from('semi_finished_products')
+            .select('id, code, name, unit, unit_cost')
+            .eq('id', r.material_id)
+            .single();
+          const unitCost = Number(sp?.unit_cost || 0);
+          const qty = Number(r.quantity_needed || 0);
+          const lineCost = qty * unitCost;
+          semiFinishedCost += lineCost;
+          breakdown.push({
+            type: 'semi', id: sp?.id, code: sp?.code, name: sp?.name,
+            quantity: qty, unit: sp?.unit || 'adet', unit_cost: unitCost, total_cost: lineCost,
+          });
+        }
+      }
+    }
+
+    totalCost = rawMaterialCost + semiFinishedCost;
+
+    // Kar marjı hesapla (bilgi amaçlı)
     const salePrice = parseFloat(product.sale_price || '0');
     const profitAmount = salePrice - totalCost;
     const profitPercentage = totalCost > 0 ? (profitAmount / totalCost) * 100 : 0;
 
     // BOM cost breakdown'ı kaydet
-    if (result.breakdown && result.breakdown.length > 0) {
+    if (breakdown && breakdown.length > 0) {
       // Önce eski kayıtları pasif yap
       await supabase
         .from('bom_cost_breakdown')
@@ -85,7 +162,7 @@ export async function POST(request: NextRequest) {
         .eq('product_id', productId);
 
       // Yeni kayıtları ekle
-      const breakdownRecords = result.breakdown.map((item: any) => ({
+      const breakdownRecords = breakdown.map((item: any) => ({
         product_id: productId,
         material_type: item.type,
         material_id: item.id,
@@ -106,7 +183,7 @@ export async function POST(request: NextRequest) {
       await supabase
         .from('finished_products')
         .update({ 
-          sale_price: totalCost,
+          cost_price: totalCost,
           updated_at: new Date().toISOString()
         })
         .eq('id', productId);
@@ -132,10 +209,10 @@ export async function POST(request: NextRequest) {
       },
       calculation: {
         total_cost: totalCost,
-        raw_material_cost: parseFloat(result.raw_material_cost || '0'),
-        semi_finished_cost: parseFloat(result.semi_finished_cost || '0'),
-        item_count: result.item_count || 0,
-        breakdown: result.breakdown || []
+        raw_material_cost: rawMaterialCost,
+        semi_finished_cost: semiFinishedCost,
+        item_count: itemCount,
+        breakdown
       },
       profitability: {
         profit_amount: profitAmount,

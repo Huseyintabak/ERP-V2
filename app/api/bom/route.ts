@@ -191,9 +191,19 @@ export async function PUT(request: NextRequest) {
       updateError = error;
     } else {
       // Yarımmamül BOM'u
+      const { data: semiRecord } = await supabase
+        .from('semi_bom')
+        .select('id')
+        .eq('id', bomId)
+        .single();
+
+      if (!semiRecord) {
+        return NextResponse.json({ error: 'BOM item not found' }, { status: 404 });
+      }
+
       const { data, error } = await supabase
         .from('semi_bom')
-        .update({ quantity })
+        .update({ quantity: quantity_needed })
         .eq('id', bomId)
         .select()
         .single();

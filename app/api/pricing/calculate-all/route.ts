@@ -23,7 +23,74 @@ export async function POST(request: NextRequest) {
 
     const supabase = await createClient();
 
-    // Get all unique product IDs from BOM
+    // 1) ÖNCE YARI MAMULLERİ HESAPLA (semi_bom -> semi_finished_products.unit_cost)
+    const { data: semiBomProducts, error: semiBomError } = await supabase
+      .from('semi_bom')
+      .select('semi_product_id');
+
+    if (semiBomError) throw semiBomError;
+
+    const uniqueSemiIds = [...new Set((semiBomProducts || []).map(b => b.semi_product_id))];
+
+    logger.log(`🔄 Yarı mamul maliyet hesaplama: ${uniqueSemiIds.length} ürün`);
+
+    const results = {
+      total: 0,
+      success: 0,
+      failed: 0,
+      errors: [] as string[]
+    };
+
+    for (const semiId of uniqueSemiIds) {
+      try {
+        // Directly compute from semi_bom
+        const { data: rows, error } = await supabase
+          .from('semi_bom')
+          .select('material_type, material_id, quantity')
+          .eq('semi_product_id', semiId);
+
+        if (error) throw error;
+
+        let totalCost = 0;
+        for (const r of rows || []) {
+          if (r.material_type === 'raw') {
+            const { data: rm } = await supabase
+              .from('raw_materials')
+              .select('unit_price')
+              .eq('id', r.material_id)
+              .single();
+            totalCost += Number(r.quantity || 0) * Number(rm?.unit_price || 0);
+          } else if (r.material_type === 'semi') {
+            const { data: sp } = await supabase
+              .from('semi_finished_products')
+              .select('unit_cost')
+              .eq('id', r.material_id)
+              .single();
+            totalCost += Number(r.quantity || 0) * Number(sp?.unit_cost || 0);
+          }
+        }
+
+        const { error: updateError } = await supabase
+          .from('semi_finished_products')
+          .update({ unit_cost: totalCost })
+          .eq('id', semiId);
+
+        if (updateError) {
+          logger.error(`❌ Semi update failed ${semiId}:`, updateError.message);
+          results.failed++;
+          results.errors.push(`${semiId}: ${updateError.message}`);
+        } else {
+          logger.log(`✅ Semi updated ${semiId}: ₺${totalCost}`);
+          results.success++;
+        }
+      } catch (error: any) {
+        logger.error(`❌ Semi error ${semiId}:`, error.message);
+        results.failed++;
+        results.errors.push(`${semiId}: ${error.message}`);
+      }
+    }
+
+    // 2) SONRA NİHAİ ÜRÜNLERİ HESAPLA (bom -> finished_products.cost_price)
     const { data: bomProducts, error: bomError } = await supabase
       .from('bom')
       .select('finished_product_id')
@@ -31,28 +98,11 @@ export async function POST(request: NextRequest) {
 
     if (bomError) throw bomError;
 
-    if (!bomProducts || bomProducts.length === 0) {
-      return NextResponse.json({
-        success: true,
-        message: 'Hiç BOM kaydı bulunamadı',
-        stats: { total: 0, success: 0, failed: 0 }
-      });
-    }
+    const uniqueFinishedIds = [...new Set((bomProducts || []).map(b => b.finished_product_id))];
+    logger.log(`🔄 Nihai ürün maliyet hesaplama: ${uniqueFinishedIds.length} ürün`);
+    results.total = uniqueSemiIds.length + uniqueFinishedIds.length;
 
-    // Get unique product IDs
-    const uniqueProductIds = [...new Set(bomProducts.map(b => b.finished_product_id))];
-    
-    logger.log(`🔄 Toplu maliyet hesaplama başlatılıyor: ${uniqueProductIds.length} ürün`);
-
-    const results = {
-      total: uniqueProductIds.length,
-      success: 0,
-      failed: 0,
-      errors: [] as string[]
-    };
-
-    // Calculate cost for each product
-    for (const productId of uniqueProductIds) {
+    for (const productId of uniqueFinishedIds) {
       try {
         // Call calculate_bom_cost function
         const { data: costData, error: costError } = await supabase
@@ -83,11 +133,11 @@ export async function POST(request: NextRequest) {
           .single();
 
         if (finishedProduct) {
-          // Update finished product cost (sale_price = maliyet)
+          // Update finished product cost to cost_price (not sale_price)
           const { error: updateError } = await supabase
             .from('finished_products')
             .update({ 
-              sale_price: totalCost,
+              cost_price: totalCost,
               updated_at: new Date().toISOString()
             })
             .eq('id', productId);
@@ -97,7 +147,7 @@ export async function POST(request: NextRequest) {
             results.failed++;
             results.errors.push(`${finishedProduct.code}: ${updateError.message}`);
           } else {
-            logger.log(`✅ Finished product ${finishedProduct.code}: ₺${totalCost}`);
+            logger.log(`✅ Finished product ${finishedProduct.code} cost_price: ₺${totalCost}`);
             results.success++;
           }
         } else {
