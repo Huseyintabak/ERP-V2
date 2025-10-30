@@ -179,40 +179,28 @@ export async function GET(request: NextRequest) {
 
     // Get production log IDs to track consumption by plan
     const productionLogIds = plans.map(p => p.id);
-    
-    // Get consumption data from stock_movements linked to production logs
-    const { data: stockMovements } = await supabase
-      .from('stock_movements')
-      .select('material_id, material_type, quantity, production_log_id')
-      .in('movement_type', ['uretim'])
-      .not('production_log_id', 'is', null);
-    
-    // Get production logs to map consumption to plans
-    const { data: productionLogs } = await supabase
+
+    // Compute produced quantities per plan directly from production_logs
+    const { data: logsForProduced } = await supabase
       .from('production_logs')
-      .select('id, plan_id')
+      .select('plan_id, quantity_produced')
       .in('plan_id', productionLogIds);
 
-    // Create a map: plan_id -> material_id -> consumed quantity
+    const producedByPlan = new Map();
+    for (const lg of (logsForProduced || [])) {
+      producedByPlan.set(
+        lg.plan_id,
+        (producedByPlan.get(lg.plan_id) || 0) + parseFloat(lg.quantity_produced || '0')
+      );
+    }
+
+    // Create a map: plan_id -> material_id -> consumed quantity using BOM snapshot × produced
     const planConsumptionMap = new Map();
-    
-    if (stockMovements && productionLogs) {
-      const logToPlanMap = new Map(productionLogs.map(log => [log.id, log.plan_id]));
-      
-      for (const movement of stockMovements) {
-        if (movement.production_log_id) {
-          const planId = logToPlanMap.get(movement.production_log_id);
-          if (planId) {
-            const key = `${planId}-${movement.material_type}-${movement.material_id}`;
-            const consumed = Math.abs(parseFloat(movement.quantity));
-            if (planConsumptionMap.has(key)) {
-              planConsumptionMap.set(key, planConsumptionMap.get(key) + consumed);
-            } else {
-              planConsumptionMap.set(key, consumed);
-            }
-          }
-        }
-      }
+    for (const s of bomSnapshots) {
+      const produced = producedByPlan.get(s.plan_id) || 0;
+      const consumed = produced * parseFloat(s.quantity_needed || '0');
+      const key = `${s.plan_id}-${s.material_type}-${s.material_id}`;
+      planConsumptionMap.set(key, (planConsumptionMap.get(key) || 0) + consumed);
     }
 
     const reservationsMap = new Map();
@@ -230,6 +218,7 @@ export async function GET(request: NextRequest) {
       if (reservationsMap.has(key)) {
         const existing = reservationsMap.get(key);
         existing.reserved_quantity += parseFloat(snapshot.quantity_needed);
+        existing.consumed_quantity += consumedQuantity;
       } else {
         reservationsMap.set(key, {
           id: `${snapshot.plan_id}-${snapshot.material_id}`,
@@ -249,7 +238,13 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const reservations = Array.from(reservationsMap.values());
+    // Clamp over-consumption to reserved quantity
+    const reservations = Array.from(reservationsMap.values()).map((r: any) => {
+      if (r.consumed_quantity > r.reserved_quantity) {
+        r.consumed_quantity = r.reserved_quantity;
+      }
+      return r;
+    });
 
     // Filter by order_id if provided
     let filteredReservations = reservations;
