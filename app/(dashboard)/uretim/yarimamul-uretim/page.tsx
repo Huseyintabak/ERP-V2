@@ -14,6 +14,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Plus, Factory, Package, Users, Clock, CheckCircle, AlertCircle, Edit, Trash2, Check, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatDate } from '@/lib/utils';
+import { useAuthStore } from '@/stores/auth-store';
 
 interface SemiFinishedProduct {
   id: string;
@@ -54,6 +55,7 @@ interface Operator {
 }
 
 export default function YariMamulUretimPage() {
+  const { user } = useAuthStore();
   const [semiProducts, setSemiProducts] = useState<SemiFinishedProduct[]>([]);
   const [productionOrders, setProductionOrders] = useState<SemiProductionOrder[]>([]);
   const [operators, setOperators] = useState<Operator[]>([]);

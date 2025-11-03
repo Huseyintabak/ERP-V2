@@ -10,9 +10,9 @@ const rawMaterialImportSchema = z.object({
   code: z.string().min(1),
   name: z.string().min(1),
   barcode: z.string().optional(),
-  quantity: z.number().min(0),
-  unit: z.string().min(1),
-  unit_price: z.number().min(0),
+  quantity: z.number().min(0).optional(),
+  unit: z.string().min(1).optional(),
+  unit_price: z.number().min(0).optional(),
   description: z.string().optional(),
 });
 
@@ -21,9 +21,9 @@ const semiFinishedImportSchema = z.object({
   code: z.string().min(1),
   name: z.string().min(1),
   barcode: z.string().optional(),
-  quantity: z.number().min(0),
-  unit: z.string().min(1),
-  unit_cost: z.number().min(0),
+  quantity: z.number().min(0).optional(),
+  unit: z.string().min(1).optional(),
+  unit_cost: z.number().min(0).optional(),
   description: z.string().optional(),
 });
 
@@ -32,9 +32,9 @@ const finishedProductImportSchema = z.object({
   code: z.string().min(1),
   name: z.string().min(1),
   barcode: z.string().optional(),
-  quantity: z.number().min(0),
-  unit: z.string().min(1),
-  sale_price: z.number().min(0),
+  quantity: z.number().min(0).optional(),
+  unit: z.string().min(1).optional(),
+  sale_price: z.number().min(0).optional(),
   description: z.string().optional(),
 });
 
@@ -83,6 +83,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No data found in file' }, { status: 400 });
     }
 
+    // Log first row to see what columns exist
+    if (data.length > 0) {
+      logger.log('Excel columns detected:', Object.keys(data[0]));
+      logger.log('First row sample:', data[0]);
+    }
+
     // Validate and process data based on type
     let schema;
     let tableName;
@@ -115,15 +121,49 @@ export async function POST(request: NextRequest) {
       const rowNumber = i + 2; // +2 because Excel starts from 1 and we skip header
 
       try {
+        // Log row data for debugging
+        if (i === 0) {
+          logger.log('Processing first row:', row);
+          logger.log('Available fields in row:', Object.keys(row));
+        }
+        
         // Convert types for Excel data
-        const processedRow = {
-          ...row,
-          barcode: row.barcode ? String(row.barcode) : undefined,
-          quantity: Number(row.quantity),
-          unit_price: Number(row.unit_price),
-          unit_cost: Number(row.unit_cost),
-          sale_price: Number(row.sale_price),
+        const processedRow: any = {
+          code: String(row.code),
+          name: String(row.name),
         };
+        
+        // Optional fields
+        if (row.barcode) processedRow.barcode = String(row.barcode);
+        if (row.quantity !== undefined && row.quantity !== null && row.quantity !== '') {
+          processedRow.quantity = Number(row.quantity);
+        }
+        if (row.unit) processedRow.unit = String(row.unit);
+        if (row.description) processedRow.description = String(row.description);
+        
+        // Price fields (only process the price field for the selected type)
+        // Try different possible column names
+        if (type === 'raw') {
+          const priceValue = row.unit_price ?? row['Unit Price'] ?? row['Birim Fiyat'] ?? row['unit price'];
+          if (priceValue !== undefined && priceValue !== null && priceValue !== '') {
+            processedRow.unit_price = Number(priceValue);
+            logger.log(`Row ${rowNumber}: Found raw material price:`, priceValue);
+          }
+        }
+        if (type === 'semi') {
+          const costValue = row.unit_cost ?? row['Unit Cost'] ?? row['Birim Maliyet'] ?? row['unit cost'];
+          if (costValue !== undefined && costValue !== null && costValue !== '') {
+            processedRow.unit_cost = Number(costValue);
+            logger.log(`Row ${rowNumber}: Found semi-finished cost:`, costValue);
+          }
+        }
+        if (type === 'finished') {
+          const saleValue = row.sale_price ?? row['Sale Price'] ?? row['Satış Fiyatı'] ?? row['sale price'];
+          if (saleValue !== undefined && saleValue !== null && saleValue !== '') {
+            processedRow.sale_price = Number(saleValue);
+            logger.log(`Row ${rowNumber}: Found finished product price:`, saleValue);
+          }
+        }
 
         // Validate row data
         const validatedData = schema.parse(processedRow);
@@ -131,34 +171,84 @@ export async function POST(request: NextRequest) {
         // Check if code already exists
         const { data: existing } = await supabase
           .from(tableName)
-          .select('id')
+          .select('id, quantity')
           .eq('code', validatedData.code)
           .single();
 
         if (existing) {
-          results.errors++;
-          results.errorDetails.push({
-            row: rowNumber,
-            code: validatedData.code,
-            error: 'Bu kod zaten mevcut',
-          });
-          continue;
-        }
+          // Update existing record - only update price fields based on type
+          let updateData: any = {};
+          
+          if (type === 'raw' && validatedData.unit_price !== undefined) {
+            // For raw materials, update unit_price
+            updateData.unit_price = validatedData.unit_price;
+            logger.log(`Row ${rowNumber}: Updating raw material ${validatedData.code} with price:`, validatedData.unit_price);
+          } else if (type === 'semi' && validatedData.unit_cost !== undefined) {
+            // For semi-finished, update unit_cost
+            updateData.unit_cost = validatedData.unit_cost;
+            logger.log(`Row ${rowNumber}: Updating semi-finished ${validatedData.code} with cost:`, validatedData.unit_cost);
+          } else if (type === 'finished' && validatedData.sale_price !== undefined) {
+            // For finished products, update sale_price
+            updateData.sale_price = validatedData.sale_price;
+            logger.log(`Row ${rowNumber}: Updating finished product ${validatedData.code} with price:`, validatedData.sale_price);
+          }
+          
+          // Only update if there's data to update
+          if (Object.keys(updateData).length === 0) {
+            logger.log(`Row ${rowNumber}: No price data found for ${validatedData.code}`);
+            results.errors++;
+            results.errorDetails.push({
+              row: rowNumber,
+              code: validatedData.code,
+              error: 'Fiyat alanı bulunamadı',
+            });
+            continue;
+          }
+          
+          logger.log(`Row ${rowNumber}: Updating ${validatedData.code} with data:`, updateData);
+          const { error } = await supabase
+            .from(tableName)
+            .update(updateData)
+            .eq('code', validatedData.code);
+          
+          if (!error) {
+            logger.log(`Row ${rowNumber}: Successfully updated ${validatedData.code}`);
+          } else {
+            logger.log(`Row ${rowNumber}: Error updating ${validatedData.code}:`, error.message);
+          }
 
-        // Insert new record
-        const { error } = await supabase
-          .from(tableName)
-          .insert([validatedData]);
-
-        if (error) {
-          results.errors++;
-          results.errorDetails.push({
-            row: rowNumber,
-            code: validatedData.code,
-            error: error.message,
-          });
+          if (error) {
+            results.errors++;
+            results.errorDetails.push({
+              row: rowNumber,
+              code: validatedData.code,
+              error: error.message,
+            });
+          } else {
+            results.success++;
+          }
         } else {
-          results.success++;
+          // Insert new record - add required default values
+          const insertData = {
+            ...validatedData,
+            quantity: validatedData.quantity ?? 0,
+            unit: validatedData.unit ?? 'adet',
+          };
+          
+          const { error } = await supabase
+            .from(tableName)
+            .insert([insertData]);
+
+          if (error) {
+            results.errors++;
+            results.errorDetails.push({
+              row: rowNumber,
+              code: validatedData.code,
+              error: error.message,
+            });
+          } else {
+            results.success++;
+          }
         }
       } catch (error: unknown) {
         results.errors++;
