@@ -374,7 +374,7 @@ export function TaskDetailPanel({ task, onRefresh }: TaskDetailPanelProps) {
         },
         body: JSON.stringify({
           order_id: task.order_id || task.id,
-          order_type: task.task_type === 'semi_production' ? 'semi_production_plan' : 'production_plan',
+          order_type: task.task_type === 'semi_production' ? 'semi_production_order' : 'production_plan',
           materials
         }),
       });

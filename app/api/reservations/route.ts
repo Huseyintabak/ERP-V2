@@ -133,6 +133,154 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const order_id = searchParams.get('order_id');
+    const orderTypeParam = searchParams.get('order_type');
+
+    let isSemiOrder = orderTypeParam === 'semi_production_order';
+    let semiOrders: any[] | null = null;
+
+    if (!isSemiOrder && order_id) {
+      const { data: semiOrder } = await supabase
+        .from('semi_production_orders')
+        .select(`
+          id,
+          order_number,
+          planned_quantity,
+          status,
+          created_at,
+          product:semi_finished_products(id, name, code)
+        `)
+        .eq('id', order_id)
+        .maybeSingle();
+
+      if (semiOrder) {
+        isSemiOrder = true;
+        semiOrders = [semiOrder];
+      }
+    }
+
+    if (isSemiOrder) {
+      const reservationQuery = supabase
+        .from('material_reservations')
+        .select('*')
+        .eq('order_type', 'semi_production_order');
+
+      if (order_id) {
+        reservationQuery.eq('order_id', order_id);
+      }
+
+      const { data: reservations, error: reservationError } = await reservationQuery;
+
+      if (reservationError) {
+        logger.error('Error fetching semi production reservations:', reservationError);
+        return NextResponse.json({ data: [] });
+      }
+
+      if (!reservations || reservations.length === 0) {
+        return NextResponse.json({ data: [] });
+      }
+
+      const orderIds = [...new Set(reservations.map((r: any) => r.order_id))];
+
+      if (!semiOrders) {
+        if (orderIds.length > 0) {
+          const { data: orderRows, error: orderError } = await supabase
+            .from('semi_production_orders')
+            .select(`
+              id,
+              order_number,
+              planned_quantity,
+              status,
+              created_at,
+              product:semi_finished_products(id, name, code)
+            `)
+            .in('id', orderIds);
+
+          if (orderError) {
+            logger.error('Error fetching semi production orders for reservations:', orderError);
+          }
+
+          semiOrders = orderRows || [];
+        } else {
+          semiOrders = [];
+        }
+      }
+
+      const orderMap = new Map<string, any>();
+      (semiOrders || []).forEach((order) => {
+        if (!order) return;
+        orderMap.set(order.id, order);
+      });
+
+      const rawIds = Array.from(new Set(
+        reservations
+          .filter((r: any) => r.material_type === 'raw')
+          .map((r: any) => r.material_id)
+      ));
+      const semiIds = Array.from(new Set(
+        reservations
+          .filter((r: any) => r.material_type === 'semi')
+          .map((r: any) => r.material_id)
+      ));
+
+      const { data: rawMaterials } = rawIds.length
+        ? await supabase
+            .from('raw_materials')
+            .select('id, name, code, unit')
+            .in('id', rawIds)
+        : { data: [] };
+
+      const { data: semiMaterials } = semiIds.length
+        ? await supabase
+            .from('semi_finished_products')
+            .select('id, name, code, unit')
+            .in('id', semiIds)
+        : { data: [] };
+
+      const rawMap = new Map<string, any>();
+      (rawMaterials || []).forEach((material: any) => {
+        rawMap.set(material.id, material);
+      });
+
+      const semiMap = new Map<string, any>();
+      (semiMaterials || []).forEach((material: any) => {
+        semiMap.set(material.id, material);
+      });
+
+      const formattedReservations = reservations.map((reservation: any) => {
+        const reservedQuantity = Number(reservation.reserved_quantity || 0);
+        const consumedQuantity = Number(reservation.consumed_quantity || 0);
+        const clampedConsumed = Math.min(consumedQuantity, reservedQuantity);
+
+        const materialInfo = reservation.material_type === 'raw'
+          ? rawMap.get(reservation.material_id)
+          : semiMap.get(reservation.material_id);
+
+        const orderInfo = orderMap.get(reservation.order_id);
+
+        return {
+          id: reservation.id,
+          order_id: reservation.order_id,
+          order_type: reservation.order_type,
+          material_id: reservation.material_id,
+          material_type: reservation.material_type,
+          reserved_quantity: reservedQuantity,
+          consumed_quantity: clampedConsumed,
+          status: reservation.status,
+          created_at: reservation.created_at,
+          material_name: materialInfo?.name || null,
+          material_code: materialInfo?.code || null,
+          unit: materialInfo?.unit || 'adet',
+          order_info: orderInfo
+            ? {
+                order_number: orderInfo.order_number,
+                customer_name: orderInfo.product?.name || 'İç Üretim'
+              }
+            : undefined
+        };
+      });
+
+      return NextResponse.json({ data: formattedReservations });
+    }
 
     // Get reservations from BOM snapshots to see which materials are reserved for which orders
     // First get all BOM snapshots
