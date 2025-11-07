@@ -111,6 +111,24 @@ interface SemiProductionTask {
   };
 }
 
+const mapSemiProductionTask = (task: any) => {
+  const deliveryDate = task?.completed_at ?? task?.started_at ?? task?.created_at ?? null;
+
+  return {
+    ...task,
+    task_type: 'semi_production' as const,
+    order_id: task.id,
+    order_number: task.order_number,
+    order: {
+      id: task.id,
+      order_number: task.order_number,
+      customer_name: 'İç Üretim (Yarı Mamul)',
+      delivery_date: deliveryDate,
+      priority: task.priority || 'orta',
+    },
+  };
+};
+
 export default function OperatorDashboardClient() {
   const { user } = useAuthStore();
   const operatorId = user?.id;
@@ -228,12 +246,7 @@ export default function OperatorDashboardClient() {
       }));
 
       // Yarı mamul üretim siparişlerini işle
-      const semiTasks = (semiData.data || []).map((task: any) => ({
-        ...task,
-        task_type: 'semi_production' as const,
-        order_id: task.id, // Yarı mamul için order_id'yi id ile eşle
-        order_number: task.order_number
-      }));
+      const semiTasks = (semiData.data || []).map(mapSemiProductionTask);
 
       // Birleştir ve sırala
       const allTasks = [...productionTasks, ...semiTasks].sort((a, b) => 
@@ -274,12 +287,7 @@ export default function OperatorDashboardClient() {
       }));
 
       // Yarı mamul üretim siparişlerini işle
-      const semiTasks = (semiData.data || []).map((task: any) => ({
-        ...task,
-        task_type: 'semi_production' as const,
-        order_id: task.id, // Yarı mamul için order_id'yi id ile eşle
-        order_number: task.order_number
-      }));
+      const semiTasks = (semiData.data || []).map(mapSemiProductionTask);
 
       // Birleştir ve sırala
       const allTasks = [...productionTasks, ...semiTasks].sort((a, b) => 
@@ -320,12 +328,7 @@ export default function OperatorDashboardClient() {
       }));
 
       // Yarı mamul üretim siparişlerini işle
-      const semiTasks = (semiData.data || []).map((task: any) => ({
-        ...task,
-        task_type: 'semi_production' as const,
-        order_id: task.id, // Yarı mamul için order_id'yi id ile eşle
-        order_number: task.order_number
-      }));
+      const semiTasks = (semiData.data || []).map(mapSemiProductionTask);
 
       // Birleştir ve sırala
       const allTasks = [...productionTasks, ...semiTasks].sort((a, b) => 
