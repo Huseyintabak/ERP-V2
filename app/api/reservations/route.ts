@@ -48,6 +48,11 @@ export async function POST(request: NextRequest) {
       logger.log('Creating reservation for material:', material.material_id);
       
       try {
+        const reservationQuantity = Number(material.quantity_needed || material.reserved_quantity || 0);
+        if (!reservationQuantity || reservationQuantity <= 0) {
+          throw new Error('Geçerli bir rezervasyon miktarı sağlanmadı');
+        }
+
         // Veritabanına rezervasyon kaydet
         const { data: dbReservation, error: dbError } = await supabase
           .from('material_reservations')
@@ -56,7 +61,7 @@ export async function POST(request: NextRequest) {
             order_type,
             material_id: material.material_id,
             material_type: material.material_type,
-            reserved_quantity: material.quantity_needed,
+            reserved_quantity: reservationQuantity,
             consumed_quantity: 0,
             status: 'active',
             created_by: payload.userId
@@ -67,6 +72,75 @@ export async function POST(request: NextRequest) {
         if (dbError) {
           logger.log('Database error, using fallback:', dbError.message);
           throw new Error(dbError.message);
+        }
+
+        const stockTable = material.material_type === 'raw'
+          ? 'raw_materials'
+          : material.material_type === 'semi'
+            ? 'semi_finished_products'
+            : null;
+
+        if (!stockTable) {
+          await supabase.from('material_reservations').delete().eq('id', dbReservation.id);
+          throw new Error(`Desteklenmeyen malzeme tipi: ${material.material_type}`);
+        }
+
+        const { data: stockRow, error: stockFetchError } = await supabase
+          .from(stockTable)
+          .select('quantity, reserved_quantity, name, code')
+          .eq('id', material.material_id)
+          .single();
+
+        if (stockFetchError || !stockRow) {
+          await supabase.from('material_reservations').delete().eq('id', dbReservation.id);
+          throw new Error(`Stok bilgisi alınamadı: ${stockFetchError?.message}`);
+        }
+
+        if (Number(stockRow.quantity) < reservationQuantity) {
+          await supabase.from('material_reservations').delete().eq('id', dbReservation.id);
+          throw new Error('Yeterli stok bulunmuyor');
+        }
+
+        const newQuantity = Number(stockRow.quantity) - reservationQuantity;
+        const newReserved = Number(stockRow.reserved_quantity || 0) + reservationQuantity;
+
+        const { error: stockUpdateError } = await supabase
+          .from(stockTable)
+          .update({
+            quantity: newQuantity,
+            reserved_quantity: newReserved
+          })
+          .eq('id', material.material_id);
+
+        if (stockUpdateError) {
+          await supabase.from('material_reservations').delete().eq('id', dbReservation.id);
+          throw new Error(`Stok güncellenemedi: ${stockUpdateError.message}`);
+        }
+
+        const description = `Rezervasyon: ${reservationQuantity} adet ${stockRow.name || material.material_name || 'Malzeme'} (${stockRow.code || material.material_code || 'N/A'})`;
+
+        const { error: movementError } = await supabase
+          .from('stock_movements')
+          .insert({
+            material_type: material.material_type,
+            material_id: material.material_id,
+            movement_type: 'cikis',
+            quantity: -reservationQuantity,
+            user_id: payload.userId,
+            description
+          });
+
+        if (movementError) {
+          logger.error('Stock movement insert failed, rolling back reservation:', movementError);
+          await supabase.from('material_reservations').delete().eq('id', dbReservation.id);
+          await supabase
+            .from(stockTable)
+            .update({
+              quantity: stockRow.quantity,
+              reserved_quantity: stockRow.reserved_quantity
+            })
+            .eq('id', material.material_id);
+          throw new Error(`Stok hareketi kaydedilemedi: ${movementError.message}`);
         }
 
         const reservation = {
@@ -81,23 +155,7 @@ export async function POST(request: NextRequest) {
         
       } catch (error) {
         logger.error('❌ Error creating reservation for material:', material.material_id, error);
-        // Hata durumunda fallback rezervasyon oluştur
-        const fallbackReservation = {
-          id: `fallback-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-          order_id,
-          order_type,
-          material_id: material.material_id,
-          material_type: material.material_type,
-          reserved_quantity: material.quantity_needed,
-          consumed_quantity: 0,
-          status: 'active',
-          created_at: new Date().toISOString(),
-          material_name: material.material_name || 'Unknown Material',
-          material_code: material.material_code || 'N/A',
-          unit: material.unit || 'adet'
-        };
-        reservations.push(fallbackReservation);
-        logger.log('✅ Fallback reservation created:', fallbackReservation.id);
+        throw error;
       }
     }
 

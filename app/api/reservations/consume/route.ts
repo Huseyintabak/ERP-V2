@@ -82,27 +82,24 @@ export async function POST(request: NextRequest) {
                         material_type === 'semi' ? 'semi_finished_products' : 
                         'finished_products';
 
+      const { data: stockRow, error: stockError } = await supabase
+        .from(stockTable)
+        .select('reserved_quantity')
+        .eq('id', material_id)
+        .single();
+
+      if (stockError || !stockRow) {
+        throw new Error(`Stok bilgisi alınamadı: ${stockError?.message}`);
+      }
+
+      const updatedReserved = Math.max(Number(stockRow.reserved_quantity || 0) - consumed_quantity, 0);
+
       await supabase
         .from(stockTable)
         .update({
-          reserved_quantity: supabase.raw(`reserved_quantity - ${consumed_quantity}`),
-          quantity: supabase.raw(`quantity - ${consumed_quantity}`)
+          reserved_quantity: updatedReserved
         })
         .eq('id', material_id);
-
-      // Stok hareketi kaydet
-      await supabase
-        .from('stock_movements')
-        .insert({
-          material_id,
-          material_type,
-          movement_type: 'production_consumption',
-          quantity: -consumed_quantity,
-          reference_id: order_id,
-          reference_type: order_type,
-          notes: `Üretim tüketimi - Rezervasyon ID: ${reservation.id}`,
-          created_by: payload.userId
-        });
 
       return {
         material_id,
