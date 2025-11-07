@@ -155,13 +155,39 @@ export const useRealtimeUnified = (
   // Check connection health before attempting WebSocket connection
   const checkConnectionHealth = useCallback(async () => {
     try {
-      const response = await fetch('/api/test-notifications', {
-        method: 'GET',
-        signal: AbortSignal.timeout(5000) // 5 second timeout
-      });
-      return response.ok;
-    } catch (error) {
-      logger.log(`🔔 Connection health check failed for ${table}:`, error);
+      // Try to fetch a simple endpoint to check if server is running
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+      
+      try {
+        const response = await fetch('/api/test-notifications', {
+          method: 'GET',
+          signal: controller.signal,
+          cache: 'no-store'
+        });
+        clearTimeout(timeoutId);
+        return response.ok;
+      } catch (fetchError: any) {
+        clearTimeout(timeoutId);
+        // If it's an abort error, server might be slow but still running
+        if (fetchError.name === 'AbortError') {
+          logger.log(`🔔 Connection health check timeout for ${table}, assuming server is slow`);
+          return true; // Assume server is running but slow
+        }
+        // Network errors mean server is likely down
+        if (fetchError.message?.includes('Failed to fetch') || 
+            fetchError.message?.includes('network') ||
+            fetchError.message?.includes('ECONNREFUSED')) {
+          logger.log(`🔔 Connection health check failed - server appears down for ${table}`);
+          return false;
+        }
+        // Other errors might be transient
+        logger.log(`🔔 Connection health check error for ${table}:`, fetchError.message);
+        return true; // Give benefit of doubt
+      }
+    } catch (error: any) {
+      logger.log(`🔔 Connection health check exception for ${table}:`, error?.message || error);
+      // If we can't even make the request, assume server is down
       return false;
     }
   }, [table]);
@@ -244,22 +270,30 @@ export const useRealtimeUnified = (
 
           if (err) {
             // Handle specific WebSocket errors with retry logic
-            if (err.message?.includes('WebSocket is closed before the connection is established')) {
-              logger.log(`🔔 WebSocket closed early for ${table}, retrying...`);
+            const errorMessage = err.message || err.toString() || 'Unknown error';
+            
+            if (errorMessage.includes('WebSocket is closed before the connection is established') ||
+                errorMessage.includes('WebSocket connection failed') ||
+                errorMessage.includes('connection is closed')) {
+              logger.log(`🔔 WebSocket connection issue for ${table}, retrying... (attempt ${retryAttempt + 1})`);
               
               if (retryAttempt < 5) {
+                // Exponential backoff with jitter
+                const delay = Math.min(2000 * Math.pow(2, retryAttempt) + Math.random() * 1000, 30000);
                 setTimeout(() => {
                   if (!isDestroyedRef.current) {
                     setupRealtime(retryAttempt + 1);
                   }
-                }, 2000 * (retryAttempt + 1));
+                }, delay);
               } else {
-                logger.log(`🔔 Max retries reached for ${table}, switching to fallback`);
+                logger.log(`🔔 Max WebSocket retries reached for ${table}, switching to fallback`);
                 startFallback();
               }
               return;
             }
-            handleError(err.message || 'Unknown subscription error');
+            
+            // For other errors, use standard error handling
+            handleError(errorMessage);
             return;
           }
 

@@ -34,6 +34,10 @@ yarn-error.log*
 .env*
 !.env.example
 
+# MCP configuration (contains sensitive API keys)
+mcp.json
+!.mcp.example.json
+
 # vercel
 .vercel
 

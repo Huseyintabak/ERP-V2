@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { orderSchema } from '@/types';
+import { z } from 'zod';
 
 import { logger } from '@/lib/utils/logger';
 // GET - List Orders
@@ -64,10 +65,139 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    logger.log('📝 Orders POST request body:', body);
+    logger.log('📝 Orders POST request body:', JSON.stringify(body, null, 2));
     
-    const validated = orderSchema.parse(body);
-    logger.log('✅ Orders POST validated:', validated);
+    // Validation öncesi kontrol
+    if (!body.customer_name) {
+      logger.error('❌ Missing customer_name');
+      return NextResponse.json({ error: 'Müşteri adı gerekli' }, { status: 400 });
+    }
+    if (!body.items || !Array.isArray(body.items) || body.items.length === 0) {
+      logger.error('❌ Missing or empty items array');
+      return NextResponse.json({ error: 'En az bir ürün seçmelisiniz' }, { status: 400 });
+    }
+    // delivery_date validation - string, Date objesi veya Excel serial number olabilir
+    let deliveryDate = body.delivery_date;
+    if (!deliveryDate) {
+      logger.error('❌ Missing delivery_date');
+      return NextResponse.json({ error: 'Teslim tarihi gerekli' }, { status: 400 });
+    }
+    
+    // Excel serial date'i tarihe çeviren fonksiyon
+    const excelSerialToDate = (serial: number): string => {
+      // Excel epoch: 1899-12-30 (Excel'de 0 = 1899-12-30)
+      // Excel serial date 1 = 1900-01-01
+      // Excel'de 1900 yılı artık yıl olarak kabul edilir (yanlış ama Excel'in hatası)
+      // Bu yüzden 1 gün çıkarıyoruz: (serial - 1)
+      const excelEpoch = new Date(Date.UTC(1899, 11, 30));
+      const date = new Date(excelEpoch.getTime() + (serial - 1) * 86400000);
+      // YYYY-MM-DD formatında döndür
+      const year = date.getUTCFullYear();
+      const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+      const day = String(date.getUTCDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+    
+    // Date objesi ise string'e çevir
+    if (deliveryDate instanceof Date) {
+      deliveryDate = deliveryDate.toISOString().split('T')[0];
+    } else if (typeof deliveryDate === 'number') {
+      // Excel serial date number ise Date'e çevir
+      deliveryDate = excelSerialToDate(deliveryDate);
+    } else if (typeof deliveryDate === 'string') {
+      deliveryDate = deliveryDate.trim();
+      // Boş string kontrolü
+      if (deliveryDate === '') {
+        logger.error('❌ Empty delivery_date string');
+        return NextResponse.json({ error: 'Teslim tarihi gerekli' }, { status: 400 });
+      }
+      
+      // Eğer sadece sayı içeriyorsa (Excel serial date string olarak gelmiş olabilir)
+      const numValue = Number(deliveryDate);
+      if (!isNaN(numValue) && numValue > 0 && numValue < 1000000 && !deliveryDate.includes('-')) {
+        // Muhtemelen Excel serial date (örn: "45852")
+        logger.log('📅 Converting Excel serial date to date:', numValue);
+        deliveryDate = excelSerialToDate(numValue);
+      }
+      
+      // Tarih formatı kontrolü (YYYY-MM-DD)
+      const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+      if (!dateRegex.test(deliveryDate)) {
+        logger.error('❌ Invalid date format:', deliveryDate);
+        return NextResponse.json({ error: 'Geçersiz tarih formatı. YYYY-MM-DD formatında olmalı' }, { status: 400 });
+      }
+    } else {
+      // Diğer tipler için string'e çevir ve kontrol et
+      const strValue = String(deliveryDate).trim();
+      const numValue = Number(strValue);
+      if (!isNaN(numValue) && numValue > 0 && numValue < 1000000) {
+        deliveryDate = excelSerialToDate(numValue);
+      } else {
+        deliveryDate = strValue;
+      }
+      
+      if (deliveryDate === '' || deliveryDate === 'undefined' || deliveryDate === 'null') {
+        logger.error('❌ Invalid delivery_date type:', typeof body.delivery_date, body.delivery_date);
+        return NextResponse.json({ error: 'Geçersiz teslim tarihi formatı' }, { status: 400 });
+      }
+    }
+    
+    // Body'yi güncelle
+    body.delivery_date = deliveryDate;
+    if (!body.priority || !['dusuk', 'orta', 'yuksek'].includes(body.priority)) {
+      logger.error('❌ Invalid priority:', body.priority);
+      return NextResponse.json({ error: 'Geçerli öncelik seçin (dusuk/orta/yuksek)' }, { status: 400 });
+    }
+    
+    // UUID format kontrolü için regex
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    
+    // Items validation
+    for (let i = 0; i < body.items.length; i++) {
+      const item = body.items[i];
+      if (!item.product_id) {
+        logger.error(`❌ Item ${i} missing product_id`);
+        return NextResponse.json({ error: `Ürün ${i + 1}: Ürün ID gerekli` }, { status: 400 });
+      }
+      if (!item.quantity || item.quantity < 1) {
+        logger.error(`❌ Item ${i} invalid quantity:`, item.quantity);
+        return NextResponse.json({ error: `Ürün ${i + 1}: Miktar en az 1 olmalı` }, { status: 400 });
+      }
+      // UUID format kontrolü
+      if (!uuidRegex.test(item.product_id)) {
+        logger.error(`❌ Item ${i} invalid product_id format:`, item.product_id);
+        return NextResponse.json({ error: `Ürün ${i + 1}: Geçersiz ürün ID formatı` }, { status: 400 });
+      }
+    }
+    
+    // customer_id UUID kontrolü
+    if (body.customer_id && !uuidRegex.test(body.customer_id)) {
+      logger.error('❌ Invalid customer_id format:', body.customer_id);
+      return NextResponse.json({ error: 'Geçersiz müşteri ID formatı' }, { status: 400 });
+    }
+    
+    // assigned_operator_id UUID kontrolü
+    if (body.assigned_operator_id && !uuidRegex.test(body.assigned_operator_id)) {
+      logger.error('❌ Invalid assigned_operator_id format:', body.assigned_operator_id);
+      return NextResponse.json({ error: 'Geçersiz operatör ID formatı' }, { status: 400 });
+    }
+    
+    // Zod validation
+    let validated;
+    try {
+      validated = orderSchema.parse(body);
+      logger.log('✅ Orders POST validated:', validated);
+    } catch (error: any) {
+      logger.error('❌ Zod validation error:', error);
+      if (error instanceof z.ZodError) {
+        const errorMessages = error.errors.map(e => `${e.path.join('.')}: ${e.message}`);
+        return NextResponse.json({ 
+          error: 'Validation error', 
+          details: errorMessages 
+        }, { status: 400 });
+      }
+      throw error;
+    }
     
     const userId = request.headers.get('x-user-id');
     if (!userId) {
@@ -128,7 +258,8 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       message: `Sipariş oluşturuldu (${validated.items.length} ürün)`,
-      order: fullOrder,
+      data: fullOrder,
+      order: fullOrder, // Backward compatibility
     }, { status: 201 });
   } catch (error: any) {
     logger.error('❌ Orders POST error:', error);

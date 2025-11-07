@@ -7,7 +7,11 @@ import { logger } from '@/lib/utils/logger';
 // Müşteri şeması
 const customerSchema = z.object({
   name: z.string().min(1, 'Müşteri adı gerekli'),
-  email: z.string().email('Geçerli email adresi gerekli').optional().or(z.literal('')),
+  email: z.union([
+    z.string().email('Geçerli email adresi gerekli'),
+    z.literal(''),
+    z.undefined()
+  ]).optional(),
   phone: z.string().optional(),
   company: z.string().optional(),
   address: z.string().optional(),
@@ -116,18 +120,25 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Email boş string ise null yap (database için)
+    const insertData = {
+      ...validatedData,
+      email: validatedData.email && validatedData.email.trim() !== '' ? validatedData.email : null,
+    };
+
     const { data: customer, error } = await supabase
       .from('customers')
-      .insert([validatedData])
+      .insert([insertData])
       .select()
       .single();
 
     if (error) {
       logger.error('Error creating customer:', error);
-      return NextResponse.json({ error: 'Failed to create customer' }, { status: 500 });
+      logger.error('Error details:', { code: error.code, message: error.message, details: error.details, hint: error.hint });
+      return NextResponse.json({ error: 'Failed to create customer', details: error.message }, { status: 500 });
     }
 
-    return NextResponse.json({ customer }, { status: 201 });
+    return NextResponse.json({ data: customer }, { status: 201 });
   } catch (error: unknown) {
     logger.error('Customer creation error:', error);
     if (error instanceof z.ZodError) {

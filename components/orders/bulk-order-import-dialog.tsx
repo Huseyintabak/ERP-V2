@@ -77,23 +77,83 @@ export function BulkOrderImportDialog({ onImportComplete }: BulkOrderImportDialo
   const parseExcelFile = async (file: File) => {
     try {
       const data = await file.arrayBuffer();
-      const workbook = XLSX.read(data);
+      // Excel dosyasını oku - tarihleri string olarak al
+      const workbook = XLSX.read(data, { 
+        cellDates: false, // Tarihleri string olarak oku
+        cellNF: false,
+        cellText: false
+      });
       const sheetName = workbook.SheetNames[0];
       const worksheet = workbook.Sheets[sheetName];
-      const jsonData = XLSX.utils.sheet_to_json(worksheet);
+      // Excel'den tarihleri raw (number) olarak al ki serial date'leri yakalayabilelim
+      const jsonData = XLSX.utils.sheet_to_json(worksheet, {
+        raw: true, // Tarihleri raw (number) olarak al - Excel serial date'leri yakalamak için
+        defval: '' // Boş hücreler için varsayılan değer
+      });
 
-      const parsedOrders: ImportOrder[] = jsonData.map((row: any) => ({
-        customer_name: row['Müşteri Adı'] || '',
-        product_code: row['Ürün Kodu'] || '',
-        quantity: Number(row['Miktar']) || 0,
-        delivery_date: row['Teslim Tarihi'] || '',
-        priority: (row['Öncelik'] || 'orta') as 'dusuk' | 'orta' | 'yuksek',
-        assigned_operator: row['Atanan Operatör'] || '',
-        notes: row['Notlar'] || ''
-      }));
+      // Excel serial date'i tarihe çeviren fonksiyon
+      const excelSerialToDate = (serial: number): string => {
+        // Excel epoch: 1899-12-30 (Excel'de 0 = 1899-12-30)
+        // Excel serial date 1 = 1900-01-01
+        // Excel'de 1900 yılı artık yıl olarak kabul edilir (yanlış ama Excel'in hatası)
+        // Bu yüzden 1 gün çıkarıyoruz: (serial - 1)
+        // Excel epoch: 1899-12-30 00:00:00 UTC
+        const excelEpoch = new Date(Date.UTC(1899, 11, 30));
+        const date = new Date(excelEpoch.getTime() + (serial - 1) * 86400000);
+        // YYYY-MM-DD formatında döndür
+        const year = date.getUTCFullYear();
+        const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+        const day = String(date.getUTCDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      };
+
+      const parsedOrders: ImportOrder[] = jsonData.map((row: any) => {
+        // Tarih formatını düzelt (Excel'den Date objesi veya serial number gelebilir)
+        let deliveryDate = row['Teslim Tarihi'] || '';
+        
+        if (deliveryDate instanceof Date) {
+          // Date objesi ise ISO string'e çevir
+          deliveryDate = deliveryDate.toISOString().split('T')[0];
+        } else if (typeof deliveryDate === 'number') {
+          // Excel serial date number ise Date'e çevir
+          deliveryDate = excelSerialToDate(deliveryDate);
+        } else if (typeof deliveryDate === 'string') {
+          // String ise önce trim yap
+          deliveryDate = deliveryDate.trim();
+          
+          // Eğer sadece sayı içeriyorsa (Excel serial date string olarak gelmiş olabilir)
+          const numValue = Number(deliveryDate);
+          if (!isNaN(numValue) && numValue > 0 && numValue < 1000000) {
+            // Muhtemelen Excel serial date
+            deliveryDate = excelSerialToDate(numValue);
+          }
+        } else {
+          // Diğer durumlarda string'e çevir ve kontrol et
+          const strValue = String(deliveryDate || '');
+          const numValue = Number(strValue);
+          if (!isNaN(numValue) && numValue > 0 && numValue < 1000000) {
+            deliveryDate = excelSerialToDate(numValue);
+          } else {
+            deliveryDate = strValue;
+          }
+        }
+
+        return {
+          customer_name: String(row['Müşteri Adı'] || '').trim(),
+          product_code: String(row['Ürün Kodu'] || '').trim(),
+          quantity: Number(row['Miktar']) || 0,
+          delivery_date: deliveryDate,
+          priority: (row['Öncelik'] || 'orta') as 'dusuk' | 'orta' | 'yuksek',
+          assigned_operator: String(row['Atanan Operatör'] || '').trim(),
+          notes: String(row['Notlar'] || '').trim()
+        };
+      });
 
       setImportData(parsedOrders);
-      toast.success(`${parsedOrders.length} sipariş yüklendi`);
+      
+      // Müşteri sayısını hesapla
+      const uniqueCustomers = new Set(parsedOrders.map(o => o.customer_name.toLowerCase().trim()));
+      toast.success(`${uniqueCustomers.size} müşteri için ${parsedOrders.length} ürün yüklendi`);
     } catch (error) {
       toast.error('Excel dosyası okunamadı');
       logger.error('Excel parse error:', error);
@@ -141,8 +201,23 @@ export function BulkOrderImportDialog({ onImportComplete }: BulkOrderImportDialo
     setImportProgress(0);
     const results: ImportResult[] = [];
 
-    for (let i = 0; i < importData.length; i++) {
-      const order = importData[i];
+    // Müşterilere göre grupla - aynı müşteri için tek sipariş
+    const ordersByCustomer = new Map<string, ImportOrder[]>();
+    
+    for (const order of importData) {
+      const customerKey = order.customer_name.toLowerCase().trim();
+      if (!ordersByCustomer.has(customerKey)) {
+        ordersByCustomer.set(customerKey, []);
+      }
+      ordersByCustomer.get(customerKey)!.push(order);
+    }
+
+    const totalCustomers = ordersByCustomer.size;
+    let processedCustomers = 0;
+
+    // Her müşteri için tek bir sipariş oluştur
+    for (const [customerKey, customerOrders] of ordersByCustomer.entries()) {
+      const firstOrder = customerOrders[0]; // İlk siparişten müşteri bilgilerini al
       
       try {
         if (!user?.id) {
@@ -150,57 +225,107 @@ export function BulkOrderImportDialog({ onImportComplete }: BulkOrderImportDialo
         }
 
         // Önce müşteriyi bul veya oluştur
-        const customerResponse = await fetch('/api/customers', {
-          method: 'POST',
-          headers: { 
-            'Content-Type': 'application/json',
-            'x-user-id': user.id
-          },
-          body: JSON.stringify({
-            name: order.customer_name,
-            email: `${order.customer_name.toLowerCase().replace(/\s+/g, '.')}@example.com`,
-            phone: '',
-            address: ''
-          })
-        });
-
         let customerId;
-        if (customerResponse.ok) {
-          const customerData = await customerResponse.json();
-          customerId = customerData.data.id;
-        } else {
-          // Müşteri zaten varsa, mevcut müşteriyi bul
-          const searchResponse = await fetch(`/api/customers?search=${encodeURIComponent(order.customer_name)}`, {
-            headers: {
-              'x-user-id': user.id
-            }
-          });
-          const searchData = await searchResponse.json();
-          if (searchData.data && searchData.data.length > 0) {
-            customerId = searchData.data[0].id;
-          } else {
-            throw new Error('Müşteri oluşturulamadı');
-          }
-        }
-
-        // Ürünü bul
-        const productResponse = await fetch(`/api/stock/finished?search=${encodeURIComponent(order.product_code)}`, {
+        
+        // Önce mevcut müşteriyi ara
+        const searchResponse = await fetch(`/api/customers?search=${encodeURIComponent(firstOrder.customer_name)}`, {
           headers: {
             'x-user-id': user.id
           }
         });
-        const productData = await productResponse.json();
         
-        if (!productData.data || productData.data.length === 0) {
-          throw new Error(`Ürün bulunamadı: ${order.product_code}`);
+        if (searchResponse.ok) {
+          const searchData = await searchResponse.json();
+          if (searchData.data && searchData.data.length > 0) {
+            // Müşteri zaten varsa, onu kullan
+            customerId = searchData.data[0].id;
+          } else {
+            // Müşteri yoksa, oluştur
+            const customerResponse = await fetch('/api/customers', {
+              method: 'POST',
+              headers: { 
+                'Content-Type': 'application/json',
+                'x-user-id': user.id
+              },
+              body: JSON.stringify({
+                name: firstOrder.customer_name,
+                email: '', // Email opsiyonel, boş bırakabiliriz
+                phone: '',
+                address: ''
+              })
+            });
+
+            if (customerResponse.ok) {
+              const customerData = await customerResponse.json();
+              customerId = customerData.data?.id || customerData.customer?.id;
+              if (!customerId) {
+                throw new Error('Müşteri oluşturuldu ama ID alınamadı');
+              }
+            } else {
+              const errorData = await customerResponse.json().catch(() => ({ error: 'Bilinmeyen hata' }));
+              throw new Error(`Müşteri oluşturulamadı: ${errorData.error || customerResponse.statusText}`);
+            }
+          }
+        } else {
+          throw new Error('Müşteri arama hatası');
         }
 
-        const product = productData.data[0];
+        // Tüm ürünleri bul ve items array'i oluştur
+        const items: Array<{ product_id: string; quantity: number }> = [];
+        const productErrors: string[] = [];
 
-        // Operatörü bul (eğer belirtilmişse)
-        let assignedOperatorId = undefined;
-        if (order.assigned_operator) {
-          const operatorResponse = await fetch(`/api/operators?search=${encodeURIComponent(order.assigned_operator)}`, {
+        for (const orderItem of customerOrders) {
+          // Ürünü bul - önce tam eşleşme, sonra partial search
+          const productCode = orderItem.product_code.trim();
+          let productResponse = await fetch(`/api/stock/finished?search=${encodeURIComponent(productCode)}&limit=100`, {
+            headers: {
+              'x-user-id': user.id
+            }
+          });
+          let productData = await productResponse.json();
+          
+          // Önce tam eşleşme ara
+          let product = productData.data?.find((p: any) => 
+            p.code?.toLowerCase() === productCode.toLowerCase()
+          );
+          
+          // Tam eşleşme yoksa, ilk sonucu al (partial match)
+          if (!product && productData.data && productData.data.length > 0) {
+            product = productData.data[0];
+          }
+          
+          // Hala bulunamadıysa, case-insensitive exact match dene
+          if (!product && productData.data && productData.data.length > 0) {
+            product = productData.data.find((p: any) => 
+              p.code && p.code.toLowerCase().includes(productCode.toLowerCase())
+            );
+          }
+          
+          if (!product || !product.id) {
+            productErrors.push(`Ürün bulunamadı: ${orderItem.product_code}`);
+            continue;
+          }
+
+          items.push({
+            product_id: product.id,
+            quantity: Number(orderItem.quantity)
+          });
+        }
+
+        // Eğer hiç ürün bulunamadıysa, hata ver
+        if (items.length === 0) {
+          throw new Error(`Hiç ürün bulunamadı. Hatalar: ${productErrors.join(', ')}`);
+        }
+
+        // Eğer bazı ürünler bulunamadıysa, uyarı ver ama devam et
+        if (productErrors.length > 0) {
+          logger.warn(`Bazı ürünler bulunamadı: ${productErrors.join(', ')}`);
+        }
+
+        // Operatörü bul (ilk siparişten al, eğer belirtilmişse)
+        let assignedOperatorId: string | undefined = undefined;
+        if (firstOrder.assigned_operator && firstOrder.assigned_operator.trim() !== '') {
+          const operatorResponse = await fetch(`/api/operators?search=${encodeURIComponent(firstOrder.assigned_operator)}`, {
             headers: {
               'x-user-id': user.id
             }
@@ -212,6 +337,32 @@ export function BulkOrderImportDialog({ onImportComplete }: BulkOrderImportDialo
           }
         }
 
+        // Request body hazırla - ilk siparişten tarih ve öncelik bilgilerini al
+        // delivery_date'i güvenli şekilde string'e çevir
+        let deliveryDate = firstOrder.delivery_date;
+        if (deliveryDate instanceof Date) {
+          deliveryDate = deliveryDate.toISOString().split('T')[0];
+        } else if (typeof deliveryDate === 'string') {
+          deliveryDate = deliveryDate.trim();
+        } else {
+          deliveryDate = String(deliveryDate || '');
+        }
+
+        const requestBody: any = {
+          customer_name: String(firstOrder.customer_name || '').trim(),
+          items: items, // Tüm ürünleri tek siparişe ekle
+          delivery_date: deliveryDate,
+          priority: firstOrder.priority,
+        };
+        
+        // Opsiyonel alanları ekle (sadece varsa)
+        if (customerId) {
+          requestBody.customer_id = customerId;
+        }
+        if (assignedOperatorId) {
+          requestBody.assigned_operator_id = assignedOperatorId;
+        }
+
         // Siparişi oluştur
         const orderResponse = await fetch('/api/orders', {
           method: 'POST',
@@ -219,44 +370,38 @@ export function BulkOrderImportDialog({ onImportComplete }: BulkOrderImportDialo
             'Content-Type': 'application/json',
             'x-user-id': user.id
           },
-          body: JSON.stringify({
-            customer_name: order.customer_name,
-            customer_id: customerId,
-            items: [{
-              product_id: product.id,
-              quantity: order.quantity
-            }],
-            delivery_date: order.delivery_date,
-            priority: order.priority,
-            assigned_operator_id: assignedOperatorId,
-            notes: order.notes
-          })
+          body: JSON.stringify(requestBody)
         });
 
         if (orderResponse.ok) {
           const orderData = await orderResponse.json();
+          const productCodes = customerOrders.map(o => o.product_code).join(', ');
           results.push({
             success: true,
-            message: `Sipariş oluşturuldu: ${order.customer_name} - ${order.product_code}`,
-            order: orderData.data
+            message: `Sipariş oluşturuldu: ${firstOrder.customer_name} - ${items.length} ürün (${productCodes})`,
+            order: orderData.data || orderData.order
           });
         } else {
-          const errorData = await orderResponse.json();
+          const errorData = await orderResponse.json().catch(() => ({ error: 'Bilinmeyen hata' }));
+          const errorMessage = errorData.error || errorData.message || `HTTP ${orderResponse.status}: ${orderResponse.statusText}`;
           results.push({
             success: false,
-            message: `Sipariş oluşturulamadı: ${order.customer_name}`,
-            errors: [errorData.error]
+            message: `Sipariş oluşturulamadı: ${firstOrder.customer_name}`,
+            errors: Array.isArray(errorData.details) 
+              ? errorData.details.map((d: any) => d.message || d.error || String(d))
+              : [errorMessage]
           });
         }
       } catch (error: any) {
         results.push({
           success: false,
-          message: `Hata: ${order.customer_name}`,
+          message: `Hata: ${firstOrder.customer_name}`,
           errors: [error.message]
         });
       }
 
-      setImportProgress(((i + 1) / importData.length) * 100);
+      processedCustomers++;
+      setImportProgress((processedCustomers / totalCustomers) * 100);
     }
 
     setImportResults(results);
@@ -267,11 +412,11 @@ export function BulkOrderImportDialog({ onImportComplete }: BulkOrderImportDialo
     const errorCount = results.filter(r => !r.success).length;
 
     if (successCount > 0) {
-      toast.success(`${successCount} sipariş başarıyla oluşturuldu`);
+      toast.success(`${successCount} müşteri için sipariş başarıyla oluşturuldu`);
       onImportComplete?.();
     }
     if (errorCount > 0) {
-      toast.error(`${errorCount} sipariş oluşturulamadı`);
+      toast.error(`${errorCount} müşteri için sipariş oluşturulamadı`);
     }
   };
 
@@ -356,42 +501,74 @@ export function BulkOrderImportDialog({ onImportComplete }: BulkOrderImportDialo
           </Card>
 
           {/* Önizleme */}
-          {importData.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">3. Önizleme</CardTitle>
-                <CardDescription>
-                  {importData.length} sipariş yüklendi
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="max-h-60 overflow-y-auto">
-                  <div className="space-y-2">
-                    {importData.slice(0, 5).map((order, index) => (
-                      <div key={index} className="flex items-center justify-between p-2 border rounded">
-                        <div>
-                          <span className="font-medium">{order.customer_name}</span>
-                          <span className="text-gray-500 ml-2">- {order.product_code}</span>
-                          <span className="text-gray-500 ml-2">({order.quantity} adet)</span>
-                          {order.assigned_operator && (
-                            <span className="text-blue-600 ml-2">👤 {order.assigned_operator}</span>
+          {importData.length > 0 && (() => {
+            // Müşterilere göre grupla
+            const previewGroups = new Map<string, ImportOrder[]>();
+            for (const order of importData) {
+              const customerKey = order.customer_name.toLowerCase().trim();
+              if (!previewGroups.has(customerKey)) {
+                previewGroups.set(customerKey, []);
+              }
+              previewGroups.get(customerKey)!.push(order);
+            }
+            
+            const previewArray = Array.from(previewGroups.entries()).slice(0, 5);
+            const totalGroups = previewGroups.size;
+            
+            return (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">3. Önizleme</CardTitle>
+                  <CardDescription>
+                    {totalGroups} müşteri için {importData.length} ürün yüklendi
+                    <br />
+                    <span className="text-xs text-muted-foreground">
+                      Aynı müşteriye ait ürünler tek siparişte birleştirilecek
+                    </span>
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="max-h-60 overflow-y-auto">
+                    <div className="space-y-3">
+                      {previewArray.map(([customerKey, orders], index) => (
+                        <div key={index} className="p-3 border rounded-lg bg-gray-50">
+                          <div className="font-medium text-sm mb-2">{orders[0].customer_name}</div>
+                          <div className="space-y-1 ml-2">
+                            {orders.slice(0, 3).map((order, orderIndex) => (
+                              <div key={orderIndex} className="flex items-center justify-between text-xs">
+                                <div>
+                                  <span className="text-gray-600">• {order.product_code}</span>
+                                  <span className="text-gray-500 ml-2">({order.quantity} adet)</span>
+                                </div>
+                                <Badge variant={order.priority === 'yuksek' ? 'destructive' : order.priority === 'orta' ? 'default' : 'secondary'} className="text-xs">
+                                  {order.priority}
+                                </Badge>
+                              </div>
+                            ))}
+                            {orders.length > 3 && (
+                              <p className="text-xs text-gray-500 ml-2">
+                                ... ve {orders.length - 3} ürün daha
+                              </p>
+                            )}
+                          </div>
+                          {orders[0].assigned_operator && (
+                            <div className="text-xs text-blue-600 mt-2 ml-2">
+                              👤 {orders[0].assigned_operator}
+                            </div>
                           )}
                         </div>
-                        <Badge variant={order.priority === 'yuksek' ? 'destructive' : order.priority === 'orta' ? 'default' : 'secondary'}>
-                          {order.priority}
-                        </Badge>
-                      </div>
-                    ))}
-                    {importData.length > 5 && (
-                      <p className="text-sm text-gray-500 text-center">
-                        ... ve {importData.length - 5} sipariş daha
-                      </p>
-                    )}
+                      ))}
+                      {totalGroups > 5 && (
+                        <p className="text-sm text-gray-500 text-center">
+                          ... ve {totalGroups - 5} müşteri daha
+                        </p>
+                      )}
+                    </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
+                </CardContent>
+              </Card>
+            );
+          })()}
 
           {/* İçe Aktarma */}
           {importData.length > 0 && !showResults && (
@@ -435,7 +612,7 @@ export function BulkOrderImportDialog({ onImportComplete }: BulkOrderImportDialo
               <CardHeader>
                 <CardTitle className="text-lg">İçe Aktarma Sonuçları</CardTitle>
                 <CardDescription>
-                  {importResults.filter(r => r.success).length} başarılı, {importResults.filter(r => !r.success).length} hatalı
+                  {importResults.filter(r => r.success).length} müşteri başarılı, {importResults.filter(r => !r.success).length} müşteri hatalı
                 </CardDescription>
               </CardHeader>
               <CardContent>

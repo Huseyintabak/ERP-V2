@@ -7,6 +7,8 @@ const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
+  // Source map ayarları - production'da devre dışı
+  productionBrowserSourceMaps: false,
   // Development için CORS ve diğer ayarlar
   async headers() {
     return [

@@ -10,7 +10,9 @@ export function createClient() {
           eventsPerSecond: 1, // Very conservative
           heartbeatIntervalMs: 180000, // 3 minutes - extremely conservative
           reconnectAfterMs: [10000, 20000, 30000, 60000, 120000] // Very conservative reconnection
-        }
+        },
+        // Suppress WebSocket errors in console (they're handled by hooks)
+        log_level: process.env.NODE_ENV === 'development' ? 'info' : 'error'
       },
       global: {
         headers: {

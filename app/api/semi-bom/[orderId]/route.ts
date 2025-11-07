@@ -58,11 +58,11 @@ export async function GET(
         product: product
       };
 
-      // BOM'u getir (nihai ürün BOM API'si gibi)
+      // BOM'u getir - semi_bom tablosundan
       const { data: bomItems, error: bomError } = await supabase
-        .from('bom')
+        .from('semi_bom')
         .select('*')
-        .eq('finished_product_id', productId);
+        .eq('semi_product_id', productId);
 
       if (bomError) {
         logger.error('BOM fetch error:', bomError);
@@ -108,9 +108,9 @@ export async function GET(
             }
           }
 
-          // Nihai ürün BOM API'si gibi hesaplama
-          const quantityNeeded = item.quantity_needed * plannedQuantity;
-          const consumptionPerUnit = item.quantity_needed;
+          // Yarı mamul BOM hesaplama
+          const quantityNeeded = item.quantity * plannedQuantity;
+          const consumptionPerUnit = item.quantity;
 
           return {
             material_type: item.material_type,
@@ -137,32 +137,26 @@ export async function GET(
     
     logger.log('✅ Order found:', order.id, 'Product:', order.product?.name);
 
-    // Yarı mamul ürünün BOM'unu getir (bom tablosundan - finished_product_id kullanarak)
+    // Yarı mamul ürünün BOM'unu getir - semi_bom tablosundan
     logger.log('🔍 Fetching BOM for semi product:', order.product_id);
     const { data: bomItems, error: bomError } = await supabase
-      .from('bom')
+      .from('semi_bom')
       .select(`
         *,
-        raw_material:raw_materials(
+        raw_material:raw_materials!semi_bom_material_id_fkey(
           id,
           name,
           code,
           quantity
         ),
-        semi_finished_product:semi_finished_products(
-          id,
-          name,
-          code,
-          quantity
-        ),
-        finished_product:finished_products(
+        semi_finished_product:semi_finished_products!semi_bom_material_id_fkey(
           id,
           name,
           code,
           quantity
         )
       `)
-      .eq('finished_product_id', order.product_id);
+      .eq('semi_product_id', order.product_id);
       
     logger.log('🔍 BOM fetch result:', { bomItems: bomItems?.length, bomError });
 
@@ -262,14 +256,10 @@ export async function GET(
           currentStock = item.semi_finished_product.quantity || 0;
           materialName = item.semi_finished_product.name;
           materialCode = item.semi_finished_product.code;
-        } else if (item.material_type === 'finished' && item.finished_product) {
-          currentStock = item.finished_product.quantity || 0;
-          materialName = item.finished_product.name;
-          materialCode = item.finished_product.code;
         }
 
-        // BOM tablosunda quantity_needed kolonu var, bunu kullan
-        const quantityPerUnit = item.quantity_needed || 1.0; // BOM'dan gelen miktar
+        // semi_bom tablosunda quantity kolonu var, bunu kullan
+        const quantityPerUnit = item.quantity || 1.0; // BOM'dan gelen miktar
         const quantityNeeded = quantityPerUnit * order.planned_quantity;
         const consumptionPerUnit = quantityPerUnit;
 

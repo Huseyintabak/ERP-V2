@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { Toaster } from "@/components/ui/sonner";
+import { WebSocketErrorSuppressor } from "@/components/websocket-error-suppressor";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -23,6 +24,7 @@ export default function RootLayout({
     <html lang="tr">
       <body className={`${inter.variable} font-sans antialiased`}>
         <ErrorBoundary>
+          <WebSocketErrorSuppressor />
           {children}
           <Toaster position="top-right" />
         </ErrorBoundary>

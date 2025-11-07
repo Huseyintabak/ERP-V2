@@ -79,7 +79,7 @@ export default function UretimYonetimPage() {
   }, []);
 
   // Real-time updates for orders with unified system
-  useRealtimeUnified(
+  const realtimeStatus = useRealtimeUnified(
     'orders',
     (newOrder) => {
       setOrders(prev => [newOrder, ...prev]);
@@ -97,12 +97,23 @@ export default function UretimYonetimPage() {
     },
     () => fetchOrders(), // fallback fetch
     {
-      maxRetries: 3,
+      maxRetries: 5, // Increased retries for WebSocket issues
       retryDelay: 2000,
       enableFallback: true,
       fallbackInterval: 30000
     }
   );
+
+  // Silently handle WebSocket errors - they're expected in some network conditions
+  // The hook will automatically fallback to polling if WebSocket fails
+  useEffect(() => {
+    if (realtimeStatus.error && !realtimeStatus.isUsingFallback) {
+      // Only log in development, don't show to user
+      if (process.env.NODE_ENV === 'development') {
+        console.log('🔔 Realtime connection issue, will retry or use fallback:', realtimeStatus.error);
+      }
+    }
+  }, [realtimeStatus.error, realtimeStatus.isUsingFallback]);
 
   const handleApproveOrder = async (orderId: string) => {
     try {
