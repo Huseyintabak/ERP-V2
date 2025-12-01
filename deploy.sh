@@ -16,9 +16,22 @@ NC='\033[0m' # No Color
 
 # 1. Git pull (çakışmaları çöz)
 echo -e "${YELLOW}📥 Git'ten son değişiklikler çekiliyor...${NC}"
-git stash  # Yerel değişiklikleri sakla
-git pull origin main
-git stash pop || true  # Saklananları geri getir (çakışma yoksa)
+
+# Yerel değişiklikleri kontrol et ve stash et
+if ! git diff-index --quiet HEAD -- 2>/dev/null; then
+    echo -e "${YELLOW}⚠️  Yerel değişiklikler tespit edildi, stash ediliyor...${NC}"
+    git stash save "Deploy öncesi yerel değişiklikler - $(date +%Y%m%d_%H%M%S)" 2>/dev/null || true
+fi
+
+# Remote'tan son değişiklikleri çek
+echo -e "${YELLOW}📥 Remote'tan değişiklikler çekiliyor...${NC}"
+git fetch origin main
+
+# Remote'u tercih et (production'da remote her zaman doğru kaynak)
+echo -e "${YELLOW}🔄 Remote değişiklikleri uygulanıyor...${NC}"
+git reset --hard origin/main
+
+echo -e "${GREEN}✅ Git güncellemesi tamamlandı${NC}"
 
 # 2. PM2'yi durdur (dosyalar kilitli olabilir)
 echo -e "${YELLOW}⏹️  PM2 durduruluyor (dosyalar kilitli olabilir)...${NC}"
