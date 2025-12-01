@@ -20,12 +20,28 @@ git stash  # Yerel değişiklikleri sakla
 git pull origin main
 git stash pop || true  # Saklananları geri getir (çakışma yoksa)
 
-# 2. Cache temizleme
-echo -e "${YELLOW}🧹 Cache temizleniyor...${NC}"
-rm -rf .next
-rm -rf node_modules/.cache
+# 2. PM2'yi durdur (dosyalar kilitli olabilir)
+echo -e "${YELLOW}⏹️  PM2 durduruluyor (dosyalar kilitli olabilir)...${NC}"
+pm2 stop thunder-erp 2>/dev/null || echo "PM2'de uygulama çalışmıyor veya zaten durdurulmuş"
 
-# 3. Dependencies kontrol
+# Kısa bir bekleme (dosyaların serbest bırakılması için)
+sleep 2
+
+# 3. Cache temizleme
+echo -e "${YELLOW}🧹 Cache temizleniyor...${NC}"
+# Erişim engellendi durumunda sudo kullan veya sahiplik kontrolü yap
+if [ -d ".next" ]; then
+    # Önce sahiplik kontrolü
+    if [ ! -w ".next" ]; then
+        echo "İzin sorunu var, sahiplik düzeltiliyor..."
+        sudo chown -R $USER:$USER .next 2>/dev/null || true
+    fi
+    rm -rf .next || sudo rm -rf .next
+fi
+rm -rf node_modules/.cache 2>/dev/null || true
+rm -rf .turbo 2>/dev/null || true
+
+# 4. Dependencies kontrol
 echo -e "${YELLOW}📦 Dependencies kontrol ediliyor...${NC}"
 if [ ! -d "node_modules" ]; then
     echo "Node modules yok, yükleniyor..."
@@ -35,11 +51,11 @@ else
     npm install
 fi
 
-# 4. Build
+# 5. Build
 echo -e "${YELLOW}🔨 Production build oluşturuluyor...${NC}"
 npm run build
 
-# 5. PM2 restart
+# 6. PM2 restart
 echo -e "${YELLOW}🔄 PM2 ile uygulama yeniden başlatılıyor...${NC}"
 if pm2 list | grep -q "thunder-erp"; then
     pm2 restart thunder-erp
