@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { verifyJWT } from '@/lib/auth/jwt';
+import { AgentOrchestrator } from '@/lib/ai/orchestrator';
+import { agentLogger } from '@/lib/ai/utils/logger';
 
 import { logger } from '@/lib/utils/logger';
 // Support both POST and PATCH for flexibility
@@ -23,17 +25,21 @@ async function handleApprove(
   params: Promise<{ id: string }>
 ) {
   try {
+    logger.log('🚀 Order approval endpoint called');
     const token = request.cookies.get('thunder_token')?.value;
     if (!token) {
+      logger.warn('❌ No token found in request');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const payload = await verifyJWT(token);
     const { id } = await params;
+    logger.log(`📦 Approving order: ${id}, User: ${payload.userId}, Role: ${payload.role}`);
     const supabase = await createClient();
 
     // Allow both managers and planning personnel to approve orders
     if (!['yonetici', 'planlama'].includes(payload.role)) {
+      logger.warn(`❌ Forbidden: Role ${payload.role} is not allowed to approve orders`);
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -43,13 +49,125 @@ async function handleApprove(
     
     // Approval always sets status to 'uretimde' (in production)
     const status = 'uretimde';
+    logger.log(`✅ Order approval request validated, proceeding to AI agent validation...`);
+
+    // ============================================
+    // AI AGENT VALIDATION (Opsiyonel - AGENT_ENABLED kontrolü ile)
+    // ============================================
+    logger.log(`🔍 AGENT_ENABLED check: ${process.env.AGENT_ENABLED} (type: ${typeof process.env.AGENT_ENABLED})`);
+    logger.log(`🔍 All env vars: AGENT_ENABLED=${process.env.AGENT_ENABLED}, OPENAI_API_KEY=${process.env.OPENAI_API_KEY ? 'SET' : 'NOT SET'}`);
+    
+    if (process.env.AGENT_ENABLED === 'true') {
+      try {
+        logger.log('🤖 AI Agent validation başlatılıyor...');
+        
+        // Order detaylarını al
+        const { data: orderData, error: orderError } = await supabase
+          .from('orders')
+          .select(`
+            *,
+            order_items:order_items(*, product:finished_products(*))
+          `)
+          .eq('id', id)
+          .single();
+
+        if (orderError || !orderData) {
+          logger.warn('⚠️ Order data alınamadı, agent validation atlanıyor:', orderError);
+        } else {
+          // Planning Agent ile konuşma başlat
+          const orchestrator = AgentOrchestrator.getInstance();
+          const agentResult = await orchestrator.startConversation('planning', {
+            id: `order_approve_${id}_${Date.now()}`,
+            prompt: `Bu siparişi onaylamak istiyorum: Order #${orderData.order_number || id}`,
+            type: 'request',
+            context: {
+              orderId: id,
+              orderNumber: orderData.order_number,
+              orderData: {
+                id: orderData.id,
+                order_number: orderData.order_number,
+                customer_id: orderData.customer_id,
+                delivery_date: orderData.delivery_date,
+                status: orderData.status,
+                items: orderData.order_items || []
+              },
+              requestedBy: payload.userId,
+              requestedByRole: payload.role
+            },
+            urgency: 'high',
+            severity: 'high'
+          });
+
+          await agentLogger.log({
+            agent: 'planning',
+            action: 'order_approval_validation',
+            orderId: id,
+            finalDecision: agentResult.finalDecision,
+            protocolResult: agentResult.protocolResult
+          });
+
+          // Agent reddettiyse
+          if (agentResult.finalDecision === 'rejected') {
+            logger.warn('❌ AI Agent sipariş onayını reddetti:', agentResult.protocolResult?.errors);
+            return NextResponse.json(
+              {
+                error: 'AI Agent validation failed',
+                message: 'Sipariş onayı AI Agent tarafından reddedildi',
+                details: agentResult.protocolResult?.errors || [],
+                warnings: agentResult.protocolResult?.warnings || [],
+                agentReasoning: agentResult.protocolResult?.decision?.reasoning
+              },
+              { status: 400 }
+            );
+          }
+
+          // Human approval bekleniyorsa
+          if (agentResult.finalDecision === 'pending_approval') {
+            logger.log('⏳ AI Agent human approval bekliyor...');
+            return NextResponse.json(
+              {
+                error: 'Human approval required',
+                message: 'Bu işlem için yönetici onayı gerekiyor',
+                approvalRequired: true,
+                decisionId: agentResult.protocolResult?.decision?.action
+              },
+              { status: 403 }
+            );
+          }
+
+          // Agent onayladıysa
+          if (agentResult.finalDecision === 'approved') {
+            logger.log('✅ AI Agent sipariş onayını onayladı');
+            logger.log('📊 Agent reasoning:', agentResult.protocolResult?.decision?.reasoning);
+          }
+        }
+      } catch (error: any) {
+        // Agent hatası durumunda graceful degradation - manuel onay devam eder
+        logger.error('❌ AI Agent validation hatası:', error);
+        logger.error('❌ Error stack:', error.stack);
+        logger.warn('⚠️ AI Agent validation hatası, manuel onay devam ediyor:', error.message);
+        await agentLogger.error({
+          agent: 'planning',
+          action: 'order_approval_validation_error',
+          orderId: id,
+          error: error.message,
+          stack: error.stack
+        });
+        // Hata olsa bile manuel onay devam eder (graceful degradation)
+      }
+    } else {
+      logger.warn(`⚠️ AI Agent validation atlandı: AGENT_ENABLED=${process.env.AGENT_ENABLED} (expected: 'true')`);
+    }
 
     // First, check stock availability before approving the order
     logger.log('🔍 Checking stock availability before approval...');
     
     const { data: orderItems, error: itemsError } = await supabase
       .from('order_items')
-      .select('*')
+      .select(`
+        *,
+        product:finished_products(id, code, name)
+      `)
       .eq('order_id', id);
 
     if (itemsError) {
@@ -69,7 +187,8 @@ async function handleApprove(
     const insufficientMaterials = [];
     
     for (const item of orderItems) {
-      logger.log(`🔍 Checking stock for: ${item.product_name} (${item.quantity} units)`);
+      const productName = (item.product as any)?.name || 'Bilinmeyen Ürün';
+      logger.log(`🔍 Checking stock for: ${productName} (${item.quantity} units)`);
 
       // Get BOM for this product
       const { data: bomItems, error: bomError } = await supabase
@@ -109,7 +228,7 @@ async function handleApprove(
             if (available < needed) {
               insufficientMaterials.push({
                 product_id: item.product_id,
-                product_name: item.product_name || 'Bilinmeyen Ürün',
+                product_name: productName,
                 material_code: material.code,
                 material_name: material.name,
                 needed: needed,
@@ -188,10 +307,13 @@ async function handleApprove(
 
       logger.log('👤 Order assigned operator:', orderDetails.assigned_operator_id);
       
-      // Fetch order items
+      // Fetch order items with product details
       const { data: orderItems, error: itemsError } = await supabase
         .from('order_items')
-        .select('*')
+        .select(`
+          *,
+          product:finished_products(id, code, name)
+        `)
         .eq('order_id', id);
 
       if (itemsError) {
@@ -210,6 +332,7 @@ async function handleApprove(
         
         for (const item of orderItems) {
           const productId = item.product_id;
+          const productName = (item.product as any)?.name || 'N/A';
           if (productGroups.has(productId)) {
             // If same product exists, add quantities together
             productGroups.get(productId).quantity += item.quantity;
@@ -219,13 +342,23 @@ async function handleApprove(
             productGroups.set(productId, {
               product_id: productId,
               quantity: item.quantity,
-              product_name: item.product_name
+              product_name: productName
             });
             logger.log(`🆕 New product ${productId}: ${item.quantity} units`);
           }
         }
 
         logger.log(`📊 Grouped ${orderItems.length} items into ${productGroups.size} unique products`);
+        
+        // DEBUG: Tüm ürünleri logla
+        logger.log('📦 All products to create plans for:');
+        productGroups.forEach((productData, productId) => {
+          logger.log(`  - Product ${productId}: ${productData.quantity} units (${productData.product_name || 'N/A'})`);
+        });
+
+        let createdPlansCount = 0;
+        let skippedPlansCount = 0;
+        let errorPlansCount = 0;
 
         // Create production plans for each unique product
         for (const [productId, productData] of productGroups) {
@@ -242,11 +375,12 @@ async function handleApprove(
           if (existingPlan) {
             logger.log('⚠️ Production plan already exists for this order and product. Skipping...');
             logger.log('   Plan ID:', existingPlan.id, 'Status:', existingPlan.status);
+            skippedPlansCount++;
             continue; // Skip creating duplicate plan
           }
           
           // Create production plan with operator assignment if available
-          const planData = {
+          const planData: any = {
             order_id: id,
             product_id: productId,
             planned_quantity: productData.quantity,
@@ -260,6 +394,8 @@ async function handleApprove(
           if (orderDetails.assigned_operator_id) {
             planData.assigned_operator_id = orderDetails.assigned_operator_id;
             logger.log('👤 Assigning operator to production plan:', orderDetails.assigned_operator_id);
+          } else {
+            logger.warn('⚠️ Order has no assigned operator - plan will be created without operator assignment');
           }
 
           const { data: plan, error: planError } = await supabase
@@ -270,10 +406,14 @@ async function handleApprove(
 
           if (planError) {
             logger.error('❌ Error creating production plan:', planError);
+            logger.error('   Plan data:', JSON.stringify(planData, null, 2));
+            errorPlansCount++;
             continue;
           }
 
-          logger.log('✅ Production plan created:', plan.id);
+          createdPlansCount++;
+          logger.log(`✅ Production plan created: ${plan.id} for product ${productId} (${productData.product_name || 'N/A'})`);
+          logger.log(`   Assigned operator: ${plan.assigned_operator_id || 'NONE'}`);
 
           // Get BOM for this product
           const { data: bomItems, error: bomError } = await supabase
@@ -367,6 +507,13 @@ async function handleApprove(
             }
           }
         }
+        
+        // Summary log
+        logger.log(`📊 Production Plan Creation Summary:`);
+        logger.log(`   Total products: ${productGroups.size}`);
+        logger.log(`   Created: ${createdPlansCount}`);
+        logger.log(`   Skipped (existing): ${skippedPlansCount}`);
+        logger.log(`   Errors: ${errorPlansCount}`);
       } else {
         logger.warn('⚠️ No order items found in order!');
       }

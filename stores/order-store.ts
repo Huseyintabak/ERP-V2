@@ -500,28 +500,30 @@ export const useOrderStore = create<OrderStore>()(
           const { user } = useAuthStore.getState();
           
           // Optimistic update
-          get().actions.optimisticUpdateOrder(orderId, { status: 'onaylandi' });
+          get().actions.optimisticUpdateOrder(orderId, { status: 'uretimde' });
           
           try {
             if (!user?.id) {
               throw new Error('Kullanıcı kimlik doğrulaması gerekli');
             }
-            const response = await fetch(`/api/orders/${orderId}`, {
-              method: 'PATCH',
+            const response = await fetch(`/api/orders/${orderId}/approve`, {
+              method: 'POST',
               headers: { 
                 'Content-Type': 'application/json',
                 'x-user-id': user.id
               },
-              body: JSON.stringify({ status: 'onaylandi' }),
+              body: JSON.stringify({ notes: '' }),
             });
             
             if (!response.ok) {
-              throw new Error('Failed to approve order');
+              const errorData = await response.json().catch(() => ({}));
+              throw new Error(errorData.error || errorData.message || 'Failed to approve order');
             }
             
             const result = await response.json();
-            get().actions.updateOrder(result.data);
-          } catch (error) {
+            get().actions.updateOrder(result);
+            get().actions.fetchOrders(); // Refresh orders to get updated status
+          } catch (error: any) {
             // Revert optimistic update on error
             get().actions.fetchOrders();
             throw error;

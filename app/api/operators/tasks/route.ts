@@ -93,6 +93,31 @@ export async function GET(request: NextRequest) {
 
     logger.log('✅ Tasks found:', data?.length || 0);
     logger.log('📦 Tasks data:', JSON.stringify(data, null, 2));
+    
+    // DEBUG: Aynı order_id'ye sahip planları kontrol et
+    if (data && data.length > 0) {
+      const orderGroups = new Map();
+      data.forEach((plan: any) => {
+        const orderId = plan.order_id;
+        if (!orderGroups.has(orderId)) {
+          orderGroups.set(orderId, []);
+        }
+        orderGroups.get(orderId).push({
+          plan_id: plan.id,
+          product_id: plan.product_id,
+          product_name: plan.product?.name,
+          order_number: plan.order?.order_number
+        });
+      });
+      
+      logger.log('📊 Plans grouped by order_id:');
+      orderGroups.forEach((plans, orderId) => {
+        logger.log(`  Order ${orderId}: ${plans.length} plans`);
+        plans.forEach((p: any) => {
+          logger.log(`    - Plan ${p.plan_id}: ${p.product_name} (${p.product_id})`);
+        });
+      });
+    }
 
     return NextResponse.json({
       data: data || [],

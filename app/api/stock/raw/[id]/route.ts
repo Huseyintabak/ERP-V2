@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { verifyJWT } from '@/lib/auth/jwt';
+import { AgentOrchestrator } from '@/lib/ai/orchestrator';
+import { agentLogger } from '@/lib/ai/utils/logger';
 
 import { logger } from '@/lib/utils/logger';
 export async function GET(
@@ -54,6 +56,105 @@ export async function PUT(
     }
 
     const updateData = await request.json();
+
+    // Get current material data before update
+    const { data: currentMaterial } = await supabase
+      .from('raw_materials')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    // ============================================
+    // AI AGENT VALIDATION (Opsiyonel - AGENT_ENABLED kontrolü ile)
+    // Quantity güncellemesi için özellikle önemli
+    // ============================================
+    if (process.env.AGENT_ENABLED === 'true' && updateData.quantity !== undefined) {
+      try {
+        logger.log('🤖 AI Agent validation başlatılıyor (Warehouse - Raw Material Update)...');
+        
+        // Warehouse Agent ile konuşma başlat
+        const orchestrator = AgentOrchestrator.getInstance();
+        const agentResult = await orchestrator.startConversation('warehouse', {
+          id: `raw_material_update_${id}_${Date.now()}`,
+          prompt: `Bu hammadde stok güncellemesini doğrula: ${currentMaterial?.name || id}`,
+          type: 'validation',
+          context: {
+            materialId: id,
+            materialName: currentMaterial?.name,
+            materialCode: currentMaterial?.code,
+            currentQuantity: currentMaterial?.quantity,
+            newQuantity: updateData.quantity,
+            quantityChange: updateData.quantity - (currentMaterial?.quantity || 0),
+            criticalLevel: currentMaterial?.critical_level,
+            updateData: updateData,
+            requestedBy: payload.userId,
+            requestedByRole: payload.role
+          },
+          urgency: Math.abs(updateData.quantity - (currentMaterial?.quantity || 0)) > 100 ? 'high' : 'medium',
+          severity: updateData.quantity < (currentMaterial?.critical_level || 0) ? 'high' : 'medium'
+        });
+
+        await agentLogger.log({
+          agent: 'warehouse',
+          action: 'raw_material_update_validation',
+          materialId: id,
+          currentQuantity: currentMaterial?.quantity,
+          newQuantity: updateData.quantity,
+          finalDecision: agentResult.finalDecision,
+          protocolResult: agentResult.protocolResult
+        });
+
+        // Agent reddettiyse
+        if (agentResult.finalDecision === 'rejected') {
+          logger.warn('❌ AI Agent hammadde güncellemesini reddetti:', agentResult.protocolResult?.errors);
+          return NextResponse.json(
+            {
+              error: 'AI Agent validation failed',
+              message: 'Hammadde güncellemesi AI Agent tarafından reddedildi',
+              details: agentResult.protocolResult?.errors || [],
+              warnings: agentResult.protocolResult?.warnings || [],
+              agentReasoning: agentResult.protocolResult?.decision?.reasoning
+            },
+            { status: 400 }
+          );
+        }
+
+        // Human approval bekleniyorsa
+        if (agentResult.finalDecision === 'pending_approval') {
+          logger.log('⏳ AI Agent human approval bekliyor...');
+          return NextResponse.json(
+            {
+              error: 'Human approval required',
+              message: 'Bu hammadde güncellemesi için yönetici onayı gerekiyor',
+              approvalRequired: true,
+              decisionId: agentResult.protocolResult?.decision?.action
+            },
+            { status: 403 }
+          );
+        }
+
+        // Agent onayladıysa
+        if (agentResult.finalDecision === 'approved') {
+          logger.log('✅ AI Agent hammadde güncellemesini onayladı');
+          logger.log('📊 Agent reasoning:', agentResult.protocolResult?.decision?.reasoning);
+          
+          // Agent'ın önerileri varsa logla
+          if (agentResult.protocolResult?.warnings && agentResult.protocolResult.warnings.length > 0) {
+            logger.warn('⚠️ AI Agent uyarıları:', agentResult.protocolResult.warnings);
+          }
+        }
+      } catch (error: any) {
+        // Agent hatası durumunda graceful degradation - manuel güncelleme devam eder
+        logger.warn('⚠️ AI Agent validation hatası, manuel güncelleme devam ediyor:', error.message);
+        await agentLogger.error({
+          agent: 'warehouse',
+          action: 'raw_material_update_validation_error',
+          materialId: id,
+          error: error.message
+        });
+        // Hata olsa bile manuel güncelleme devam eder (graceful degradation)
+      }
+    }
 
     const { data: material, error } = await supabase
       .from('raw_materials')

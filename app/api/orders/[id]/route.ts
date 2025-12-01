@@ -93,6 +93,39 @@ export async function PUT(
       return NextResponse.json({ error: 'Failed to update order' }, { status: 400 });
     }
 
+    // Eğer assigned_operator_id güncelleniyorsa, bu order'a ait tüm production_plan'ları da güncelle
+    if (updateData.assigned_operator_id !== undefined) {
+      logger.log('👤 Updating operator assignment for all production plans in order:', id);
+      logger.log('   New operator ID:', updateData.assigned_operator_id);
+      
+      const { data: plans, error: plansError } = await supabase
+        .from('production_plans')
+        .select('id')
+        .eq('order_id', id);
+
+      if (plansError) {
+        logger.error('❌ Error fetching production plans:', plansError);
+      } else if (plans && plans.length > 0) {
+        logger.log(`📦 Found ${plans.length} production plans to update`);
+        
+        const { error: updatePlansError } = await supabase
+          .from('production_plans')
+          .update({
+            assigned_operator_id: updateData.assigned_operator_id || null,
+            updated_at: new Date().toISOString()
+          })
+          .eq('order_id', id);
+
+        if (updatePlansError) {
+          logger.error('❌ Error updating production plans:', updatePlansError);
+        } else {
+          logger.log(`✅ Updated ${plans.length} production plans with operator assignment`);
+        }
+      } else {
+        logger.log('⚠️ No production plans found for this order');
+      }
+    }
+
     return NextResponse.json(order);
   } catch (error) {
     logger.error('Error updating order:', error);

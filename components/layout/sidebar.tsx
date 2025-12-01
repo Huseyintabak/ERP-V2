@@ -25,7 +25,12 @@ import {
   ArrowUpDown,
   FileText,
   Radio,
-  ScrollText
+  ScrollText,
+  Bot,
+  DollarSign,
+  Activity,
+  MessageSquare,
+  Code
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth-store';
 import { Button } from '@/components/ui/button';
@@ -131,6 +136,18 @@ const navItems: NavItem[] = [
     href: '/kullanicilar',
     icon: UserCheck,
     roles: ['yonetici'],
+  },
+  {
+    title: 'AI Yönetimi',
+    icon: Bot,
+    roles: ['yonetici', 'planlama'],
+    children: [
+      { title: 'AI Dashboard', href: '/ai-dashboard', icon: Activity },
+      { title: 'Karar Onayları', href: '/ai-onaylar', icon: UserCheck },
+      { title: 'Maliyetler', href: '/ai-maliyetler', icon: DollarSign },
+      { title: 'Agent Konuşmaları', href: '/ai-konusmalar', icon: MessageSquare },
+      { title: 'Developer Agent', href: '/ai-gelistirme', icon: Code },
+    ],
   },
   {
     title: 'Sistem Bakım',

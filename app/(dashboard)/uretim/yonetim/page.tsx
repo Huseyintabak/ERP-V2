@@ -125,7 +125,8 @@ export default function UretimYonetimPage() {
         headers: {
           'Content-Type': 'application/json',
           'x-user-id': user.id
-        }
+        },
+        body: JSON.stringify({ notes: '' })
       });
       const data = await response.json();
 

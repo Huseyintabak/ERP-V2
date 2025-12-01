@@ -253,6 +253,28 @@ export default function OperatorDashboardClient() {
         new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
       );
 
+      // DEBUG: Aynı order'dan gelen planları logla
+      if (allTasks.length > 0) {
+        const orderGroups = new Map<string, any[]>();
+        allTasks.forEach((task: any) => {
+          const orderId = task.order_id || task.order?.id;
+          if (orderId) {
+            if (!orderGroups.has(orderId)) {
+              orderGroups.set(orderId, []);
+            }
+            orderGroups.get(orderId)!.push(task);
+          }
+        });
+        
+        orderGroups.forEach((tasks, orderId) => {
+          if (tasks.length > 1) {
+            logger.log(`📦 Order ${orderId} has ${tasks.length} production plans:`, 
+              tasks.map((t: any) => `${t.product?.name || 'N/A'} (${t.id})`).join(', ')
+            );
+          }
+        });
+      }
+
       setAssignedTasks(allTasks);
     } catch (error) {
       logger.error('Assigned tasks fetch error:', error);

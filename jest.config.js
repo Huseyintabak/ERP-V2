@@ -1,0 +1,35 @@
+const nextJest = require('next/jest')
+
+const createJestConfig = nextJest({
+  // Next.js app dizini
+  dir: './',
+})
+
+// Jest'e özel konfigürasyon
+const customJestConfig = {
+  setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
+  testEnvironment: 'jest-environment-node',
+  moduleNameMapper: {
+    '^@/(.*)$': '<rootDir>/$1',
+  },
+  testMatch: [
+    '**/__tests__/**/*.test.[jt]s?(x)',
+    '**/?(*.)+(spec|test).[jt]s?(x)',
+  ],
+  collectCoverageFrom: [
+    'lib/**/*.{js,ts}',
+    'app/**/*.{js,ts}',
+    '!**/*.d.ts',
+    '!**/node_modules/**',
+  ],
+  testTimeout: 30000, // 30 saniye timeout
+  // Environment variable'ları test ortamında kullanılabilir yap
+  globals: {
+    'process.env': {
+      ...process.env,
+    },
+  },
+}
+
+module.exports = createJestConfig(customJestConfig)
+

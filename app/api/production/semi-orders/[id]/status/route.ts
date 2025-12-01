@@ -13,9 +13,16 @@ export async function PATCH(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const payload = await verifyJWT(token);
+    let payload: Awaited<ReturnType<typeof verifyJWT>>;
+    try {
+      payload = await verifyJWT(token);
+    } catch (authError) {
+      logger.warn('Unauthorized semi production order status PATCH attempt:', authError);
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     if (!payload) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const { id } = await params;

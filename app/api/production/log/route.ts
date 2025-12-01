@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { verifyJWT } from '@/lib/auth/jwt';
+import { AgentOrchestrator } from '@/lib/ai/orchestrator';
+import { agentLogger } from '@/lib/ai/utils/logger';
 
 import { logger } from '@/lib/utils/logger';
 export async function POST(request: NextRequest) {
@@ -202,6 +204,106 @@ export async function POST(request: NextRequest) {
         consumption: consumption,
         before: material?.quantity || 0
       });
+    }
+
+    // ============================================
+    // AI AGENT VALIDATION (Opsiyonel - AGENT_ENABLED kontrolü ile)
+    // ============================================
+    if (process.env.AGENT_ENABLED === 'true') {
+      try {
+        logger.log('🤖 AI Agent validation başlatılıyor (Production)...');
+        
+        // Production Agent ile konuşma başlat
+        const orchestrator = AgentOrchestrator.getInstance();
+        const agentResult = await orchestrator.startConversation('production', {
+          id: `production_log_${plan_id}_${Date.now()}`,
+          prompt: `Bu üretim kaydını doğrula: Plan #${plan_id}, Üretilen: ${quantity_produced} adet`,
+          type: 'validation',
+          context: {
+            planId: plan_id,
+            planData: {
+              id: plan.id,
+              product_id: plan.product_id,
+              product_name: product.name,
+              planned_quantity: plan.planned_quantity,
+              produced_quantity: plan.produced_quantity,
+              quantity_produced: quantity_produced,
+              totalProduced: totalProduced,
+              status: plan.status
+            },
+            operatorId: operatorId,
+            barcodeScanned: barcode_scanned,
+            bomSnapshot: bomSnapshot.map(item => ({
+              material_type: item.material_type,
+              material_id: item.material_id,
+              material_name: item.material_name,
+              quantity_needed: item.quantity_needed,
+              consumption: (item.quantity_needed / plan.planned_quantity) * quantity_produced
+            })),
+            stockChecks: stockChecks
+          },
+          urgency: 'high',
+          severity: 'medium'
+        });
+
+        await agentLogger.log({
+          agent: 'production',
+          action: 'production_log_validation',
+          planId: plan_id,
+          finalDecision: agentResult.finalDecision,
+          protocolResult: agentResult.protocolResult
+        });
+
+        // Agent reddettiyse
+        if (agentResult.finalDecision === 'rejected') {
+          logger.warn('❌ AI Agent üretim kaydını reddetti:', agentResult.protocolResult?.errors);
+          return NextResponse.json(
+            {
+              error: 'AI Agent validation failed',
+              message: 'Üretim kaydı AI Agent tarafından reddedildi',
+              details: agentResult.protocolResult?.errors || [],
+              warnings: agentResult.protocolResult?.warnings || [],
+              agentReasoning: agentResult.protocolResult?.decision?.reasoning
+            },
+            { status: 400 }
+          );
+        }
+
+        // Human approval bekleniyorsa
+        if (agentResult.finalDecision === 'pending_approval') {
+          logger.log('⏳ AI Agent human approval bekliyor...');
+          return NextResponse.json(
+            {
+              error: 'Human approval required',
+              message: 'Bu üretim kaydı için yönetici onayı gerekiyor',
+              approvalRequired: true,
+              decisionId: agentResult.protocolResult?.decision?.action
+            },
+            { status: 403 }
+          );
+        }
+
+        // Agent onayladıysa
+        if (agentResult.finalDecision === 'approved') {
+          logger.log('✅ AI Agent üretim kaydını onayladı');
+          logger.log('📊 Agent reasoning:', agentResult.protocolResult?.decision?.reasoning);
+          
+          // Agent'ın önerileri varsa logla
+          if (agentResult.protocolResult?.warnings && agentResult.protocolResult.warnings.length > 0) {
+            logger.warn('⚠️ AI Agent uyarıları:', agentResult.protocolResult.warnings);
+          }
+        }
+      } catch (error: any) {
+        // Agent hatası durumunda graceful degradation - manuel kayıt devam eder
+        logger.warn('⚠️ AI Agent validation hatası, manuel kayıt devam ediyor:', error.message);
+        await agentLogger.error({
+          agent: 'production',
+          action: 'production_log_validation_error',
+          planId: plan_id,
+          error: error.message
+        });
+        // Hata olsa bile manuel kayıt devam eder (graceful degradation)
+      }
     }
 
     // 6. Production Log Kaydet (admin client ile RLS bypass)

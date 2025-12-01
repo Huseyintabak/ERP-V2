@@ -13,9 +13,16 @@ export async function PUT(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const payload = await verifyJWT(token);
+    let payload: Awaited<ReturnType<typeof verifyJWT>>;
+    try {
+      payload = await verifyJWT(token);
+    } catch (authError) {
+      logger.warn('Unauthorized semi production order PUT attempt:', authError);
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     if (!payload) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     // Only managers and planlama can update semi production orders
@@ -82,9 +89,16 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const payload = await verifyJWT(token);
+    let payload: Awaited<ReturnType<typeof verifyJWT>>;
+    try {
+      payload = await verifyJWT(token);
+    } catch (authError) {
+      logger.warn('Unauthorized semi production order DELETE attempt:', authError);
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     if (!payload) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     // Only managers and planlama can delete semi production orders

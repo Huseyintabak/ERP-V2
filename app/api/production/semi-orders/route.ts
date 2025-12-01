@@ -10,9 +10,16 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const payload = await verifyJWT(token);
+    let payload: Awaited<ReturnType<typeof verifyJWT>>;
+    try {
+      payload = await verifyJWT(token);
+    } catch (authError) {
+      logger.warn('Unauthorized semi production orders GET attempt:', authError);
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     if (!payload) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const supabase = await createClient();
@@ -59,10 +66,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const payload = await verifyJWT(token);
-    if (!payload) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+    let payload: Awaited<ReturnType<typeof verifyJWT>>;
+    try {
+      payload = await verifyJWT(token);
+    } catch (authError) {
+      logger.warn('Unauthorized semi production orders POST attempt:', authError);
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+
+    if (!payload) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    logger.log('👤 Semi-order POST payload:', payload);
 
     // Only managers and planlama can create semi production orders
     if (!['yonetici', 'planlama'].includes(payload.role)) {
@@ -77,6 +93,15 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = await createClient();
+
+    logger.log('📝 Semi-order POST insert payload:', {
+      product_id,
+      planned_quantity,
+      priority,
+      assigned_operator_id,
+      notes,
+      created_by: payload.userId,
+    });
 
     // Try to create order directly
 
@@ -124,6 +149,9 @@ export async function POST(request: NextRequest) {
 
     if (error) {
       logger.error('Error creating semi production order:', error);
+      if (error.code === '23514') {
+        return NextResponse.json({ error: 'Yeterli stok bulunmuyor. Lütfen hammadde/semi stoklarını kontrol edin.' }, { status: 400 });
+      }
       return NextResponse.json({ error: 'Failed to create order' }, { status: 500 });
     }
 
