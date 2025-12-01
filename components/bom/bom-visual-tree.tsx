@@ -33,6 +33,7 @@ interface BomNode {
     cost?: number;
     stock?: number;
     isRoot?: boolean;
+    materialId?: string; // Store original material ID for saving
   };
   position: { x: number; y: number };
 }
@@ -101,7 +102,8 @@ export function BomVisualTree({
               code: material.material.code,
               quantity: material.quantity_needed,
               unit: material.material.unit,
-              cost: material.material.unit_price || material.material.unit_cost || 0
+              cost: material.material.unit_price || material.material.unit_cost || 0,
+              materialId: material.material_id // Store original material ID
             },
             position: { 
               x: 100 + (index * 150), 
@@ -135,7 +137,8 @@ export function BomVisualTree({
               code: material.material.code,
               quantity: material.quantity_needed,
               unit: material.material.unit,
-              cost: material.material.unit_price || material.material.unit_cost || 0
+              cost: material.material.unit_price || material.material.unit_cost || 0,
+              materialId: material.material_id // Store original material ID
             },
             position: { 
               x: 200 + (index * 150), 
@@ -198,7 +201,8 @@ export function BomVisualTree({
             code: material.material.code,
             quantity: material.quantity_needed,
             unit: material.material.unit,
-            cost: material.material.unit_price || material.material.unit_cost || 0
+            cost: material.material.unit_price || material.material.unit_cost || 0,
+            materialId: material.material_id // Store original material ID
           },
           position: { 
             x: 100 + (index * 150), 
@@ -232,7 +236,8 @@ export function BomVisualTree({
             code: material.material.code,
             quantity: material.quantity_needed,
             unit: material.material.unit,
-            cost: material.material.unit_price || material.material.unit_cost || 0
+            cost: material.material.unit_price || material.material.unit_cost || 0,
+            materialId: material.material_id // Store original material ID
           },
           position: { 
             x: 200 + (index * 150), 
@@ -332,7 +337,8 @@ export function BomVisualTree({
         quantity: formData.quantity,
         unit: formData.unit,
         cost: material.unit_price || material.unit_cost || 0,
-        stock: material.quantity || 0
+        stock: material.quantity || 0,
+        materialId: material.id // Store original material ID for saving
       },
       position: { x: Math.random() * 400 + 100, y: Math.random() * 300 + 150 }
     };
@@ -409,20 +415,65 @@ export function BomVisualTree({
 
   // Handle saving BOM
   const handleSave = () => {
+    // Filter out root product node and validate materials
+    const materialNodes = nodes.filter(node => node.id !== productId);
+    
+    if (materialNodes.length === 0) {
+      toast.error('Kaydedilecek malzeme bulunamadı');
+      return;
+    }
+
+    // Extract material IDs - try data.materialId first, then parse from node.id
+    const materials = materialNodes.map((node, index) => {
+      let materialId = node.data.materialId;
+      
+      // If materialId not in data, try to extract from node.id
+      if (!materialId) {
+        // Handle formats: "material-{id}" or "{id}-{timestamp}"
+        const parts = node.id.split('-');
+        if (parts[0] === 'material') {
+          // Format: "material-{uuid}" - extract everything after "material-"
+          materialId = parts.slice(1).join('-'); // Handle UUIDs with dashes
+        } else {
+          // Format: "{id}-{timestamp}" - first part is the ID
+          materialId = parts[0];
+        }
+      }
+
+      if (!materialId || materialId === 'material') {
+        console.error('Could not extract material ID from node:', {
+          nodeId: node.id,
+          nodeData: node.data,
+          nodeType: node.type,
+          index
+        });
+        throw new Error(`Malzeme ID'si bulunamadı: ${node.data.label || 'Bilinmeyen malzeme'}`);
+      }
+
+      // Validate material type
+      const materialType = node.type === 'raw' ? 'raw' : (node.type === 'semi' ? 'semi' : 'raw');
+      
+      // Validate quantity
+      if (!node.data.quantity || node.data.quantity <= 0) {
+        throw new Error(`Geçersiz miktar: ${node.data.label || 'Bilinmeyen malzeme'}`);
+      }
+
+      return {
+        material_id: materialId,
+        material_type: materialType,
+        quantity: node.data.quantity,
+        quantity_needed: node.data.quantity // API accepts both
+      };
+    });
+
     const bomData = {
       productId,
-      materials: nodes
-        .filter(node => node.id !== productId)
-        .map(node => ({
-          materialId: node.id.split('-')[0], // Extract original material ID
-          materialType: node.type,
-          quantity: node.data.quantity,
-          unit: node.data.unit
-        }))
+      materials
     };
 
+    console.log('Saving BOM data:', bomData);
     onSave(bomData);
-    toast.success('BOM kaydedildi');
+    // Don't show success toast here - let the parent component handle it
   };
 
   // Handle reset

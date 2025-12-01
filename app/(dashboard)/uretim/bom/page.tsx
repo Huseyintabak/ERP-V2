@@ -639,26 +639,71 @@ export default function BOMPage() {
       if (!user?.id) {
         throw new Error('Kullanıcı kimlik doğrulaması gerekli');
       }
-      const response = await fetch(`/api/bom/${selectedProduct?.id}`, {
+
+      if (!selectedProduct?.id) {
+        throw new Error('Ürün seçilmedi');
+      }
+
+      console.log('Saving BOM for product:', selectedProduct.id);
+      console.log('BOM data received:', bomData);
+
+      // Transform data to API format
+      const entries = (bomData.materials || []).map((material: any) => ({
+        material_type: material.material_type || material.materialType || 'raw',
+        material_id: material.material_id || material.materialId,
+        quantity_needed: material.quantity_needed || material.quantity,
+        quantity: material.quantity_needed || material.quantity // API accepts both
+      }));
+
+      console.log('Transformed entries:', entries);
+
+      // Validate entries
+      const invalidEntries = entries.filter((entry: any) => 
+        !entry.material_id || !entry.material_type || !entry.quantity_needed
+      );
+
+      if (invalidEntries.length > 0) {
+        console.error('Invalid entries:', invalidEntries);
+        throw new Error('Geçersiz malzeme verileri. Lütfen tüm alanları kontrol edin.');
+      }
+
+      const response = await fetch(`/api/bom/${selectedProduct.id}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'x-user-id': user.id
         },
         body: JSON.stringify({
-          product_id: selectedProduct?.id,
-          entries: bomData.materials
+          product_id: selectedProduct.id,
+          entries: entries
         }),
       });
 
       if (!response.ok) {
         const errorText = await response.text();
         console.error('BOM save error:', response.status, errorText);
-        throw new Error(`BOM kaydedilemedi: ${response.status} - ${errorText}`);
+        
+        let errorMessage = `BOM kaydedilemedi: ${response.status}`;
+        try {
+          const errorJson = JSON.parse(errorText);
+          errorMessage = errorJson.error || errorMessage;
+        } catch {
+          errorMessage = errorText || errorMessage;
+        }
+        
+        throw new Error(errorMessage);
       }
 
+      const result = await response.json();
+      console.log('BOM save success:', result);
+
       toast.success('BOM başarıyla kaydedildi');
-      fetchBOMData(selectedProduct?.id || '');
+      
+      // Refresh BOM data
+      await fetchBOMData(selectedProduct.id);
+      
+      // Auto calculate cost
+      await autoCalculateCost(selectedProduct.id);
     } catch (error: any) {
       console.error('Error saving BOM:', error);
       toast.error(error.message || 'BOM kaydedilirken hata oluştu');
