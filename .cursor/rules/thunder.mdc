@@ -6,6 +6,24 @@ alwaysApply: true
 
 **⚠️ KRİTİK UYARI: Bu proje artık CANLI ORTAMDA çalışıyor!**
 
+## 🏗️ PROJE YAPISI
+
+### Teknoloji Stack
+- **Framework:** Next.js 15.5.4 (App Router)
+- **Database:** Supabase PostgreSQL (MCP entegrasyonu aktif)
+- **AI:** OpenAI GPT-4 (Multi-Agent Architecture)
+- **Deployment:** PM2 (ecosystem.config.js)
+- **State:** Zustand stores
+- **UI:** Shadcn/ui + Tailwind CSS v4
+
+### Ana Modüller
+- **Üretim Yönetimi** (`/uretim/*`) - Sipariş, planlama, operatör atama
+- **Stok Yönetimi** (`/stok/*`) - Hammadde, yarı mamul, nihai ürün
+- **Depo Yönetimi** (`/depo-zone-yonetimi`) - Zone bazlı stok takibi
+- **AI Dashboard** (`/ai-*`) - Agent performans, maliyetler, konuşmalar, onaylar
+- **Operator Dashboard** (`/operator-dashboard`) - Barkod okuma, üretim kaydı
+- **Bildirimler & İşlem Geçmişi** - Audit logging ve notifications
+
 ## 🛡️ TEMEL GÜVENLİK KURALLARI
 
 ### 1. **VERİ KORUMA** 🔒
@@ -15,12 +33,14 @@ alwaysApply: true
 - Mevcut tabloları DROP etme
 - Kritik verileri güncelleme
 - Bulk DELETE işlemleri
+- Production_logs, stock_movements, audit_logs tablolarından silme
 
 ✅ GÜVENLİ YAKLAŞIM:
 - Soft delete kullan
-- Backup al
+- Backup al (Supabase Dashboard veya MCP)
 - Test ortamında dene
 - Rollback planı hazırla
+- Migration'ları MCP ile uygula
 ```
 
 ### 2. **DATABASE DEĞİŞİKLİKLERİ** 🗄️
@@ -29,17 +49,41 @@ alwaysApply: true
 DROP TABLE users;
 ALTER TABLE orders DROP COLUMN customer_id;
 DELETE FROM stock_movements;
+DELETE FROM production_logs;
+DELETE FROM audit_logs;
 
 ✅ GÜVENLİ:
--- Migration ile yeni kolon ekle
+-- Migration ile yeni kolon ekle (Supabase MCP kullan)
 ALTER TABLE orders ADD COLUMN new_field VARCHAR(255) DEFAULT '';
 -- Soft delete
 UPDATE orders SET is_deleted = true WHERE id = ?;
 -- Backup ile güncelleme
 UPDATE stock_movements SET status = 'archived' WHERE created_at < ?;
+-- Production trigger'ları güncelle (UUID casting kontrolü)
 ```
 
-### 3. **API DEĞİŞİKLİKLERİ** 🔌
+**ÖNEMLİ:** Database değişikliklerini **Supabase MCP** ile yap:
+```typescript
+// ✅ DOĞRU: Migration MCP ile uygula
+mcp_supabase_apply_migration({ name: 'migration_name', query: 'SQL...' })
+
+// ❌ YANLIŞ: Direkt SQL execute etme (veri kaybı riski)
+```
+
+### 3. **PRODUCTION TRIGGER'LARI** ⚙️
+```sql
+-- Production log insert edildiğinde çalışan trigger'lar:
+-- 1. update_stock_on_production() - Nihai ürün stokunu artırır
+-- 2. consume_materials_on_production() - BOM'dan malzeme tüketir
+
+-- ÖNEMLİ: format() içinde UUID casting ZORUNLU
+-- ✅ DOĞRU:
+v_error_context := format('plan_id=%s', NEW.plan_id::TEXT);
+-- ❌ YANLIŞ:
+v_error_context := format('plan_id=%s', NEW.plan_id); -- "operator does not exist" hatası!
+```
+
+### 4. **API DEĞİŞİKLİKLERİ** 🔌
 ```typescript
 ❌ BREAKING CHANGES:
 // Mevcut endpoint'i değiştirme
@@ -52,32 +96,120 @@ GET /api/v2/orders
 GET /api/orders (deprecated)
 ```
 
+### 5. **AI AGENT SİSTEMİ** 🤖
+```typescript
+// ✅ DOĞRU: Agent'lar production log validation için kullanılır
+// Agent validation başarısız olsa bile operatör üretimi devam eder (graceful degradation)
+
+// ❌ YANLIŞ: Agent hatası production'ı durdurur
+if (!agentResult.success) throw new Error('Agent validation failed');
+
+// ✅ DOĞRU: Warning ver ama devam et
+if (agentResult.finalDecision === 'rejected') {
+  logger.warn('AI Agent reddetti ama işleme devam ediliyor');
+  // Production log oluşturulmaya devam eder
+}
+```
+
+**AI Agent Özellikleri:**
+- **6 Agent:** Planning, Warehouse, Production, Purchase, Manager, Developer
+- **Zero Error Protocol:** 4 katmanlı doğrulama (Self, Cross-Agent, Consensus, Database)
+- **Human Approvals:** Kritik kararlar için onay sistemi (`human_approvals` tablosu)
+- **Cost Tracking:** `agent_costs` tablosunda token ve maliyet takibi
+- **Conversation Logs:** `agent_logs` tablosunda tüm konuşmalar
+
+**Environment Variables:**
+```bash
+# .env.local (sunucuda)
+OPENAI_API_KEY=sk-proj-...          # AI özellikleri için ZORUNLU
+AGENT_ENABLED=true                  # AI Agent'ları aktif et
+AGENT_LOGGING_ENABLED=true          # AI log'ları database'e kaydet
+```
+
 ## 📊 CANLI VERİ KORUMA LİSTESİ
 
 ### **Kritik Tablolar** ⚠️
 ```sql
--- ASLA SİLME/GÜNCELLEME YAPMA:
+-- ASLA SİLME/GÜNCELLEME YAPMA (Migration gerektirir):
 users                    -- Kullanıcı hesapları
 customers               -- Müşteri verileri
 orders                  -- Sipariş geçmişi
 order_items             -- Sipariş kalemleri
+production_plans        -- Üretim planları
+production_logs         -- Üretim kayıtları (operator kayıtları)
 raw_materials           -- Hammadde stokları
 semi_finished_products  -- Yarı mamul stokları
 finished_products       -- Nihai ürün stokları
-stock_movements         -- Stok hareketleri
+stock_movements         -- Stok hareketleri (audit için kritik!)
 audit_logs              -- Audit kayıtları
-price_history           -- Fiyat geçmişi
-zone_inventories        -- Depo zone stokları
+material_reservations   -- Malzeme rezervasyonları
+warehouse_zones         -- Depo zone'ları
+zone_inventories        -- Zone stokları
+zone_transfers          -- Zone transferleri
+agent_logs              -- AI Agent konuşma logları
+agent_costs             -- AI maliyet takibi
+human_approvals         -- AI onay kayıtları
+notifications           -- Bildirimler
 ```
 
 ### **Güvenli İşlemler** ✅
 ```sql
 -- Bu işlemler güvenli:
-INSERT INTO new_table...     -- Yeni kayıt ekleme
-UPDATE status = 'active'     -- Status güncelleme
-SELECT ...                   -- Veri okuma
-CREATE INDEX ...             -- Index ekleme
+INSERT INTO new_table...           -- Yeni kayıt ekleme
+UPDATE status = 'active'           -- Status güncelleme
+UPDATE quantity = 0                -- Stok sıfırlama (tek seferlik)
+SELECT ...                         -- Veri okuma
+CREATE INDEX ...                   -- Index ekleme
+CREATE OR REPLACE FUNCTION ...     -- Fonksiyon güncelleme
 ```
+
+### **Stok Yönetimi Kuralları**
+```sql
+-- ✅ Stok sıfırlama (1 defalık işlem):
+UPDATE finished_products SET quantity = 0 WHERE quantity > 0;
+
+-- ✅ Rezervasyon sistemi:
+-- material_reservations tablosu production_plans ile otomatik oluşur
+-- Production log insert edildiğinde otomatik consumed_quantity güncellenir
+-- Plan iptal edildiğinde rezervasyonlar otomatik serbest bırakılır
+
+-- ❌ Manuel rezervasyon silme:
+DELETE FROM material_reservations; -- TRİGGER'LAR BOZULUR!
+```
+
+## 🤖 AI AGENT KURALLARI
+
+### Agent Kullanımı
+- **Production Log Validation:** Operator üretim kayıtlarını doğrular
+- **Order Approval:** Sipariş onaylarında konsensüs oluşturur
+- **Developer Reports:** Sistem analizi ve iyileştirme önerileri
+
+### Graceful Degradation
+```typescript
+// ✅ Agent hatası olsa bile sistem çalışmaya devam etmeli
+if (process.env.AGENT_ENABLED !== 'true') {
+  // Agent devre dışıysa normal akışa devam et
+  return await createProductionLog(...);
+}
+
+try {
+  const agentResult = await orchestrator.startConversation(...);
+  // Agent sonucu logla ama production'ı durdurma
+} catch (error) {
+  logger.warn('AI Agent hatası, manuel kayıt devam ediyor');
+  // Hata olsa bile production log oluştur
+}
+```
+
+### Agent Logging
+- **Memory Logging:** Hızlı erişim için in-memory
+- **Database Logging:** `agent_logs` tablosuna kaydedilir (AGENT_LOGGING_ENABLED)
+- **Cost Tracking:** Her API çağrısı `agent_costs` tablosuna kaydedilir
+
+### Human Approvals
+- Kritik AI kararları `human_approvals` tablosuna kaydedilir
+- Yönetici/Planlama rolleri onaylayabilir/reddedebilir
+- Expiry date kontrolü yapılır (24 saat)
 
 ## 🔍 CODE REVIEW CHECKLIST
 
@@ -85,9 +217,11 @@ CREATE INDEX ...             -- Index ekleme
 - [ ] **Breaking Change:** Mevcut API'ler bozuldu mu?
 - [ ] **Data Safety:** Canlı veri etkileniyor mu?
 - [ ] **Error Handling:** Hata durumları handle ediliyor mu?
-- [ ] **Logging:** Önemli işlemler loglanıyor mu?
+- [ ] **Logging:** Önemli işlemler loglanıyor mu? (logger.ts kullan)
 - [ ] **Performance:** Query'ler optimize mi?
 - [ ] **Security:** SQL injection koruması var mı?
+- [ ] **AI Agent:** Agent hatası graceful degradation ile handle ediliyor mu?
+- [ ] **Trigger Safety:** UUID casting format() içinde doğru mu?
 - [ ] **Rollback:** Geri alma planı hazır mı?
 - [ ] **Testing:** Test coverage yeterli mi?
 
@@ -99,6 +233,8 @@ DROP TABLE orders;                   // Table drop
 ALTER TABLE DROP COLUMN;             // Column drop
 UPDATE * SET field = value;          // Bulk update
 eval(userInput);                     // Code injection
+format('id=%s', uuid)                // UUID casting eksik (trigger'larda)
+await supabase.raw()                 // Kullanılmıyor artık, execute_sql kullan
 ```
 
 ## 🚨 ACİL DURUM PROSEDÜRÜ
@@ -107,33 +243,59 @@ eval(userInput);                     // Code injection
 ```bash
 # 1. Hızlı rollback
 git revert <commit-hash>
-npm run deploy:rollback
 
-# 2. Database restore
-psql thunder_erp < backup_latest.sql
+# 2. PM2 restart (sunucuda)
+pm2 restart thunder-erp
 
-# 3. Servisleri yeniden başlat
-pm2 restart all
+# 3. Database restore (Supabase Dashboard veya MCP)
+# Supabase Dashboard > Database > Backups
 
 # 4. Monitor et
-pm2 logs
+pm2 logs thunder-erp --lines 100
+
+# 5. Migration rollback (gerekirse)
+# Supabase Dashboard > Database > Migrations
+```
+
+### **Production Log Hatası**
+```bash
+# "operator does not exist: text = uuid" hatası:
+# 1. Trigger fonksiyonlarını kontrol et
+# 2. format() içinde ::TEXT casting var mı?
+# 3. Migration uygula (MCP ile)
+mcp_supabase_apply_migration({ name: 'fix_operator_type_cast', query: '...' })
+```
+
+### **AI Agent Loop Hatası**
+```bash
+# Conversation loop olduğunda:
+# 1. API endpoint ile durdur
+POST /api/ai/conversations/[id]/stop
+
+# 2. Database'de manuel olarak tamamlandı işaretle
+UPDATE agent_logs SET action = 'conversation_failed' 
+WHERE conversation_id = '...' AND action = 'in_progress';
 ```
 
 ## ⚡ HIZLI REFERANS
 
 ### **Güvenli Komutlar** ✅
 ```bash
-# Backup
-pg_dump thunder_erp > backup.sql
+# Sunucuda deployment
+cd /var/www/thunder-erp
+git pull origin main
+npm install
+npm run build
+pm2 restart thunder-erp
 
-# Migration
-npx supabase migration up
+# Migration uygulama (Supabase MCP)
+mcp_supabase_apply_migration({ name: 'migration_name', query: 'SQL...' })
 
-# Deploy
-npm run build && npm run deploy
+# Stok sıfırlama (1 defalık)
+UPDATE finished_products SET quantity = 0 WHERE quantity > 0;
 
-# Rollback
-git revert HEAD && npm run deploy
+# Log kontrolü
+pm2 logs thunder-erp --lines 50
 ```
 
 ### **Tehlikeli Komutlar** ❌
@@ -142,12 +304,97 @@ git revert HEAD && npm run deploy
 DROP DATABASE thunder_erp;
 rm -rf /var/www/thunder-erp;
 killall node;
+DELETE FROM production_logs;
+DELETE FROM stock_movements;
+DELETE FROM audit_logs;
 ```
 
+## 📦 DEPLOYMENT KURALLARI
+
+### **PM2 Configuration**
+- **Config File:** `ecosystem.config.js`
+- **Deployment Path:** `/var/www/thunder-erp`
+- **Logs:** `~/.pm2/logs/thunder-erp-*.log`
+- **Restart:** `pm2 restart thunder-erp`
+
+### **Environment Variables (Sunucuda)**
+```bash
+# /var/www/thunder-erp/.env.local
+NEXT_PUBLIC_SUPABASE_URL=...
+NEXT_PUBLIC_SUPABASE_ANON_KEY=...
+SUPABASE_SERVICE_ROLE_KEY=...
+JWT_SECRET=...
+NODE_ENV=production
+OPENAI_API_KEY=sk-proj-...          # AI için ZORUNLU
+AGENT_ENABLED=true                  # AI Agent'ları aktif et
+```
+
+### **Git Workflow**
+```bash
+# ✅ DOĞRU: Feature branch'ten main'e merge
+git checkout -b feature/new-feature
+git commit -m "feat: yeni özellik"
+git push origin feature/new-feature
+# PR oluştur ve merge et
+
+# ❌ YANLIŞ: Direkt main'e commit
+git checkout main
+git commit -m "fix: hotfix"  # ❌ Production'ı bozabilir!
+```
+
+## 🗄️ SUPABASE MCP KULLANIMI
+
+### **Migration Uygulama**
+```typescript
+// ✅ DOĞRU: MCP ile migration
+await mcp_supabase_apply_migration({
+  name: 'fix_operator_type_cast',
+  query: `CREATE OR REPLACE FUNCTION ...`
+});
+
+// ✅ DOĞRU: SQL execute (read-only veya güvenli işlemler)
+await mcp_supabase_execute_sql({
+  query: 'SELECT * FROM production_plans LIMIT 10'
+});
+```
+
+### **MCP Tool'ları**
+- `mcp_supabase_apply_migration` - Migration uygula (DDL)
+- `mcp_supabase_execute_sql` - SQL çalıştır (SELECT, güvenli UPDATE)
+- `mcp_supabase_list_tables` - Tabloları listele
+- `mcp_supabase_get_logs` - Log'ları getir
+- `mcp_supabase_get_advisors` - Güvenlik/performans önerileri
+
 ## 🎯 HEDEF
-**Sıfır downtime, sıfır veri kaybı, maksimum güvenlik!**
+**Sıfır downtime, sıfır veri kaybı, maksimum güvenlik, AI destekli karar verme!**
 
 ---
 
-**📅 Son Güncelleme:** 2025-10-28 
-**🔄 Versiyon:** 1.0.0 Production Ready
+## 📝 NOTLAR
+
+### **Son Yapılan Değişiklikler**
+- ✅ Production trigger'ları UUID casting ile güncellendi
+- ✅ AI Agent sistemi production-ready
+- ✅ Human approval sistemi entegre edildi
+- ✅ Agent cost tracking aktif
+- ✅ Operator dashboard production log validation ile entegre
+- ✅ Material reservation sistemi otomatik çalışıyor
+- ✅ Warehouse zone management aktif
+
+### **Bilinmesi Gerekenler**
+- Production log insert edildiğinde **otomatik** trigger'lar çalışır:
+  1. `update_stock_on_production()` - Nihai ürün stoku artar
+  2. `consume_materials_on_production()` - BOM malzemeleri tüketilir
+  3. `material_reservations` otomatik güncellenir
+  4. `stock_movements` kayıtları oluşur
+- AI Agent validation başarısız olsa bile production log oluşturulur (operatör üretimi)
+- Operator dashboard'da barkod okuma ile üretim kaydı yapılır
+- Stok hareketleri **asla silinmemeli** (audit için kritik)
+
+---
+
+**📅 Son Güncelleme:** 2025-01-27  
+**🔄 Versiyon:** 2.0.0 Production Ready (AI Agent Enabled)  
+**🗄️ Database:** Supabase PostgreSQL (MCP Integrated)  
+**🚀 Deployment:** PM2 (ecosystem.config.js)  
+**🤖 AI:** Multi-Agent Architecture (6 Agents, Zero Error Protocol)

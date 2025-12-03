@@ -50,6 +50,12 @@ class AgentLogger {
     const isTestEnv = process.env.NODE_ENV === 'test' || process.env.JEST_WORKER_ID !== undefined;
     
     if (process.env.AGENT_ENABLED === 'true' || process.env.AGENT_LOGGING_ENABLED === 'true') {
+      // Environment variable kontrolü - Supabase credentials yoksa skip et
+      if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+        // Silent skip - environment variables yoksa database logging yapma
+        return;
+      }
+      
       try {
         // AI agent'lar server-side çalıştığı için service role client kullan (RLS bypass)
         // Test ortamında test client kullan, production'da admin client
@@ -60,6 +66,11 @@ class AgentLogger {
         } else {
           const { createAdminClient } = await import('@/lib/supabase/server');
           supabase = createAdminClient(); // Service role key kullan (RLS bypass)
+        }
+        
+        // Supabase client oluşturulamadıysa skip et
+        if (!supabase) {
+          return;
         }
         
         // Extract database fields from entry
@@ -88,11 +99,26 @@ class AgentLogger {
         const { error } = await supabase.from('agent_logs').insert(dbEntry);
         
         if (error) {
-          console.error('Failed to save agent log to database:', error);
+          // Sadece development'ta error log, production'da silent fail
+          if (process.env.NODE_ENV === 'development') {
+            console.error('Failed to save agent log to database:', {
+              message: error.message,
+              code: error.code,
+              details: error.details
+            });
+          }
           // Database hatası olsa bile memory log devam eder
         }
-      } catch (error) {
-        console.error('Failed to save agent log:', error);
+      } catch (error: any) {
+        // Network errors veya diğer beklenmedik hatalar için silent fail
+        // Sadece development'ta log, production'da memory logging yeterli
+        if (process.env.NODE_ENV === 'development') {
+          console.error('Failed to save agent log to database:', {
+            message: error?.message || 'Unknown error',
+            name: error?.name,
+            stack: error?.stack
+          });
+        }
         // Hata olsa bile memory log devam eder
       }
     }
