@@ -48,7 +48,7 @@ export default function AIMaliyetlerPage() {
   const [stats, setStats] = useState<CostStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [period, setPeriod] = useState<'day' | 'week' | 'month'>('day');
+  const [period, setPeriod] = useState<'day' | 'week' | 'month'>('month'); // Default month - daha fazla veri göster
 
   useEffect(() => {
     fetchCosts();
@@ -61,11 +61,27 @@ export default function AIMaliyetlerPage() {
       const res = await fetch(`/api/ai/costs?period=${period}`);
       const data = await res.json();
       
-      if (res.ok && data.success) {
+      console.log('🔍 API Response:', {
+        ok: res.ok,
+        status: res.status,
+        success: data.success,
+        hasSummary: !!data.summary,
+        hasByAgent: !!data.byAgent,
+        hasByModel: !!data.byModel,
+        byAgentKeys: Object.keys(data.byAgent || {}).length,
+        byModelKeys: Object.keys(data.byModel || {}).length,
+        recentCostsLength: data.recentCosts?.length || 0
+      });
+      
+      if (res.ok && data.success !== false) {
         console.log('✅ Costs data loaded:', {
           totalCost: data.summary?.totalCost || 0,
           totalRequests: data.summary?.totalRequests || 0,
-          recentCosts: data.recentCosts?.length || 0
+          recentCosts: data.recentCosts?.length || 0,
+          byAgentKeys: Object.keys(data.byAgent || {}).length,
+          byModelKeys: Object.keys(data.byModel || {}).length,
+          byAgent: data.byAgent,
+          byModel: data.byModel
         });
         setStats(data);
       } else {
@@ -164,9 +180,9 @@ export default function AIMaliyetlerPage() {
             onChange={(e) => setPeriod(e.target.value as 'day' | 'week' | 'month')}
             className="px-3 py-2 border rounded-md"
           >
-            <option value="day">Günlük</option>
-            <option value="week">Haftalık</option>
-            <option value="month">Aylık</option>
+            <option value="day">Son 24 Saat</option>
+            <option value="week">Son 7 Gün</option>
+            <option value="month">Son 30 Gün</option>
           </select>
           <Button onClick={fetchCosts} variant="outline" size="sm">
             <RefreshCw className="h-4 w-4" />
@@ -290,62 +306,86 @@ export default function AIMaliyetlerPage() {
       {/* By Agent */}
       <Card>
         <CardHeader>
-          <CardTitle>Agent Bazında Maliyet</CardTitle>
+          <CardTitle className="flex items-center justify-between">
+            Agent Bazında Maliyet
+            {Object.keys(byAgent).length > 0 && (
+              <Badge variant="outline">{Object.keys(byAgent).length} Agent</Badge>
+            )}
+          </CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Agent</TableHead>
-                <TableHead>Maliyet</TableHead>
-                <TableHead>Token</TableHead>
-                <TableHead>İstek</TableHead>
-                <TableHead>Ortalama/İstek</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {Object.entries(byAgent).map(([agent, data]) => (
-                <TableRow key={agent}>
-                  <TableCell className="font-medium">{agent}</TableCell>
-                  <TableCell>${data.cost.toFixed(4)}</TableCell>
-                  <TableCell>{data.tokens.toLocaleString()}</TableCell>
-                  <TableCell>{data.requests}</TableCell>
-                  <TableCell>${(data.cost / data.requests).toFixed(4)}</TableCell>
+          {Object.keys(byAgent).length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <p>Henüz agent bazında maliyet verisi bulunmuyor.</p>
+              <p className="text-xs mt-2">AI agent'lar kullanıldığında maliyetler burada görünecektir.</p>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Agent</TableHead>
+                  <TableHead>Maliyet</TableHead>
+                  <TableHead>Token</TableHead>
+                  <TableHead>İstek</TableHead>
+                  <TableHead>Ortalama/İstek</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {Object.entries(byAgent).map(([agent, data]) => (
+                  <TableRow key={agent}>
+                    <TableCell className="font-medium">{agent}</TableCell>
+                    <TableCell>${data.cost.toFixed(4)}</TableCell>
+                    <TableCell>{data.tokens.toLocaleString()}</TableCell>
+                    <TableCell>{data.requests}</TableCell>
+                    <TableCell>${data.requests > 0 ? (data.cost / data.requests).toFixed(4) : '0.0000'}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
 
       {/* By Model */}
       <Card>
         <CardHeader>
-          <CardTitle>Model Bazında Maliyet</CardTitle>
+          <CardTitle className="flex items-center justify-between">
+            Model Bazında Maliyet
+            {Object.keys(byModel).length > 0 && (
+              <Badge variant="outline">{Object.keys(byModel).length} Model</Badge>
+            )}
+          </CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Model</TableHead>
-                <TableHead>Maliyet</TableHead>
-                <TableHead>Token</TableHead>
-                <TableHead>İstek</TableHead>
-                <TableHead>Ortalama/İstek</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {Object.entries(byModel).map(([model, data]) => (
-                <TableRow key={model}>
-                  <TableCell className="font-medium">{model}</TableCell>
-                  <TableCell>${data.cost.toFixed(4)}</TableCell>
-                  <TableCell>{data.tokens.toLocaleString()}</TableCell>
-                  <TableCell>{data.requests}</TableCell>
-                  <TableCell>${(data.cost / data.requests).toFixed(4)}</TableCell>
+          {Object.keys(byModel).length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <p>Henüz model bazında maliyet verisi bulunmuyor.</p>
+              <p className="text-xs mt-2">AI agent'lar kullanıldığında maliyetler burada görünecektir.</p>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Model</TableHead>
+                  <TableHead>Maliyet</TableHead>
+                  <TableHead>Token</TableHead>
+                  <TableHead>İstek</TableHead>
+                  <TableHead>Ortalama/İstek</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {Object.entries(byModel).map(([model, data]) => (
+                  <TableRow key={model}>
+                    <TableCell className="font-medium">{model}</TableCell>
+                    <TableCell>${data.cost.toFixed(4)}</TableCell>
+                    <TableCell>{data.tokens.toLocaleString()}</TableCell>
+                    <TableCell>{data.requests}</TableCell>
+                    <TableCell>${data.requests > 0 ? (data.cost / data.requests).toFixed(4) : '0.0000'}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
 

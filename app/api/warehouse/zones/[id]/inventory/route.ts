@@ -25,6 +25,12 @@ export async function GET(
     }
 
     const { id: zoneId } = await params;
+    const { searchParams } = new URL(request.url);
+    const startDate = searchParams.get('startDate');
+    const endDate = searchParams.get('endDate');
+    
+    logger.info('Zone inventory request:', { zoneId, startDate, endDate });
+
     const adminSupabase = await createAdminClient();
 
     // Fetch zone inventory (polymorphic - cannot join directly, use admin client for RLS bypass)
@@ -41,30 +47,103 @@ export async function GET(
     }
 
     if (!inventoryRecords || inventoryRecords.length === 0) {
-      return NextResponse.json({ data: [], zone: null }, { status: 200 });
+      return NextResponse.json({ data: [], zone: null, transfers: [] }, { status: 200 });
     }
 
     // Fetch product details separately
     const productIds = inventoryRecords.map(inv => inv.material_id);
-    const { data: products, error: prodError } = await adminSupabase
+    const productQuery = adminSupabase
       .from('finished_products')
       .select('id, name, code, sale_price, unit')
       .in('id', productIds);
+
+    const { data: products, error: prodError } = await productQuery;
 
     if (prodError) {
       logger.error('Error fetching products:', prodError);
       return NextResponse.json({ error: prodError.message }, { status: 500 });
     }
 
-    // Combine inventory with product details (map sale_price to unit_price for consistency)
-    const inventory = inventoryRecords.map(inv => {
+    // Fetch transfer history for this zone (products transferred TO this zone)
+    let transferQuery = adminSupabase
+      .from('zone_transfers')
+      .select(`
+        id,
+        from_zone_id,
+        to_zone_id,
+        product_id,
+        quantity,
+        transfer_date,
+        from_zone:warehouse_zones!zone_transfers_from_zone_id_fkey(name),
+        to_zone:warehouse_zones!zone_transfers_to_zone_id_fkey(name)
+      `)
+      .eq('to_zone_id', zoneId)
+      .in('product_id', productIds);
+
+    // Apply date filters if provided
+    if (startDate) {
+      transferQuery = transferQuery.gte('transfer_date', startDate);
+    }
+    if (endDate) {
+      // Add 1 day to endDate to include the entire day
+      const endDatePlusOne = new Date(endDate);
+      endDatePlusOne.setDate(endDatePlusOne.getDate() + 1);
+      transferQuery = transferQuery.lt('transfer_date', endDatePlusOne.toISOString());
+    }
+
+    const { data: transfers, error: transferError } = await transferQuery
+      .order('transfer_date', { ascending: false });
+
+    if (transferError) {
+      logger.error('Error fetching transfers:', transferError);
+      // Don't fail the entire request if transfers fail
+    }
+
+    // If date filters are applied, filter inventory to only show products that were transferred in that date range
+    let filteredInventoryRecords = inventoryRecords;
+    if (startDate || endDate) {
+      // Get product IDs that were transferred in the date range
+      const transferredProductIds = transfers?.map(t => t.product_id) || [];
+      logger.info('Filtering by date range:', { 
+        totalInventory: inventoryRecords.length, 
+        transferredProductIds: transferredProductIds.length,
+        startDate, 
+        endDate 
+      });
+      
+      // Filter inventory to only show products that were transferred in the date range
+      filteredInventoryRecords = inventoryRecords.filter(inv => 
+        transferredProductIds.includes(inv.material_id)
+      );
+      
+      logger.info('Filtered inventory count:', { 
+        before: inventoryRecords.length, 
+        after: filteredInventoryRecords.length 
+      });
+    }
+
+    // Combine inventory with product details and latest transfer date
+    const inventory = filteredInventoryRecords.map(inv => {
       const product = products?.find(p => p.id === inv.material_id);
+      
+      // Find latest transfer for this product to this zone
+      const productTransfers = transfers?.filter(t => 
+        t.product_id === inv.material_id && 
+        t.to_zone_id === zoneId
+      ) || [];
+      
+      const latestTransfer = productTransfers.length > 0 
+        ? productTransfers[0] // Already sorted by date descending
+        : null;
+
       return {
         ...inv,
         product: product ? {
           ...product,
           unit_price: product.sale_price // Map sale_price to unit_price
-        } : null
+        } : null,
+        latest_transfer_date: latestTransfer?.transfer_date || null,
+        latest_transfer_from: latestTransfer?.from_zone?.name || null
       };
     });
 
@@ -87,9 +166,18 @@ export async function GET(
       return NextResponse.json({ error: zoneError.message }, { status: 500 });
     }
 
+    logger.info('Returning inventory data:', { 
+      inventoryCount: inventory?.length || 0,
+      filteredCount: filteredInventoryRecords.length,
+      hasDateFilter: !!(startDate || endDate),
+      startDate,
+      endDate
+    });
+
     return NextResponse.json({ 
       data: inventory || [],
-      zone: zone
+      zone: zone,
+      transfers: transfers || []
     });
 
   } catch (error) {

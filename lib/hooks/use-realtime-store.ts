@@ -81,7 +81,18 @@ export const useRealtimeStore = (handlers: RealtimeHandlers = {}) => {
           handlers.onRawMaterialUpdate?.(material);
         }
       )
-      .subscribe();
+      .subscribe((status, err) => {
+        if (err) {
+          // Silently handle WebSocket connection errors - Supabase will auto-reconnect
+          if (process.env.NODE_ENV === 'development') {
+            logger.log('Raw materials channel subscription error (will auto-reconnect):', err);
+          }
+          return;
+        }
+        if (process.env.NODE_ENV === 'development' && status === 'SUBSCRIBED') {
+          logger.log('Raw materials channel subscribed');
+        }
+      });
 
     subscriptions.push({ channel: rawMaterialsChannel, table: 'raw_materials' });
 
@@ -134,7 +145,17 @@ export const useRealtimeStore = (handlers: RealtimeHandlers = {}) => {
           handlers.onSemiFinishedUpdate?.(product);
         }
       )
-      .subscribe();
+      .subscribe((status, err) => {
+        if (err) {
+          if (process.env.NODE_ENV === 'development') {
+            logger.log('Semi finished channel subscription error (will auto-reconnect):', err);
+          }
+          return;
+        }
+        if (process.env.NODE_ENV === 'development' && status === 'SUBSCRIBED') {
+          logger.log('Semi finished channel subscribed');
+        }
+      });
 
     subscriptions.push({ channel: semiFinishedChannel, table: 'semi_finished_products' });
 
@@ -187,7 +208,17 @@ export const useRealtimeStore = (handlers: RealtimeHandlers = {}) => {
           handlers.onFinishedProductUpdate?.(product);
         }
       )
-      .subscribe();
+      .subscribe((status, err) => {
+        if (err) {
+          if (process.env.NODE_ENV === 'development') {
+            logger.log('Finished products channel subscription error (will auto-reconnect):', err);
+          }
+          return;
+        }
+        if (process.env.NODE_ENV === 'development' && status === 'SUBSCRIBED') {
+          logger.log('Finished products channel subscribed');
+        }
+      });
 
     subscriptions.push({ channel: finishedProductsChannel, table: 'finished_products' });
 
@@ -219,7 +250,17 @@ export const useRealtimeStore = (handlers: RealtimeHandlers = {}) => {
           handlers.onStockMovementAdd?.(movement);
         }
       )
-      .subscribe();
+      .subscribe((status, err) => {
+        if (err) {
+          if (process.env.NODE_ENV === 'development') {
+            logger.log('Stock movements channel subscription error (will auto-reconnect):', err);
+          }
+          return;
+        }
+        if (process.env.NODE_ENV === 'development' && status === 'SUBSCRIBED') {
+          logger.log('Stock movements channel subscribed');
+        }
+      });
 
     subscriptions.push({ channel: stockMovementsChannel, table: 'stock_movements' });
 
@@ -285,7 +326,17 @@ export const useRealtimeStore = (handlers: RealtimeHandlers = {}) => {
           handlers.onOrderUpdate?.(order);
         }
       )
-      .subscribe();
+      .subscribe((status, err) => {
+        if (err) {
+          if (process.env.NODE_ENV === 'development') {
+            logger.log('Orders channel subscription error (will auto-reconnect):', err);
+          }
+          return;
+        }
+        if (process.env.NODE_ENV === 'development' && status === 'SUBSCRIBED') {
+          logger.log('Orders channel subscribed');
+        }
+      });
 
     subscriptions.push({ channel: ordersChannel, table: 'orders' });
 
@@ -347,7 +398,17 @@ export const useRealtimeStore = (handlers: RealtimeHandlers = {}) => {
           handlers.onProductionPlanUpdate?.(plan);
         }
       )
-      .subscribe();
+      .subscribe((status, err) => {
+        if (err) {
+          if (process.env.NODE_ENV === 'development') {
+            logger.log('Production plans channel subscription error (will auto-reconnect):', err);
+          }
+          return;
+        }
+        if (process.env.NODE_ENV === 'development' && status === 'SUBSCRIBED') {
+          logger.log('Production plans channel subscribed');
+        }
+      });
 
     subscriptions.push({ channel: productionPlansChannel, table: 'production_plans' });
 
@@ -369,7 +430,17 @@ export const useRealtimeStore = (handlers: RealtimeHandlers = {}) => {
           handlers.onNotificationAdd?.(notification);
         }
       )
-      .subscribe();
+      .subscribe((status, err) => {
+        if (err) {
+          if (process.env.NODE_ENV === 'development') {
+            logger.log('Notifications channel subscription error (will auto-reconnect):', err);
+          }
+          return;
+        }
+        if (process.env.NODE_ENV === 'development' && status === 'SUBSCRIBED') {
+          logger.log('Notifications channel subscribed');
+        }
+      });
 
     subscriptions.push({ channel: notificationsChannel, table: 'notifications' });
 
@@ -464,7 +535,17 @@ export const useTableRealtime = (table: string, onUpdate: (payload: any) => void
         },
         onUpdate
       )
-      .subscribe();
+      .subscribe((status, err) => {
+        if (err) {
+          if (process.env.NODE_ENV === 'development') {
+            logger.log(`${table} channel subscription error (will auto-reconnect):`, err);
+          }
+          return;
+        }
+        if (process.env.NODE_ENV === 'development' && status === 'SUBSCRIBED') {
+          logger.log(`${table} channel subscribed`);
+        }
+      });
 
     return () => {
       supabase.removeChannel(channel);

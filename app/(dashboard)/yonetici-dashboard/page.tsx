@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -17,7 +17,11 @@ import {
   Factory,
   Target,
   Activity,
-  Zap
+  Zap,
+  Bot,
+  MessageSquare,
+  Brain,
+  Sparkles
 } from 'lucide-react';
 import { useDashboardStats, useDashboardActions, useDashboardLoading } from '@/stores/dashboard-stats-store';
 import { useRoleBasedRealtime } from '@/lib/hooks/use-realtime-store';
@@ -33,6 +37,10 @@ export default function YoneticiDashboard() {
   const stats = useDashboardStats('yonetici');
   const loading = useDashboardLoading('yonetici');
   const actions = useDashboardActions();
+  
+  const [aiStats, setAiStats] = useState<any>(null);
+  const [aiCosts, setAiCosts] = useState<any>(null);
+  const [aiLoading, setAiLoading] = useState(true);
 
   // Performance and memory monitoring - DISABLED FOR NOW
   // const memoryDetector = useMemoryLeakDetector('YoneticiDashboard');
@@ -49,7 +57,35 @@ export default function YoneticiDashboard() {
 
   useEffect(() => {
     actions.fetchStats('yonetici');
+    fetchAIStats();
+    fetchAICosts();
   }, [actions]);
+  
+  const fetchAIStats = async () => {
+    try {
+      const res = await fetch('/api/ai/dashboard');
+      const data = await res.json();
+      if (res.ok && data.success !== false) {
+        setAiStats(data);
+      }
+    } catch (error) {
+      console.error('AI stats fetch error:', error);
+    } finally {
+      setAiLoading(false);
+    }
+  };
+  
+  const fetchAICosts = async () => {
+    try {
+      const res = await fetch('/api/ai/costs?period=month');
+      const data = await res.json();
+      if (res.ok && data.success !== false) {
+        setAiCosts(data);
+      }
+    } catch (error) {
+      console.error('AI costs fetch error:', error);
+    }
+  };
 
   // Show loading state
   if (loading) {
@@ -258,54 +294,119 @@ export default function YoneticiDashboard() {
         </Card>
       </div>
 
-      {/* Quick Actions */}
+      {/* AI Statistics */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Zap className="h-5 w-5 text-yellow-600" />
-            Hızlı İşlemler
+            <Brain className="h-5 w-5 text-purple-600" />
+            AI Agent İstatistikleri
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <Card className="border-l-4 border-l-blue-500">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Aktif Agent'lar</CardTitle>
+                <Bot className="h-4 w-4 text-blue-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {aiLoading ? '...' : (aiStats?.agents?.length || 0)}
+                </div>
+                <p className="text-xs text-muted-foreground">Toplam agent sayısı</p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-l-4 border-l-green-500">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">AI Konuşmalar</CardTitle>
+                <MessageSquare className="h-4 w-4 text-green-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {aiLoading ? '...' : (aiStats?.stats?.conversations?.total || 0)}
+                </div>
+                <div className="flex items-center gap-2 mt-1">
+                  <Badge className="bg-green-100 text-green-800 text-xs">
+                    {aiStats?.stats?.conversations?.completed || 0} tamamlandı
+                  </Badge>
+                  <Badge className="bg-yellow-100 text-yellow-800 text-xs">
+                    {aiStats?.stats?.conversations?.inProgress || 0} devam ediyor
+                  </Badge>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-l-4 border-l-orange-500">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Aylık AI Maliyeti</CardTitle>
+                <DollarSign className="h-4 w-4 text-orange-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  ${aiLoading ? '...' : (aiCosts?.summary?.totalCost?.toFixed(4) || '0.0000')}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {aiCosts?.summary?.totalTokens?.toLocaleString() || 0} tokens kullanıldı
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-l-4 border-l-purple-500">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">AI Onaylar</CardTitle>
+                <CheckCircle className="h-4 w-4 text-purple-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {aiLoading ? '...' : (aiStats?.stats?.approvals?.pending || 0)}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {aiStats?.stats?.approvals?.approved || 0} onaylandı, {aiStats?.stats?.approvals?.rejected || 0} reddedildi
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* AI Quick Links */}
+          <div className="mt-6 grid gap-4 sm:grid-cols-3">
             <Button 
               variant="outline" 
-              className="h-auto p-4 hover:bg-blue-50 hover:border-blue-300 transition-colors"
-              onClick={() => router.push('/uretim/siparisler')}
+              className="h-auto p-4 hover:bg-blue-50 hover:border-blue-300 transition-colors justify-start"
+              onClick={() => router.push('/ai-dashboard')}
             >
-              <div className="text-left">
-                <div className="font-medium">Sipariş Onayla</div>
-                <div className="text-sm text-muted-foreground">Bekleyen siparişleri incele</div>
+              <div className="flex items-center gap-3">
+                <Sparkles className="h-5 w-5 text-blue-600" />
+                <div className="text-left">
+                  <div className="font-medium">AI Dashboard</div>
+                  <div className="text-sm text-muted-foreground">Agent performans ve metrikler</div>
+                </div>
               </div>
             </Button>
             <Button 
               variant="outline" 
-              className="h-auto p-4 hover:bg-green-50 hover:border-green-300 transition-colors"
-              onClick={() => router.push('/raporlar')}
+              className="h-auto p-4 hover:bg-green-50 hover:border-green-300 transition-colors justify-start"
+              onClick={() => router.push('/ai-konusmalar')}
             >
-              <div className="text-left">
-                <div className="font-medium">Stok Raporu</div>
-                <div className="text-sm text-muted-foreground">Detaylı stok analizi</div>
+              <div className="flex items-center gap-3">
+                <MessageSquare className="h-5 w-5 text-green-600" />
+                <div className="text-left">
+                  <div className="font-medium">AI Konuşmalar</div>
+                  <div className="text-sm text-muted-foreground">Agent konuşma geçmişi</div>
+                </div>
               </div>
             </Button>
             <Button 
               variant="outline" 
-              className="h-auto p-4 hover:bg-orange-50 hover:border-orange-300 transition-colors"
-              onClick={() => router.push('/uretim/planlar')}
+              className="h-auto p-4 hover:bg-orange-50 hover:border-orange-300 transition-colors justify-start"
+              onClick={() => router.push('/ai-maliyetler')}
             >
-              <div className="text-left">
-                <div className="font-medium">Üretim Planı</div>
-                <div className="text-sm text-muted-foreground">Üretim planlarını görüntüle</div>
-              </div>
-            </Button>
-            <Button 
-              variant="outline" 
-              className="h-auto p-4 hover:bg-purple-50 hover:border-purple-300 transition-colors"
-              onClick={() => router.push('/kullanicilar')}
-            >
-              <div className="text-left">
-                <div className="font-medium">Kullanıcı Yönetimi</div>
-                <div className="text-sm text-muted-foreground">Sistem kullanıcılarını yönet</div>
+              <div className="flex items-center gap-3">
+                <TrendingUp className="h-5 w-5 text-orange-600" />
+                <div className="text-left">
+                  <div className="font-medium">AI Maliyetler</div>
+                  <div className="text-sm text-muted-foreground">Maliyet analizi ve raporlar</div>
+                </div>
               </div>
             </Button>
           </div>

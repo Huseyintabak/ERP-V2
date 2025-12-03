@@ -135,7 +135,19 @@ export function SimpleSearchableSelect({
       </div>
 
       {open && (
-        <div id={listboxId} role="listbox" className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg">
+        <div 
+          id={listboxId} 
+          role="listbox" 
+          className="simple-searchable-select-dropdown absolute z-50 w-full mt-1 border border-gray-200 rounded-md shadow-lg" 
+          style={{ 
+            backgroundColor: '#ffffff',
+            opacity: '1',
+            background: '#ffffff',
+            backdropFilter: 'blur(12px)',
+            WebkitBackdropFilter: 'blur(12px)',
+            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)'
+          }}
+        >
           <div className="p-2 border-b">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
@@ -151,7 +163,7 @@ export function SimpleSearchableSelect({
             </div>
           </div>
           
-          <ScrollArea style={{ maxHeight }} className="p-1">
+          <ScrollArea style={{ maxHeight, backgroundColor: '#ffffff' }} className="p-1 bg-white">
             {loading ? (
               <div className="flex items-center justify-center py-4">
                 <div className="text-sm text-muted-foreground">Yükleniyor...</div>

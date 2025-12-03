@@ -37,10 +37,26 @@ export async function POST(request: NextRequest) {
     // 1. Üretilen ürünün stokunu artır
     const productTable = product_type === 'semi' ? 'semi_finished_products' : 'finished_products';
     
+    // Önce mevcut stoku al
+    const { data: currentProduct, error: fetchError } = await supabase
+      .from(productTable)
+      .select('quantity')
+      .eq('id', product_id)
+      .single();
+
+    if (fetchError || !currentProduct) {
+      throw new Error(`Ürün bulunamadı: ${fetchError?.message || 'Bilinmeyen hata'}`);
+    }
+
+    // Yeni stok miktarını hesapla
+    const newQuantity = (currentProduct.quantity || 0) + produced_quantity;
+
+    // Stoku güncelle
     const { error: stockUpdateError } = await supabase
       .from(productTable)
       .update({
-        quantity: supabase.raw(`quantity + ${produced_quantity}`)
+        quantity: newQuantity,
+        updated_at: new Date().toISOString()
       })
       .eq('id', product_id);
 

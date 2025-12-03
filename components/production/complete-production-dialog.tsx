@@ -22,6 +22,8 @@ import { useAuthStore } from '@/stores/auth-store';
 
 interface ProductionPlan {
   id: string;
+  order_id?: string;
+  product_id?: string;
   order_number: string;
   product_name: string;
   planned_quantity: number;
@@ -48,6 +50,42 @@ export function CompleteProductionDialog({ plan, onComplete }: CompleteProductio
         throw new Error('Kullanıcı kimlik doğrulaması gerekli');
       }
 
+      // Eğer plan'da order_id ve product_id yoksa, plan_id ile plan bilgilerini çek
+      let orderId = plan.order_id;
+      let productId = plan.product_id;
+
+      if (!orderId || !productId) {
+        // Plan bilgilerini fetch et
+        const planResponse = await fetch(`/api/production/plans/${plan.id}`, {
+          headers: {
+            'x-user-id': user.id
+          }
+        });
+
+        if (!planResponse.ok) {
+          throw new Error('Plan bilgileri alınamadı');
+        }
+
+        const planData = await planResponse.json();
+        orderId = planData.order_id || planData.order?.id;
+        productId = planData.product_id || planData.product?.id;
+
+        if (!orderId || !productId) {
+          throw new Error('Plan bilgilerinde order_id veya product_id bulunamadı');
+        }
+      }
+
+      // Üretilen miktarı hesapla (planlanan - şu ana kadar üretilen)
+      const producedQuantity = (plan.planned_quantity || 0) - (plan.produced_quantity || 0);
+      
+      if (producedQuantity <= 0) {
+        toast.error('Üretim zaten tamamlanmış', {
+          description: 'Bu plan için üretim zaten tamamlanmış. Stoklar güncel.',
+        });
+        setIsOpen(false);
+        return;
+      }
+
       const response = await fetch('/api/production/complete', {
         method: 'POST',
         headers: {
@@ -55,13 +93,17 @@ export function CompleteProductionDialog({ plan, onComplete }: CompleteProductio
           'x-user-id': user.id
         },
         body: JSON.stringify({ 
-          productionPlanId: plan.id 
+          order_id: orderId,
+          order_type: 'production_plan',
+          product_id: productId,
+          product_type: 'finished', // Production plans için her zaman finished products
+          produced_quantity: producedQuantity
         }),
       });
 
       const data = await response.json();
 
-      if (response.ok && data.success) {
+      if (response.ok && data.message) {
         toast.success('Üretim başarıyla tamamlandı!', {
           description: `Sipariş ${plan.order_number} için stoklar güncellendi.`,
         });
@@ -73,10 +115,10 @@ export function CompleteProductionDialog({ plan, onComplete }: CompleteProductio
           description: data.error || 'Bilinmeyen bir hata oluştu.',
         });
       }
-    } catch (error) {
+    } catch (error: any) {
       logger.error('Complete production error:', error);
-      toast.error('Bağlantı hatası', {
-        description: 'Sunucuya bağlanılamadı.',
+      toast.error('Üretim tamamlanamadı', {
+        description: error.message || 'Bağlantı hatası oluştu.',
       });
     } finally {
       setIsLoading(false);
@@ -96,7 +138,9 @@ export function CompleteProductionDialog({ plan, onComplete }: CompleteProductio
     }
   };
 
-  const canComplete = plan.status === 'devam_ediyor' || plan.status === 'planlandi';
+  // Üretim tamamlanmamış ve devam ediyor veya planlandı durumunda olmalı
+  const remainingQuantity = (plan.planned_quantity || 0) - (plan.produced_quantity || 0);
+  const canComplete = (plan.status === 'devam_ediyor' || plan.status === 'planlandi') && remainingQuantity > 0;
 
   return (
     <AlertDialog open={isOpen} onOpenChange={setIsOpen}>

@@ -34,24 +34,41 @@ export async function POST(request: NextRequest) {
 
     const orchestrator = AgentOrchestrator.getInstance();
     
+    // Benzersiz conversation ID oluştur (timestamp + random + user ID)
     const conversationId = `dev_report_${Date.now()}_${Math.random().toString(36).substring(7)}`;
     
-    logger.log(`🤖 Developer Agent rapor isteği: ${action} - ${focusArea}`);
+    logger.log(`🤖 Developer Agent rapor isteği: ${action} - ${focusArea} (ID: ${conversationId})`);
 
-    const result = await orchestrator.startConversation('developer', {
-      id: conversationId,
-      prompt: `Sistem analizi yap ve iyileştirme raporu oluştur. Focus area: ${focusArea}`,
-      type: 'analysis',
-      context: {
-        action,
-        focusArea,
-        scope,
-        requestedBy: payload.userId,
-        requestedByRole: payload.role
-      },
-      urgency: 'medium',
-      severity: 'medium'
-    });
+    let result;
+    try {
+      result = await orchestrator.startConversation('developer', {
+        id: conversationId,
+        prompt: `Sistem analizi yap ve iyileştirme raporu oluştur. Focus area: ${focusArea}`,
+        type: 'analysis',
+        context: {
+          action,
+          focusArea,
+          scope,
+          requestedBy: payload.userId,
+          requestedByRole: payload.role
+        },
+        urgency: 'medium',
+        severity: 'medium'
+      });
+    } catch (error: any) {
+      // Conversation zaten devam ediyorsa, kullanıcıya bilgi ver
+      if (error.message && error.message.includes('already in progress')) {
+        logger.warn(`⚠️ Conversation ${conversationId} zaten devam ediyor: ${error.message}`);
+        return NextResponse.json(
+          { 
+            error: error.message,
+            success: false
+          },
+          { status: 409 } // Conflict
+        );
+      }
+      throw error;
+    }
 
     // Extract report data from agent response
     const agentResponse = result.conversation.responses[0];

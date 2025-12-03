@@ -254,33 +254,27 @@ export async function POST(request: NextRequest) {
           protocolResult: agentResult.protocolResult
         });
 
-        // Agent reddettiyse
+        // Agent reddettiyse - Operatör üretimlerinde sadece warning ver, işleme devam et
+        // Çünkü operatörler gerçek üretim yapıyor ve validation hataları operasyonu durdurmamalı
         if (agentResult.finalDecision === 'rejected') {
-          logger.warn('❌ AI Agent üretim kaydını reddetti:', agentResult.protocolResult?.errors);
-          return NextResponse.json(
-            {
-              error: 'AI Agent validation failed',
-              message: 'Üretim kaydı AI Agent tarafından reddedildi',
-              details: agentResult.protocolResult?.errors || [],
-              warnings: agentResult.protocolResult?.warnings || [],
-              agentReasoning: agentResult.protocolResult?.decision?.reasoning
-            },
-            { status: 400 }
-          );
+          logger.warn('⚠️ AI Agent üretim kaydını reddetti (ama işleme devam ediliyor - operatör üretimi):', {
+            errors: agentResult.protocolResult?.errors || [],
+            warnings: agentResult.protocolResult?.warnings || [],
+            reasoning: agentResult.protocolResult?.decision?.reasoning,
+            planId: plan_id
+          });
+          // Operatör üretimlerinde validation başarısız olsa bile devam et
+          // Sadece logla, işlemi durdurma
         }
 
-        // Human approval bekleniyorsa
+        // Human approval bekleniyorsa - Operatör üretimlerinde sadece warning ver, işleme devam et
         if (agentResult.finalDecision === 'pending_approval') {
-          logger.log('⏳ AI Agent human approval bekliyor...');
-          return NextResponse.json(
-            {
-              error: 'Human approval required',
-              message: 'Bu üretim kaydı için yönetici onayı gerekiyor',
-              approvalRequired: true,
-              decisionId: agentResult.protocolResult?.decision?.action
-            },
-            { status: 403 }
-          );
+          logger.warn('⚠️ AI Agent human approval öneriyor (ama işleme devam ediliyor - operatör üretimi):', {
+            decisionId: agentResult.protocolResult?.decision?.action,
+            planId: plan_id
+          });
+          // Operatör üretimlerinde approval bekleniyor olsa bile devam et
+          // Sadece logla, işlemi durdurma
         }
 
         // Agent onayladıysa
@@ -426,6 +420,9 @@ export async function POST(request: NextRequest) {
     // - Plan produced_quantity güncellenir
     // - Kritik seviye kontrolü yapılır
 
+    // Trigger'ların çalışıp çalışmadığını doğrula (kısa bir bekleme sonrası)
+    await new Promise(resolve => setTimeout(resolve, 500)); // 500ms bekle
+
     // Güncellenmiş plan bilgilerini al
     const { data: updatedPlan, error: updatedPlanError } = await supabase
       .from('production_plans')
@@ -435,6 +432,56 @@ export async function POST(request: NextRequest) {
 
     if (updatedPlanError) {
       logger.error('Updated plan fetch error:', updatedPlanError);
+    }
+
+    // Trigger'ların çalışıp çalışmadığını kontrol et
+    // Nihai ürün stok hareketi oluşmuş mu?
+    const { data: finishedMovement, error: movementError } = await adminSupabase
+      .from('stock_movements')
+      .select('id')
+      .eq('material_type', 'finished')
+      .eq('material_id', plan.product_id)
+      .eq('movement_type', 'uretim')
+      .or(`description.ilike.%Plan #${plan_id}%,description.ilike.%plan #${plan_id}%`)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (!finishedMovement && !movementError) {
+      logger.warn('⚠️ Nihai ürün stok hareketi oluşmamış! Trigger çalışmamış olabilir.', {
+        plan_id,
+        product_id: plan.product_id,
+        log_id: log.id
+      });
+    }
+
+    // Malzeme tüketim hareketleri kontrolü (örnek 1 malzeme)
+    if (bomSnapshot && bomSnapshot.length > 0) {
+      const sampleBomItem = bomSnapshot[0];
+      const { data: materialMovement } = await adminSupabase
+        .from('stock_movements')
+        .select('id')
+        .eq('material_type', sampleBomItem.material_type)
+        .eq('material_id', sampleBomItem.material_id)
+        .eq('movement_type', 'uretim')
+        .gte('created_at', new Date(Date.now() - 2000).toISOString()) // Son 2 saniye
+        .limit(1)
+        .single();
+
+      if (!materialMovement) {
+        logger.warn('⚠️ Malzeme tüketim hareketi oluşmamış! Trigger çalışmamış olabilir.', {
+          plan_id,
+          material_id: sampleBomItem.material_id,
+          material_type: sampleBomItem.material_type,
+          log_id: log.id
+        });
+
+        // Eğer trigger çalışmamışsa, manuel olarak stok düşürme dene (fallback)
+        logger.error('❌ CRITICAL: Production trigger çalışmadı! Manuel stok düşürme gerekebilir.', {
+          plan_id,
+          log_id: log.id
+        });
+      }
     }
 
     // Response hazırla

@@ -120,3 +120,204 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Zone Stok Detayları Modal - Büyük Modal Genişliği */
+@layer components {
+  .zone-stock-detail-modal {
+    max-width: 90rem !important; /* 7xl = 80rem, daha da büyük için 90rem */
+    width: 95vw !important;
+    max-height: 90vh !important;
+  }
+  
+  @media (min-width: 1536px) {
+    .zone-stock-detail-modal {
+      max-width: 95rem !important;
+      width: 92vw !important;
+    }
+  }
+  
+  @media (max-width: 768px) {
+    .zone-stock-detail-modal {
+      max-width: calc(100% - 2rem) !important;
+      width: calc(100% - 2rem) !important;
+    }
+  }
+  
+  /* Zone Transfer Modal - Büyük Modal Genişliği */
+  .zone-transfer-modal {
+    max-width: 90rem !important; /* 7xl = 80rem, daha da büyük için 90rem */
+    width: 95vw !important;
+    max-height: 90vh !important;
+  }
+  
+  @media (min-width: 1536px) {
+    .zone-transfer-modal {
+      max-width: 95rem !important;
+      width: 92vw !important;
+    }
+  }
+  
+  @media (max-width: 768px) {
+    .zone-transfer-modal {
+      max-width: calc(100% - 2rem) !important;
+      width: calc(100% - 2rem) !important;
+    }
+  }
+  
+  /* Zone Transfer Modal - Dropdown arka plan opaklığı %95 */
+  .zone-transfer-modal [data-slot="select-content"] {
+    background-color: hsl(var(--popover) / 0.95) !important;
+    backdrop-filter: blur(8px) !important;
+    -webkit-backdrop-filter: blur(8px) !important;
+  }
+  
+  /* SimpleSearchableSelect dropdown container - opaklık %95 */
+  .zone-transfer-modal .simple-searchable-select-dropdown,
+  .zone-transfer-modal [role="listbox"] {
+    background-color: hsl(0 0% 100% / 0.95) !important;
+    backdrop-filter: blur(8px) !important;
+    -webkit-backdrop-filter: blur(8px) !important;
+  }
+  
+  /* Dark mode için */
+  .dark .zone-transfer-modal .simple-searchable-select-dropdown,
+  .dark .zone-transfer-modal [role="listbox"] {
+    background-color: hsl(var(--popover) / 0.95) !important;
+  }
+  
+  /* Yeni Sipariş Oluştur Modal - Büyük Modal Genişliği */
+  .order-create-modal {
+    max-width: 90rem !important; /* 7xl = 80rem, daha da büyük için 90rem */
+    width: 95vw !important;
+    max-height: 90vh !important;
+  }
+  
+  @media (min-width: 1536px) {
+    .order-create-modal {
+      max-width: 95rem !important;
+      width: 92vw !important;
+    }
+  }
+  
+  @media (max-width: 768px) {
+    .order-create-modal {
+      max-width: calc(100% - 2rem) !important;
+      width: calc(100% - 2rem) !important;
+    }
+  }
+  
+  /* Yeni Sipariş Oluştur Modal - Dropdown arka plan opaklığı %95 */
+  .order-create-modal [data-slot="select-content"] {
+    background-color: hsl(var(--popover) / 0.95) !important;
+    backdrop-filter: blur(8px) !important;
+    -webkit-backdrop-filter: blur(8px) !important;
+  }
+  
+  /* SimpleSearchableSelect dropdown container - opaklık %95 */
+  /* Tüm modal içindeki dropdown'lar için */
+  .order-create-modal .simple-searchable-select-dropdown,
+  .order-create-modal [role="listbox"],
+  .order-create-modal div[role="listbox"] {
+    background-color: hsl(0 0% 100% / 0.95) !important;
+    backdrop-filter: blur(8px) !important;
+    -webkit-backdrop-filter: blur(8px) !important;
+  }
+  
+  /* SimpleSearchableSelect için daha spesifik selector */
+  body .order-create-modal ~ * [role="listbox"],
+  body [data-slot="dialog-content"].order-create-modal ~ * [role="listbox"],
+  body .order-create-modal ~ * .simple-searchable-select-dropdown,
+  body [data-slot="dialog-content"].order-create-modal ~ * .simple-searchable-select-dropdown {
+    background-color: hsl(0 0% 100% / 0.95) !important;
+    backdrop-filter: blur(8px) !important;
+    -webkit-backdrop-filter: blur(8px) !important;
+  }
+  
+  /* Dark mode için */
+  .dark .order-create-modal .simple-searchable-select-dropdown,
+  .dark .order-create-modal [role="listbox"],
+  .dark .order-create-modal div[role="listbox"],
+  .dark body .order-create-modal ~ * [role="listbox"],
+  .dark body .order-create-modal ~ * .simple-searchable-select-dropdown {
+    background-color: hsl(var(--popover) / 0.95) !important;
+  }
+  
+  /* Genel olarak tüm modal içindeki dropdown'lar için - daha geniş kapsam */
+  [data-slot="dialog-content"] [role="listbox"],
+  [data-slot="dialog-content"] .simple-searchable-select-dropdown,
+  [role="listbox"].simple-searchable-select-dropdown,
+  .simple-searchable-select-dropdown[role="listbox"] {
+    background-color: rgba(255, 255, 255, 0.95) !important;
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+  }
+  
+  .dark [data-slot="dialog-content"] [role="listbox"],
+  .dark [data-slot="dialog-content"] .simple-searchable-select-dropdown,
+  .dark [role="listbox"].simple-searchable-select-dropdown,
+  .dark .simple-searchable-select-dropdown[role="listbox"] {
+    background-color: hsl(var(--popover) / 0.95) !important;
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+  }
+  
+  /* En güçlü selector - tüm SimpleSearchableSelect dropdown'ları için */
+  div.simple-searchable-select-dropdown,
+  div[role="listbox"].simple-searchable-select-dropdown,
+  [id^="listbox-"][role="listbox"] {
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    opacity: 1 !important;
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+  }
+  
+  .dark div.simple-searchable-select-dropdown,
+  .dark div[role="listbox"].simple-searchable-select-dropdown,
+  .dark [id^="listbox-"][role="listbox"] {
+    background: hsl(var(--popover)) !important;
+    background-color: hsl(var(--popover)) !important;
+    opacity: 1 !important;
+  }
+  
+  /* Tüm olası kombinasyonlar için */
+  .simple-searchable-select-dropdown,
+  [role="listbox"].simple-searchable-select-dropdown,
+  .simple-searchable-select-dropdown[role="listbox"],
+  div.simple-searchable-select-dropdown[role="listbox"] {
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    opacity: 1 !important;
+  }
+  
+  .dark .simple-searchable-select-dropdown,
+  .dark [role="listbox"].simple-searchable-select-dropdown {
+    background: hsl(var(--popover)) !important;
+    background-color: hsl(var(--popover)) !important;
+    opacity: 1 !important;
+  }
+  
+  /* ScrollArea içindeki arka planı da düzelt */
+  .simple-searchable-select-dropdown [data-radix-scroll-area-viewport],
+  .simple-searchable-select-dropdown [data-radix-scroll-area-viewport] > div {
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+  }
+  
+  .dark .simple-searchable-select-dropdown [data-radix-scroll-area-viewport],
+  .dark .simple-searchable-select-dropdown [data-radix-scroll-area-viewport] > div {
+    background: hsl(var(--popover)) !important;
+    background-color: hsl(var(--popover)) !important;
+  }
+  
+  /* Dropdown içindeki tüm div'ler için */
+  .simple-searchable-select-dropdown > div {
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+  }
+  
+  .dark .simple-searchable-select-dropdown > div {
+    background: hsl(var(--popover)) !important;
+    background-color: hsl(var(--popover)) !important;
+  }
+}

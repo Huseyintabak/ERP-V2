@@ -24,6 +24,20 @@ export interface LayerResult {
   details?: any;
   errors?: string[];
   warnings?: string[];
+  // Layer 3 (Consensus) için ek alanlar
+  approvalRate?: number;
+  totalVotes?: number;
+  approveVotes?: number;
+  rejectVotes?: number;
+  conditionalVotes?: number;
+  agentOpinions?: Array<{
+    agent: string;
+    vote: 'approve' | 'reject' | 'conditional';
+    confidence: number;
+    reasoning: string;
+    conditions?: string[];
+  }>;
+  conditions?: string[];
 }
 
 

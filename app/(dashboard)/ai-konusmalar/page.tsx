@@ -42,15 +42,16 @@ interface Conversation {
   }>;
   protocolResult?: {
     finalDecision: string;
-    layers: any;
-    errors: string[];
-    warnings: string[];
+    layers?: any;
+    errors?: string[];
+    warnings?: string[];
   };
 }
 
 export default function AIKonusmalarPage() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
 
@@ -65,7 +66,9 @@ export default function AIKonusmalarPage() {
       const res = await fetch('/api/ai/conversations');
       const data = await res.json();
       
-      if (res.ok && data.success) {
+      console.log('🔍 Conversations API Response:', data); // Debug log
+      
+      if (res.ok && (data.success !== false)) {
         console.log('✅ Conversations data loaded:', {
           count: data.conversations?.length || 0,
           conversations: data.conversations
@@ -73,10 +76,12 @@ export default function AIKonusmalarPage() {
         setConversations(data.conversations || []);
       } else {
         console.error('❌ Conversations API error:', data.error || 'Unknown error');
+        setError(data.error || 'Konuşmalar yüklenemedi');
         setConversations([]);
       }
     } catch (error: any) {
       console.error('❌ Error fetching conversations:', error);
+      setError(error.message || 'Bağlantı hatası');
       setConversations([]);
     } finally {
       setLoading(false);
@@ -85,14 +90,23 @@ export default function AIKonusmalarPage() {
 
   const viewConversation = async (id: string) => {
     try {
+      console.log('🔍 Fetching conversation details for:', id);
       const res = await fetch(`/api/ai/conversations/${id}`);
-      if (res.ok) {
-        const data = await res.json();
+      const data = await res.json();
+      
+      console.log('🔍 Conversation detail API response:', data);
+      
+      if (res.ok && data.success) {
+        console.log('✅ Conversation details loaded:', data.conversation);
         setSelectedConversation(data.conversation);
         setDialogOpen(true);
+      } else {
+        console.error('❌ Conversation detail API error:', data.error || 'Unknown error');
+        alert(`Konuşma detayları yüklenemedi: ${data.error || 'Bilinmeyen hata'}`);
       }
-    } catch (error) {
-      console.error('Error fetching conversation details:', error);
+    } catch (error: any) {
+      console.error('❌ Error fetching conversation details:', error);
+      alert(`Konuşma detayları yüklenemedi: ${error.message || 'Bağlantı hatası'}`);
     }
   };
 
@@ -197,9 +211,23 @@ export default function AIKonusmalarPage() {
           <CardTitle>Konuşma Listesi</CardTitle>
         </CardHeader>
         <CardContent>
-          {conversations.length === 0 ? (
+          {error && (
+            <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-md text-red-800">
+              <strong>Hata:</strong> {error}
+            </div>
+          )}
+          {conversations.length === 0 && !loading ? (
             <div className="text-center py-8 text-muted-foreground">
               Henüz konuşma kaydı bulunmuyor.
+              {error && (
+                <div className="mt-2 text-sm text-red-600">
+                  Veritabanından konuşma kayıtları yüklenemedi.
+                </div>
+              )}
+            </div>
+          ) : conversations.length === 0 && loading ? (
+            <div className="text-center py-8 text-muted-foreground">
+              Konuşmalar yükleniyor...
             </div>
           ) : (
             <Table>
@@ -259,7 +287,12 @@ export default function AIKonusmalarPage() {
       </Card>
 
       {/* Conversation Detail Dialog */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      <Dialog open={dialogOpen} onOpenChange={(open) => {
+        setDialogOpen(open);
+        if (!open) {
+          setSelectedConversation(null); // Dialog kapandığında selection'ı temizle
+        }
+      }}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Konuşma Detayları</DialogTitle>
@@ -268,7 +301,7 @@ export default function AIKonusmalarPage() {
             </DialogDescription>
           </DialogHeader>
 
-          {selectedConversation && (
+          {selectedConversation ? (
             <div className="space-y-4">
               {/* Conversation Info */}
               <Card>
@@ -350,7 +383,7 @@ export default function AIKonusmalarPage() {
                   <CardHeader>
                     <CardTitle className="text-lg">Zero Error Protocol Sonucu</CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-3">
+                  <CardContent className="space-y-4">
                     <div>
                       <span className="font-medium">Final Karar:</span>{' '}
                       <Badge variant={
@@ -360,7 +393,140 @@ export default function AIKonusmalarPage() {
                         {selectedConversation.protocolResult.finalDecision}
                       </Badge>
                     </div>
-                    {selectedConversation.protocolResult.errors.length > 0 && (
+
+                    {/* Layer Results */}
+                    {selectedConversation.protocolResult.layers && (
+                      <div className="space-y-2">
+                        <span className="font-medium">Katman Sonuçları:</span>
+                        <div className="grid gap-2">
+                          {/* Layer 1 */}
+                          {selectedConversation.protocolResult.layers.layer1 && (
+                            <div className="p-2 border rounded-md">
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm font-medium">Layer 1 (Primary Agent):</span>
+                                <Badge variant={selectedConversation.protocolResult.layers.layer1.isValid ? 'default' : 'destructive'}>
+                                  {selectedConversation.protocolResult.layers.layer1.isValid ? 'PASSED' : 'FAILED'}
+                                </Badge>
+                              </div>
+                              {selectedConversation.protocolResult.layers.layer1.errors?.length > 0 && (
+                                <ul className="list-disc list-inside mt-1 text-xs text-red-600">
+                                  {selectedConversation.protocolResult.layers.layer1.errors.map((e: string, i: number) => (
+                                    <li key={i}>{e}</li>
+                                  ))}
+                                </ul>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Layer 2 */}
+                          {selectedConversation.protocolResult.layers.layer2 && (
+                            <div className="p-2 border rounded-md">
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm font-medium">Layer 2 (Cross-Validation):</span>
+                                <Badge variant={selectedConversation.protocolResult.layers.layer2.isValid ? 'default' : 'destructive'}>
+                                  {selectedConversation.protocolResult.layers.layer2.isValid ? 'PASSED' : 'FAILED'}
+                                </Badge>
+                              </div>
+                              {selectedConversation.protocolResult.layers.layer2.errors?.length > 0 && (
+                                <ul className="list-disc list-inside mt-1 text-xs text-red-600">
+                                  {selectedConversation.protocolResult.layers.layer2.errors.map((e: string, i: number) => (
+                                    <li key={i}>{e}</li>
+                                  ))}
+                                </ul>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Layer 3 - Consensus Details */}
+                          {selectedConversation.protocolResult.layers.layer3 && (
+                            <div className="p-2 border rounded-md">
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm font-medium">Layer 3 (Consensus):</span>
+                                <Badge variant={selectedConversation.protocolResult.layers.layer3.isValid ? 'default' : 'destructive'}>
+                                  {selectedConversation.protocolResult.layers.layer3.isValid ? 'PASSED' : 'FAILED'}
+                                </Badge>
+                              </div>
+                              {!selectedConversation.protocolResult.layers.layer3.isValid && (
+                                <div className="mt-2 space-y-1">
+                                  <div className="text-xs text-muted-foreground">
+                                    Approval Rate: {selectedConversation.protocolResult.layers.layer3.approvalRate ? 
+                                      `${(selectedConversation.protocolResult.layers.layer3.approvalRate * 100).toFixed(1)}%` : 'N/A'}
+                                  </div>
+                                  <div className="text-xs text-muted-foreground">
+                                    Votes: {selectedConversation.protocolResult.layers.layer3.approveVotes || 0} approve, 
+                                    {' '}{selectedConversation.protocolResult.layers.layer3.rejectVotes || 0} reject,
+                                    {' '}{selectedConversation.protocolResult.layers.layer3.conditionalVotes || 0} conditional
+                                  </div>
+                                  {selectedConversation.protocolResult.layers.layer3.errors?.length > 0 && (
+                                    <ul className="list-disc list-inside mt-1 text-xs text-red-600">
+                                      {selectedConversation.protocolResult.layers.layer3.errors.map((e: string, i: number) => (
+                                        <li key={i}>{e}</li>
+                                      ))}
+                                    </ul>
+                                  )}
+                                  {selectedConversation.protocolResult.layers.layer3.warnings?.length > 0 && (
+                                    <ul className="list-disc list-inside mt-1 text-xs text-yellow-600">
+                                      {selectedConversation.protocolResult.layers.layer3.warnings.map((w: string, i: number) => (
+                                        <li key={i}>{w}</li>
+                                      ))}
+                                    </ul>
+                                  )}
+                                  {/* Agent Opinions */}
+                                  {selectedConversation.protocolResult.layers.layer3.agentOpinions && 
+                                   selectedConversation.protocolResult.layers.layer3.agentOpinions.length > 0 && (
+                                    <div className="mt-2">
+                                      <span className="text-xs font-medium">Agent Oyları:</span>
+                                      <div className="mt-1 space-y-1">
+                                        {selectedConversation.protocolResult.layers.layer3.agentOpinions.map((opinion: any, i: number) => (
+                                          <div key={i} className="text-xs p-1 bg-gray-50 rounded">
+                                            <span className="font-medium">{opinion.agent}:</span>{' '}
+                                            <Badge variant={
+                                              opinion.vote === 'approve' ? 'default' :
+                                              opinion.vote === 'reject' ? 'destructive' : 'secondary'
+                                            } className="ml-1">
+                                              {opinion.vote}
+                                            </Badge>
+                                            {' '}(Confidence: {(opinion.confidence * 100).toFixed(0)}%)
+                                            {opinion.reasoning && (
+                                              <div className="text-xs text-muted-foreground mt-1 ml-4">
+                                                {opinion.reasoning.substring(0, 200)}...
+                                              </div>
+                                            )}
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Layer 4 */}
+                          {selectedConversation.protocolResult.layers.layer4 && (
+                            <div className="p-2 border rounded-md">
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm font-medium">Layer 4 (Database Validation):</span>
+                                <Badge variant={selectedConversation.protocolResult.layers.layer4.isValid ? 'default' : 'destructive'}>
+                                  {selectedConversation.protocolResult.layers.layer4.isValid ? 'PASSED' : 'FAILED'}
+                                </Badge>
+                              </div>
+                              {selectedConversation.protocolResult.layers.layer4.errors?.length > 0 && (
+                                <ul className="list-disc list-inside mt-1 text-xs text-red-600">
+                                  {selectedConversation.protocolResult.layers.layer4.errors.map((e: string, i: number) => (
+                                    <li key={i}>{e}</li>
+                                  ))}
+                                </ul>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {selectedConversation.protocolResult.errors && 
+                     Array.isArray(selectedConversation.protocolResult.errors) &&
+                     selectedConversation.protocolResult.errors.length > 0 && (
                       <div>
                         <span className="font-medium text-red-600">Hatalar:</span>
                         <ul className="list-disc list-inside mt-1">
@@ -370,7 +536,9 @@ export default function AIKonusmalarPage() {
                         </ul>
                       </div>
                     )}
-                    {selectedConversation.protocolResult.warnings.length > 0 && (
+                    {selectedConversation.protocolResult.warnings && 
+                     Array.isArray(selectedConversation.protocolResult.warnings) &&
+                     selectedConversation.protocolResult.warnings.length > 0 && (
                       <div>
                         <span className="font-medium text-yellow-600">Uyarılar:</span>
                         <ul className="list-disc list-inside mt-1">
@@ -383,6 +551,10 @@ export default function AIKonusmalarPage() {
                   </CardContent>
                 </Card>
               )}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              Konuşma detayları yükleniyor...
             </div>
           )}
         </DialogContent>

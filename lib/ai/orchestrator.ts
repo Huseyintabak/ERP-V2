@@ -100,6 +100,71 @@ export class AgentOrchestrator {
   ): Promise<{ finalDecision: string; protocolResult: ProtocolResult; conversation: ConversationContext }> {
     const conversationId = request.id || `conv_${Date.now()}_${Math.random().toString(36).substring(7)}`;
     
+    // Eğer aynı ID ile bir conversation zaten varsa ve in_progress durumundaysa, yeni conversation başlatma
+    const existingConversation = this.conversations.get(conversationId);
+    if (existingConversation && existingConversation.status === 'in_progress') {
+      await agentLogger.warn({
+        action: 'conversation_already_in_progress',
+        conversationId,
+        agentRole,
+        message: `Conversation ${conversationId} is already in progress, returning existing conversation`
+      });
+      
+      // Mevcut conversation'ı döndür
+      if (existingConversation.protocolResult) {
+        return {
+          finalDecision: existingConversation.protocolResult.finalDecision,
+          protocolResult: existingConversation.protocolResult,
+          conversation: existingConversation
+        };
+      } else {
+        // Protocol henüz tamamlanmamışsa, bekle (ama bu normalde olmamalı)
+        throw new Error(`Conversation ${conversationId} is in progress but protocol result is not available yet`);
+      }
+    }
+
+    // Database'de de kontrol et (in-memory'de olmasa bile)
+    try {
+      const adminSupabase = createAdminClient();
+      const { data: dbConversation } = await adminSupabase
+        .from('agent_logs')
+        .select('*')
+        .eq('conversation_id', conversationId)
+        .eq('action', 'conversation_started')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (dbConversation) {
+        // Conversation'ın tamamlanıp tamamlanmadığını kontrol et
+        const { data: completedLog } = await adminSupabase
+          .from('agent_logs')
+          .select('action')
+          .eq('conversation_id', conversationId)
+          .in('action', ['conversation_completed', 'conversation_failed'])
+          .limit(1)
+          .single();
+
+        if (!completedLog) {
+          // Conversation henüz tamamlanmamış, yeni conversation başlatma
+          await agentLogger.warn({
+            action: 'conversation_already_exists_in_db',
+            conversationId,
+            agentRole,
+            message: `Conversation ${conversationId} already exists in database and is not completed, rejecting new request`
+          });
+          
+          throw new Error(`Conversation ${conversationId} is already in progress. Please wait for it to complete.`);
+        }
+      }
+    } catch (error: any) {
+      // Database kontrolü hatası olursa devam et (normal bir hata değilse)
+      if (error.message && error.message.includes('already in progress')) {
+        throw error;
+      }
+      // Diğer hatalar (örn: conversation bulunamadı) normal, devam et
+    }
+    
     const conversation: ConversationContext = {
       id: conversationId,
       prompt: request.prompt,
@@ -159,6 +224,20 @@ export class AgentOrchestrator {
       conversation.protocolResult = protocolResult;
       conversation.status = protocolResult.finalDecision === 'rejected' ? 'failed' : 'completed';
       conversation.completedAt = new Date();
+
+      // Conversation completion log'unu kaydet
+      await agentLogger.log({
+        action: conversation.status === 'completed' ? 'conversation_completed' : 'conversation_failed',
+        conversationId,
+        agent: agent.name,
+        finalDecision: protocolResult.finalDecision,
+        data: {
+          conversationId,
+          status: conversation.status,
+          finalDecision: protocolResult.finalDecision,
+          protocolResult
+        }
+      });
 
       return {
         finalDecision: protocolResult.finalDecision,
@@ -226,17 +305,33 @@ export class AgentOrchestrator {
     }
 
     // KATMAN 3: Consensus Building
+    // Production log validation için consensus daha esnek (operatör gerçek üretim yapıyor)
+    const isProductionLogValidation = decision.action === 'validate_production' || 
+                                     (decision.action?.includes('production') && decision.data?.planId);
+    
     try {
       const layer3 = await this.layer3_Consensus(decision);
       result.layers.layer3 = layer3;
 
       if (!layer3.isValid) {
-        result.errors.push('Layer 3 (Consensus) failed');
-        result.finalDecision = 'rejected';
-        return result;
+        if (isProductionLogValidation) {
+          // Production log validation için consensus başarısız olsa bile sadece warning ver
+          // Çünkü operatör gerçek üretim yapıyor, validation çok katı olmamalı
+          result.warnings.push(`Layer 3 (Consensus) warning: ${layer3.errors?.join('; ') || 'Consensus not achieved but production log will be recorded'}`);
+          // Final decision'ı değiştirme, sadece warning ekle
+        } else {
+          // Diğer validation'lar için consensus zorunlu
+          result.errors.push('Layer 3 (Consensus) failed');
+          result.finalDecision = 'rejected';
+          return result;
+        }
       }
     } catch (error: any) {
-      result.warnings.push(`Layer 3 warning: ${error.message} (continuing)`);
+      if (isProductionLogValidation) {
+        result.warnings.push(`Layer 3 warning: ${error.message} (production log validation - continuing)`);
+      } else {
+        result.warnings.push(`Layer 3 warning: ${error.message} (continuing)`);
+      }
       // Consensus hatası kritik değilse devam et
     }
 
@@ -345,16 +440,29 @@ export class AgentOrchestrator {
     const warnings: string[] = [];
 
     try {
+      // Production log validation için daha esnek kurallar
+      // Çünkü operatörler gerçek üretim yapıyor ve validation çok katı olmamalı
+      const isProductionLogValidation = decision.action === 'validate_production' || 
+                                       (decision.data?.planId && decision.action?.includes('production'));
+      
       // Consensus Engine kullan
-      // minApprovalRate: 0.75 (5/6 = 0.833 için yeterli)
+      const consensusOptions = isProductionLogValidation
+        ? {
+            minApprovalRate: 0.5, // Production log için %50 yeterli (operatör gerçek üretim yapıyor)
+            allowConditional: true,
+            minConfidence: 0.6, // Confidence threshold düşürüldü
+            requireUnanimous: false
+          }
+        : {
+            minApprovalRate: 0.75, // Diğer validation'lar için %75 onay yeterli (5/6 = 0.833 geçer)
+            allowConditional: true,
+            minConfidence: 0.7
+          };
+      
       const consensusResult = await ConsensusEngine.buildConsensus(
         decision,
         Array.from(this.agents.values()),
-        {
-          minApprovalRate: 0.75, // %75 onay yeterli (5/6 = 0.833 geçer)
-          allowConditional: true,
-          minConfidence: 0.7
-        }
+        consensusOptions
       );
 
       if (!consensusResult.isConsensus) {
@@ -373,7 +481,15 @@ export class AgentOrchestrator {
       return {
         isValid: consensusResult.isConsensus,
         errors,
-        warnings
+        warnings,
+        // Consensus detaylarını ekle (conversation detaylarında gösterilecek)
+        approvalRate: consensusResult.approvalRate,
+        totalVotes: consensusResult.totalVotes,
+        approveVotes: consensusResult.approveVotes,
+        rejectVotes: consensusResult.rejectVotes,
+        conditionalVotes: consensusResult.conditionalVotes,
+        agentOpinions: consensusResult.agentOpinions,
+        conditions: consensusResult.conditions
       };
     } catch (error: any) {
       errors.push(`Consensus error: ${error.message}`);

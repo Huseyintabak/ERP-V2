@@ -355,7 +355,7 @@ export function ZoneTransferDialog({
         )}
       </DialogTrigger>
       
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="zone-transfer-modal flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <ArrowRightLeft className="h-5 w-5" />

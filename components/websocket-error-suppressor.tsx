@@ -15,15 +15,23 @@ export function WebSocketErrorSuppressor() {
     // Filter out WebSocket errors
     const filteredError = (...args: any[]) => {
       const message = args[0]?.toString() || '';
+      const fullMessage = args.map(a => String(a)).join(' ');
       
-      // Suppress WebSocket connection errors
+      // Suppress WebSocket connection errors and related network errors
       if (
         message.includes('WebSocket') ||
         message.includes('websocket') ||
         message.includes('realtime') ||
         message.includes('wss://') ||
         message.includes('ws://') ||
-        message.includes('disconnect')
+        message.includes('disconnect') ||
+        fullMessage.includes('WebSocket') ||
+        fullMessage.includes('realtime/v1/websocket') ||
+        fullMessage.includes('closed before the connection is established') ||
+        fullMessage.includes('supabase.co/realtime') ||
+        fullMessage.includes('/realtime/') ||
+        (fullMessage.includes('Failed to load resource') && fullMessage.includes('realtime')) ||
+        (fullMessage.includes('400') && fullMessage.includes('complete') && fullMessage.includes('realtime'))
       ) {
         // Completely suppress - these are handled by our hooks
         return;
@@ -59,12 +67,17 @@ export function WebSocketErrorSuppressor() {
     // Suppress unhandled WebSocket errors
     const errorHandler = (event: ErrorEvent) => {
       const message = event.message || '';
+      const filename = event.filename || '';
+      const errorString = `${message} ${filename}`;
       if (
         message.includes('WebSocket') ||
         message.includes('websocket') ||
         message.includes('realtime') ||
         message.includes('wss://') ||
-        message.includes('ws://')
+        message.includes('ws://') ||
+        message.includes('closed before the connection is established') ||
+        errorString.includes('realtime/v1/websocket') ||
+        errorString.includes('supabase.co/realtime')
       ) {
         event.preventDefault();
         event.stopPropagation();
@@ -80,7 +93,10 @@ export function WebSocketErrorSuppressor() {
         reason.includes('websocket') ||
         reason.includes('realtime') ||
         reason.includes('wss://') ||
-        reason.includes('ws://')
+        reason.includes('ws://') ||
+        reason.includes('closed before the connection is established') ||
+        reason.includes('realtime/v1/websocket') ||
+        reason.includes('supabase.co/realtime')
       ) {
         event.preventDefault();
         return false;

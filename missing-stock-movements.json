@@ -1,0 +1,1438 @@
+[
+  {
+    "plan_id": "162a24d1-4685-4c75-b04c-a0c0368d035a",
+    "order": "ORD-2025-108",
+    "product": "TRX-1-GRAY-82-86",
+    "product_id": "bb988714-a247-4831-83ad-be861c6608ea",
+    "produced": 1,
+    "operator_id": "7b043fc6-4c0a-4be2-bffc-af565e264f55",
+    "log_time": "2025-11-03T10:37:47.761274+00:00",
+    "logs": [
+      {
+        "quantity_produced": 1,
+        "timestamp": "2025-11-03T10:37:47.761274+00:00",
+        "operator_id": "7b043fc6-4c0a-4be2-bffc-af565e264f55"
+      }
+    ],
+    "bom_snapshot": [
+      {
+        "id": "1d28a142-9c02-4df4-876a-ce1ad0260124",
+        "plan_id": "162a24d1-4685-4c75-b04c-a0c0368d035a",
+        "material_id": "7bd8b712-7bb0-4d1a-8929-91ce39786123",
+        "material_type": "raw",
+        "material_name": "TRX_Gri_Profil_575",
+        "material_code": "TRX_Gri_Profil_575",
+        "quantity_needed": 1.22,
+        "unit": "adet",
+        "created_at": "2025-11-03T07:32:39.228225+00:00"
+      },
+      {
+        "id": "f3abcd1f-52ec-4d99-80f2-a8d17ea4f48b",
+        "plan_id": "162a24d1-4685-4c75-b04c-a0c0368d035a",
+        "material_id": "22a7fe81-8a36-4a60-bef8-6992280c6dc8",
+        "material_type": "raw",
+        "material_name": "TRX_Profil_contası",
+        "material_code": "TRX_Profil_contası",
+        "quantity_needed": 1,
+        "unit": "adet",
+        "created_at": "2025-11-03T07:32:39.228225+00:00"
+      },
+      {
+        "id": "b5fe7e78-3ad7-4437-9e8f-715f91ecb4a5",
+        "plan_id": "162a24d1-4685-4c75-b04c-a0c0368d035a",
+        "material_id": "11dae487-139d-4671-8c87-2615314d8509",
+        "material_type": "raw",
+        "material_name": "TRX1_Dış_Koli_",
+        "material_code": "TRX1_Dış_Koli_",
+        "quantity_needed": 1,
+        "unit": "adet",
+        "created_at": "2025-11-03T07:32:39.228225+00:00"
+      },
+      {
+        "id": "a54c9e62-8547-4df3-a2a4-9b7e62cd11b8",
+        "plan_id": "162a24d1-4685-4c75-b04c-a0c0368d035a",
+        "material_id": "bcea84e1-b124-4d3a-af06-1812196f3454",
+        "material_type": "semi",
+        "material_name": "TRX1_Gövde_Grubu",
+        "material_code": "TRX1_Gövde_Grubu",
+        "quantity_needed": 1,
+        "unit": "adet",
+        "created_at": "2025-11-03T07:32:39.228225+00:00"
+      },
+      {
+        "id": "830ce5c5-a92f-4ded-bd95-1d32322b8b1d",
+        "plan_id": "162a24d1-4685-4c75-b04c-a0c0368d035a",
+        "material_id": "bcea84e1-b124-4d3a-af06-1812196f3454",
+        "material_type": "semi",
+        "material_name": "TRX1_Gövde_Grubu",
+        "material_code": "TRX1_Gövde_Grubu",
+        "quantity_needed": 1,
+        "unit": "adet",
+        "created_at": "2025-11-03T07:32:39.827824+00:00"
+      },
+      {
+        "id": "24bd26c8-37ab-4a4d-b234-92adc7c682b7",
+        "plan_id": "162a24d1-4685-4c75-b04c-a0c0368d035a",
+        "material_id": "22a7fe81-8a36-4a60-bef8-6992280c6dc8",
+        "material_type": "raw",
+        "material_name": "TRX_Profil_contası",
+        "material_code": "TRX_Profil_contası",
+        "quantity_needed": 1,
+        "unit": "adet",
+        "created_at": "2025-11-03T07:32:40.192573+00:00"
+      },
+      {
+        "id": "c250322c-6336-41ae-a059-61ddef5c3b75",
+        "plan_id": "162a24d1-4685-4c75-b04c-a0c0368d035a",
+        "material_id": "11dae487-139d-4671-8c87-2615314d8509",
+        "material_type": "raw",
+        "material_name": "TRX1_Dış_Koli_",
+        "material_code": "TRX1_Dış_Koli_",
+        "quantity_needed": 1,
+        "unit": "adet",
+        "created_at": "2025-11-03T07:32:40.563134+00:00"
+      },
+      {
+        "id": "7d20aad9-a52a-4be2-9daa-1ac179f9765b",
+        "plan_id": "162a24d1-4685-4c75-b04c-a0c0368d035a",
+        "material_id": "7bd8b712-7bb0-4d1a-8929-91ce39786123",
+        "material_type": "raw",
+        "material_name": "TRX_Gri_Profil_575",
+        "material_code": "TRX_Gri_Profil_575",
+        "quantity_needed": 1.22,
+        "unit": "adet",
+        "created_at": "2025-11-03T07:32:40.927273+00:00"
+      }
+    ],
+    "missing_finished": true,
+    "missing_materials": [],
+    "issue": "Nihai ürün hareketi eksik"
+  },
+  {
+    "plan_id": "72a79581-558c-46db-b3e3-917096ca90bf",
+    "order": "ORD-2025-107",
+    "product": "TRX-2-BLACK-98-102",
+    "product_id": "08dc9c60-acf4-442b-ac83-00f2eaab2806",
+    "produced": 1,
+    "operator_id": "7b043fc6-4c0a-4be2-bffc-af565e264f55",
+    "log_time": "2025-11-03T10:37:35.237652+00:00",
+    "logs": [
+      {
+        "quantity_produced": 1,
+        "timestamp": "2025-11-03T10:37:35.237652+00:00",
+        "operator_id": "7b043fc6-4c0a-4be2-bffc-af565e264f55"
+      }
+    ],
+    "bom_snapshot": [
+      {
+        "id": "34443161-09e9-42a4-bc74-35d8c14bcce2",
+        "plan_id": "72a79581-558c-46db-b3e3-917096ca90bf",
+        "material_id": "f68eb09c-98b1-46a9-baee-ec1db1a51f9a",
+        "material_type": "raw",
+        "material_name": "TRX2_Dış_Koli_",
+        "material_code": "TRX2_Dış_Koli_",
+        "quantity_needed": 1,
+        "unit": "adet",
+        "created_at": "2025-11-03T07:32:48.061529+00:00"
+      },
+      {
+        "id": "6b141943-523f-4120-a002-0d6abbb6c209",
+        "plan_id": "72a79581-558c-46db-b3e3-917096ca90bf",
+        "material_id": "5e3b9796-8dae-48f8-98c3-996d39c36c9a",
+        "material_type": "raw",
+        "material_name": "TRX_Siyah_Profil_575",
+        "material_code": "TRX_Siyah_Profil_575",
+        "quantity_needed": 1.45,
+        "unit": "adet",
+        "created_at": "2025-11-03T07:32:48.423384+00:00"
+      },
+      {
+        "id": "a66143d5-cd8a-4a9e-88bb-363285edecda",
+        "plan_id": "72a79581-558c-46db-b3e3-917096ca90bf",
+        "material_id": "22a7fe81-8a36-4a60-bef8-6992280c6dc8",
+        "material_type": "raw",
+        "material_name": "TRX_Profil_contası",
+        "material_code": "TRX_Profil_contası",
+        "quantity_needed": 2,
+        "unit": "adet",
+        "created_at": "2025-11-03T07:32:48.759987+00:00"
+      },
+      {
+        "id": "ba7987ec-2ca1-4adb-8db1-ab56e4cdb715",
+        "plan_id": "72a79581-558c-46db-b3e3-917096ca90bf",
+        "material_id": "40d127b9-57aa-4b71-8744-4c3f2dadc5d0",
+        "material_type": "semi",
+        "material_name": "TRX2_Gövde_Grubu",
+        "material_code": "TRX2_Gövde_Grubu",
+        "quantity_needed": 1,
+        "unit": "adet",
+        "created_at": "2025-11-03T07:32:49.085093+00:00"
+      },
+      {
+        "id": "0818c0d4-6334-4281-ba1f-a0275e547658",
+        "plan_id": "72a79581-558c-46db-b3e3-917096ca90bf",
+        "material_id": "f68eb09c-98b1-46a9-baee-ec1db1a51f9a",
+        "material_type": "raw",
+        "material_name": "TRX2_Dış_Koli_",
+        "material_code": "TRX2_Dış_Koli_",
+        "quantity_needed": 1,
+        "unit": "adet",
+        "created_at": "2025-11-03T07:32:47.52681+00:00"
+      },
+      {
+        "id": "edfd934e-e5dd-478f-b0ea-39a1406f3eb5",
+        "plan_id": "72a79581-558c-46db-b3e3-917096ca90bf",
+        "material_id": "22a7fe81-8a36-4a60-bef8-6992280c6dc8",
+        "material_type": "raw",
+        "material_name": "TRX_Profil_contası",
+        "material_code": "TRX_Profil_contası",
+        "quantity_needed": 2,
+        "unit": "adet",
+        "created_at": "2025-11-03T07:32:47.52681+00:00"
+      },
+      {
+        "id": "1e19566b-fb0e-45fd-a269-b6cef9ca2505",
+        "plan_id": "72a79581-558c-46db-b3e3-917096ca90bf",
+        "material_id": "5e3b9796-8dae-48f8-98c3-996d39c36c9a",
+        "material_type": "raw",
+        "material_name": "TRX_Siyah_Profil_575",
+        "material_code": "TRX_Siyah_Profil_575",
+        "quantity_needed": 1.45,
+        "unit": "adet",
+        "created_at": "2025-11-03T07:32:47.52681+00:00"
+      },
+      {
+        "id": "661193d6-8fed-4aa4-a41b-8339038b71d2",
+        "plan_id": "72a79581-558c-46db-b3e3-917096ca90bf",
+        "material_id": "40d127b9-57aa-4b71-8744-4c3f2dadc5d0",
+        "material_type": "semi",
+        "material_name": "TRX2_Gövde_Grubu",
+        "material_code": "TRX2_Gövde_Grubu",
+        "quantity_needed": 1,
+        "unit": "adet",
+        "created_at": "2025-11-03T07:32:47.52681+00:00"
+      }
+    ],
+    "missing_finished": true,
+    "missing_materials": [],
+    "issue": "Nihai ürün hareketi eksik"
+  },
+  {
+    "plan_id": "89202261-33fc-4803-803f-b2099bc64663",
+    "order": "ORD-2025-111",
+    "product": "TRX-1-BLACK-98-102",
+    "product_id": "14b7f0e4-4504-4f2b-8472-bd530d1e8b83",
+    "produced": 1,
+    "operator_id": "7b043fc6-4c0a-4be2-bffc-af565e264f55",
+    "log_time": "2025-11-03T08:53:30.86451+00:00",
+    "logs": [
+      {
+        "quantity_produced": 1,
+        "timestamp": "2025-11-03T08:53:30.86451+00:00",
+        "operator_id": "7b043fc6-4c0a-4be2-bffc-af565e264f55"
+      }
+    ],
+    "bom_snapshot": [
+      {
+        "id": "2729ae73-ed02-49c2-855c-36f9b9a7d739",
+        "plan_id": "89202261-33fc-4803-803f-b2099bc64663",
+        "material_id": "11dae487-139d-4671-8c87-2615314d8509",
+        "material_type": "raw",
+        "material_name": "TRX1_Dış_Koli_",
+        "material_code": "TRX1_Dış_Koli_",
+        "quantity_needed": 1,
+        "unit": "adet",
+        "created_at": "2025-11-03T08:43:29.958495+00:00"
+      },
+      {
+        "id": "00650086-24a1-4a79-a8d2-32a30b010bcf",
+        "plan_id": "89202261-33fc-4803-803f-b2099bc64663",
+        "material_id": "5e3b9796-8dae-48f8-98c3-996d39c36c9a",
+        "material_type": "raw",
+        "material_name": "TRX_Siyah_Profil_575",
+        "material_code": "TRX_Siyah_Profil_575",
+        "quantity_needed": 1.45,
+        "unit": "adet",
+        "created_at": "2025-11-03T08:43:29.958495+00:00"
+      },
+      {
+        "id": "d8e1033f-2eff-455e-a8e4-3868d94cf42d",
+        "plan_id": "89202261-33fc-4803-803f-b2099bc64663",
+        "material_id": "22a7fe81-8a36-4a60-bef8-6992280c6dc8",
+        "material_type": "raw",
+        "material_name": "TRX_Profil_contası",
+        "material_code": "TRX_Profil_contası",
+        "quantity_needed": 2,
+        "unit": "adet",
+        "created_at": "2025-11-03T08:43:29.958495+00:00"
+      },
+      {
+        "id": "8eb2053f-3375-4aae-bad5-e24fc133d1f7",
+        "plan_id": "89202261-33fc-4803-803f-b2099bc64663",
+        "material_id": "bcea84e1-b124-4d3a-af06-1812196f3454",
+        "material_type": "semi",
+        "material_name": "TRX1_Gövde_Grubu",
+        "material_code": "TRX1_Gövde_Grubu",
+        "quantity_needed": 1,
+        "unit": "adet",
+        "created_at": "2025-11-03T08:43:29.958495+00:00"
+      },
+      {
+        "id": "dba12f69-bc09-4b44-b9d0-0963110744c1",
+        "plan_id": "89202261-33fc-4803-803f-b2099bc64663",
+        "material_id": "11dae487-139d-4671-8c87-2615314d8509",
+        "material_type": "raw",
+        "material_name": "TRX1_Dış_Koli_",
+        "material_code": "TRX1_Dış_Koli_",
+        "quantity_needed": 1,
+        "unit": "adet",
+        "created_at": "2025-11-03T08:43:31.263152+00:00"
+      },
+      {
+        "id": "e77ada9f-8f2c-4b81-b3ef-3e8f1486bb9b",
+        "plan_id": "89202261-33fc-4803-803f-b2099bc64663",
+        "material_id": "22a7fe81-8a36-4a60-bef8-6992280c6dc8",
+        "material_type": "raw",
+        "material_name": "TRX_Profil_contası",
+        "material_code": "TRX_Profil_contası",
+        "quantity_needed": 2,
+        "unit": "adet",
+        "created_at": "2025-11-03T08:43:35.394437+00:00"
+      },
+      {
+        "id": "26f3629c-6fcb-4de0-8082-adaef7b421c3",
+        "plan_id": "89202261-33fc-4803-803f-b2099bc64663",
+        "material_id": "bcea84e1-b124-4d3a-af06-1812196f3454",
+        "material_type": "semi",
+        "material_name": "TRX1_Gövde_Grubu",
+        "material_code": "TRX1_Gövde_Grubu",
+        "quantity_needed": 1,
+        "unit": "adet",
+        "created_at": "2025-11-03T08:43:32.313371+00:00"
+      },
+      {
+        "id": "0fce113a-138b-4fc8-8a09-f6849c017def",
+        "plan_id": "89202261-33fc-4803-803f-b2099bc64663",
+        "material_id": "5e3b9796-8dae-48f8-98c3-996d39c36c9a",
+        "material_type": "raw",
+        "material_name": "TRX_Siyah_Profil_575",
+        "material_code": "TRX_Siyah_Profil_575",
+        "quantity_needed": 1.45,
+        "unit": "adet",
+        "created_at": "2025-11-03T08:43:34.004226+00:00"
+      }
+    ],
+    "missing_finished": true,
+    "missing_materials": [
+      {
+        "material_id": "11dae487-139d-4671-8c87-2615314d8509",
+        "material_type": "raw",
+        "material_code": "TRX1_Dış_Koli_",
+        "material_name": "TRX1_Dış_Koli_",
+        "quantity_needed": 1,
+        "expected_consumption": 1
+      },
+      {
+        "material_id": "5e3b9796-8dae-48f8-98c3-996d39c36c9a",
+        "material_type": "raw",
+        "material_code": "TRX_Siyah_Profil_575",
+        "material_name": "TRX_Siyah_Profil_575",
+        "quantity_needed": 1.45,
+        "expected_consumption": 1.45
+      },
+      {
+        "material_id": "22a7fe81-8a36-4a60-bef8-6992280c6dc8",
+        "material_type": "raw",
+        "material_code": "TRX_Profil_contası",
+        "material_name": "TRX_Profil_contası",
+        "quantity_needed": 2,
+        "expected_consumption": 2
+      },
+      {
+        "material_id": "bcea84e1-b124-4d3a-af06-1812196f3454",
+        "material_type": "semi",
+        "material_code": "TRX1_Gövde_Grubu",
+        "material_name": "TRX1_Gövde_Grubu",
+        "quantity_needed": 1,
+        "expected_consumption": 1
+      },
+      {
+        "material_id": "11dae487-139d-4671-8c87-2615314d8509",
+        "material_type": "raw",
+        "material_code": "TRX1_Dış_Koli_",
+        "material_name": "TRX1_Dış_Koli_",
+        "quantity_needed": 1,
+        "expected_consumption": 1
+      },
+      {
+        "material_id": "22a7fe81-8a36-4a60-bef8-6992280c6dc8",
+        "material_type": "raw",
+        "material_code": "TRX_Profil_contası",
+        "material_name": "TRX_Profil_contası",
+        "quantity_needed": 2,
+        "expected_consumption": 2
+      },
+      {
+        "material_id": "bcea84e1-b124-4d3a-af06-1812196f3454",
+        "material_type": "semi",
+        "material_code": "TRX1_Gövde_Grubu",
+        "material_name": "TRX1_Gövde_Grubu",
+        "quantity_needed": 1,
+        "expected_consumption": 1
+      },
+      {
+        "material_id": "5e3b9796-8dae-48f8-98c3-996d39c36c9a",
+        "material_type": "raw",
+        "material_code": "TRX_Siyah_Profil_575",
+        "material_name": "TRX_Siyah_Profil_575",
+        "quantity_needed": 1.45,
+        "expected_consumption": 1.45
+      }
+    ],
+    "issue": "Nihai ürün + Malzeme tüketim hareketleri eksik"
+  },
+  {
+    "plan_id": "f1134f49-4215-406d-b6bf-6d4d2bdd8873",
+    "order": "ORD-2025-110",
+    "product": "TRX-1-BLACK-86-86",
+    "product_id": "12a9720a-f052-4e61-9507-4e4cbb40c8cf",
+    "produced": 1,
+    "operator_id": "7b043fc6-4c0a-4be2-bffc-af565e264f55",
+    "log_time": "2025-11-03T08:53:03.176947+00:00",
+    "logs": [
+      {
+        "quantity_produced": 1,
+        "timestamp": "2025-11-03T08:53:03.176947+00:00",
+        "operator_id": "7b043fc6-4c0a-4be2-bffc-af565e264f55"
+      }
+    ],
+    "bom_snapshot": [
+      {
+        "id": "50e71d96-baf3-4bb0-bce0-c78fcf83b2c7",
+        "plan_id": "f1134f49-4215-406d-b6bf-6d4d2bdd8873",
+        "material_id": "5e3b9796-8dae-48f8-98c3-996d39c36c9a",
+        "material_type": "raw",
+        "material_name": "TRX_Siyah_Profil_575",
+        "material_code": "TRX_Siyah_Profil_575",
+        "quantity_needed": 1.25,
+        "unit": "adet",
+        "created_at": "2025-11-03T08:43:45.780564+00:00"
+      },
+      {
+        "id": "d9ebdff1-f8f8-4a71-b022-ccc6c69fa25d",
+        "plan_id": "f1134f49-4215-406d-b6bf-6d4d2bdd8873",
+        "material_id": "11dae487-139d-4671-8c87-2615314d8509",
+        "material_type": "raw",
+        "material_name": "TRX1_Dış_Koli_",
+        "material_code": "TRX1_Dış_Koli_",
+        "quantity_needed": 1,
+        "unit": "adet",
+        "created_at": "2025-11-03T08:43:44.259329+00:00"
+      },
+      {
+        "id": "85308935-e1c9-4986-a5ff-2fc8c7f47dbe",
+        "plan_id": "f1134f49-4215-406d-b6bf-6d4d2bdd8873",
+        "material_id": "5e3b9796-8dae-48f8-98c3-996d39c36c9a",
+        "material_type": "raw",
+        "material_name": "TRX_Siyah_Profil_575",
+        "material_code": "TRX_Siyah_Profil_575",
+        "quantity_needed": 1.25,
+        "unit": "adet",
+        "created_at": "2025-11-03T08:43:44.259329+00:00"
+      },
+      {
+        "id": "51547555-0d5f-4b92-a3e0-62332ce9bd7b",
+        "plan_id": "f1134f49-4215-406d-b6bf-6d4d2bdd8873",
+        "material_id": "22a7fe81-8a36-4a60-bef8-6992280c6dc8",
+        "material_type": "raw",
+        "material_name": "TRX_Profil_contası",
+        "material_code": "TRX_Profil_contası",
+        "quantity_needed": 2,
+        "unit": "adet",
+        "created_at": "2025-11-03T08:43:44.259329+00:00"
+      },
+      {
+        "id": "7ee30d28-e4f5-4857-99cb-21e453e6ce41",
+        "plan_id": "f1134f49-4215-406d-b6bf-6d4d2bdd8873",
+        "material_id": "bcea84e1-b124-4d3a-af06-1812196f3454",
+        "material_type": "semi",
+        "material_name": "TRX1_Gövde_Grubu",
+        "material_code": "TRX1_Gövde_Grubu",
+        "quantity_needed": 1,
+        "unit": "adet",
+        "created_at": "2025-11-03T08:43:44.259329+00:00"
+      },
+      {
+        "id": "32fc7f18-99a4-489d-a0f9-c50bd5e67a18",
+        "plan_id": "f1134f49-4215-406d-b6bf-6d4d2bdd8873",
+        "material_id": "11dae487-139d-4671-8c87-2615314d8509",
+        "material_type": "raw",
+        "material_name": "TRX1_Dış_Koli_",
+        "material_code": "TRX1_Dış_Koli_",
+        "quantity_needed": 1,
+        "unit": "adet",
+        "created_at": "2025-11-03T08:43:44.831477+00:00"
+      },
+      {
+        "id": "0c08036f-af07-4ef0-b59c-bd5f68051c38",
+        "plan_id": "f1134f49-4215-406d-b6bf-6d4d2bdd8873",
+        "material_id": "22a7fe81-8a36-4a60-bef8-6992280c6dc8",
+        "material_type": "raw",
+        "material_name": "TRX_Profil_contası",
+        "material_code": "TRX_Profil_contası",
+        "quantity_needed": 2,
+        "unit": "adet",
+        "created_at": "2025-11-03T08:43:46.766894+00:00"
+      },
+      {
+        "id": "7b92f34e-e369-44da-a700-7e767fe98388",
+        "plan_id": "f1134f49-4215-406d-b6bf-6d4d2bdd8873",
+        "material_id": "bcea84e1-b124-4d3a-af06-1812196f3454",
+        "material_type": "semi",
+        "material_name": "TRX1_Gövde_Grubu",
+        "material_code": "TRX1_Gövde_Grubu",
+        "quantity_needed": 1,
+        "unit": "adet",
+        "created_at": "2025-11-03T08:43:45.232525+00:00"
+      }
+    ],
+    "missing_finished": true,
+    "missing_materials": [
+      {
+        "material_id": "5e3b9796-8dae-48f8-98c3-996d39c36c9a",
+        "material_type": "raw",
+        "material_code": "TRX_Siyah_Profil_575",
+        "material_name": "TRX_Siyah_Profil_575",
+        "quantity_needed": 1.25,
+        "expected_consumption": 1.25
+      },
+      {
+        "material_id": "11dae487-139d-4671-8c87-2615314d8509",
+        "material_type": "raw",
+        "material_code": "TRX1_Dış_Koli_",
+        "material_name": "TRX1_Dış_Koli_",
+        "quantity_needed": 1,
+        "expected_consumption": 1
+      },
+      {
+        "material_id": "5e3b9796-8dae-48f8-98c3-996d39c36c9a",
+        "material_type": "raw",
+        "material_code": "TRX_Siyah_Profil_575",
+        "material_name": "TRX_Siyah_Profil_575",
+        "quantity_needed": 1.25,
+        "expected_consumption": 1.25
+      },
+      {
+        "material_id": "22a7fe81-8a36-4a60-bef8-6992280c6dc8",
+        "material_type": "raw",
+        "material_code": "TRX_Profil_contası",
+        "material_name": "TRX_Profil_contası",
+        "quantity_needed": 2,
+        "expected_consumption": 2
+      },
+      {
+        "material_id": "bcea84e1-b124-4d3a-af06-1812196f3454",
+        "material_type": "semi",
+        "material_code": "TRX1_Gövde_Grubu",
+        "material_name": "TRX1_Gövde_Grubu",
+        "quantity_needed": 1,
+        "expected_consumption": 1
+      },
+      {
+        "material_id": "11dae487-139d-4671-8c87-2615314d8509",
+        "material_type": "raw",
+        "material_code": "TRX1_Dış_Koli_",
+        "material_name": "TRX1_Dış_Koli_",
+        "quantity_needed": 1,
+        "expected_consumption": 1
+      },
+      {
+        "material_id": "22a7fe81-8a36-4a60-bef8-6992280c6dc8",
+        "material_type": "raw",
+        "material_code": "TRX_Profil_contası",
+        "material_name": "TRX_Profil_contası",
+        "quantity_needed": 2,
+        "expected_consumption": 2
+      },
+      {
+        "material_id": "bcea84e1-b124-4d3a-af06-1812196f3454",
+        "material_type": "semi",
+        "material_code": "TRX1_Gövde_Grubu",
+        "material_name": "TRX1_Gövde_Grubu",
+        "quantity_needed": 1,
+        "expected_consumption": 1
+      }
+    ],
+    "issue": "Nihai ürün + Malzeme tüketim hareketleri eksik"
+  },
+  {
+    "plan_id": "cd102de3-c377-42fd-a035-ce4111c04a77",
+    "order": "ORD-2025-106",
+    "product": "TRX-1-BLACK-90-98",
+    "product_id": "766f25df-152c-4dca-9179-da993bafda1e",
+    "produced": 1,
+    "operator_id": "7b043fc6-4c0a-4be2-bffc-af565e264f55",
+    "log_time": "2025-11-03T08:25:19.45734+00:00",
+    "logs": [
+      {
+        "quantity_produced": 1,
+        "timestamp": "2025-11-03T08:25:19.45734+00:00",
+        "operator_id": "7b043fc6-4c0a-4be2-bffc-af565e264f55"
+      }
+    ],
+    "bom_snapshot": [
+      {
+        "id": "84fa6b72-2a14-4990-b49a-3993cabd4520",
+        "plan_id": "cd102de3-c377-42fd-a035-ce4111c04a77",
+        "material_id": "11dae487-139d-4671-8c87-2615314d8509",
+        "material_type": "raw",
+        "material_name": "TRX1_Dış_Koli_",
+        "material_code": "TRX1_Dış_Koli_",
+        "quantity_needed": 1,
+        "unit": "adet",
+        "created_at": "2025-11-03T07:32:55.226494+00:00"
+      },
+      {
+        "id": "33c2e35a-eae6-4332-8f9c-eb301c075616",
+        "plan_id": "cd102de3-c377-42fd-a035-ce4111c04a77",
+        "material_id": "bcea84e1-b124-4d3a-af06-1812196f3454",
+        "material_type": "semi",
+        "material_name": "TRX1_Gövde_Grubu",
+        "material_code": "TRX1_Gövde_Grubu",
+        "quantity_needed": 1,
+        "unit": "adet",
+        "created_at": "2025-11-03T07:32:55.553738+00:00"
+      },
+      {
+        "id": "b361efe9-1a2c-4509-86fa-7dd3da744f17",
+        "plan_id": "cd102de3-c377-42fd-a035-ce4111c04a77",
+        "material_id": "5e3b9796-8dae-48f8-98c3-996d39c36c9a",
+        "material_type": "raw",
+        "material_name": "TRX_Siyah_Profil_575",
+        "material_code": "TRX_Siyah_Profil_575",
+        "quantity_needed": 1.36,
+        "unit": "adet",
+        "created_at": "2025-11-03T07:32:55.899587+00:00"
+      },
+      {
+        "id": "75d4a104-9c1e-4f79-92b5-9fb60d85b9e1",
+        "plan_id": "cd102de3-c377-42fd-a035-ce4111c04a77",
+        "material_id": "22a7fe81-8a36-4a60-bef8-6992280c6dc8",
+        "material_type": "raw",
+        "material_name": "TRX_Profil_contası",
+        "material_code": "TRX_Profil_contası",
+        "quantity_needed": 2,
+        "unit": "adet",
+        "created_at": "2025-11-03T07:32:56.297099+00:00"
+      },
+      {
+        "id": "cbd83bf2-cf37-4bf4-bbe8-7b272fc155a8",
+        "plan_id": "cd102de3-c377-42fd-a035-ce4111c04a77",
+        "material_id": "11dae487-139d-4671-8c87-2615314d8509",
+        "material_type": "raw",
+        "material_name": "TRX1_Dış_Koli_",
+        "material_code": "TRX1_Dış_Koli_",
+        "quantity_needed": 1,
+        "unit": "adet",
+        "created_at": "2025-11-03T07:32:54.671471+00:00"
+      },
+      {
+        "id": "12888d32-f486-48ea-b29d-c6decdc82276",
+        "plan_id": "cd102de3-c377-42fd-a035-ce4111c04a77",
+        "material_id": "5e3b9796-8dae-48f8-98c3-996d39c36c9a",
+        "material_type": "raw",
+        "material_name": "TRX_Siyah_Profil_575",
+        "material_code": "TRX_Siyah_Profil_575",
+        "quantity_needed": 1.36,
+        "unit": "adet",
+        "created_at": "2025-11-03T07:32:54.671471+00:00"
+      },
+      {
+        "id": "03f51c9d-2692-4b72-a701-2ff96794357c",
+        "plan_id": "cd102de3-c377-42fd-a035-ce4111c04a77",
+        "material_id": "22a7fe81-8a36-4a60-bef8-6992280c6dc8",
+        "material_type": "raw",
+        "material_name": "TRX_Profil_contası",
+        "material_code": "TRX_Profil_contası",
+        "quantity_needed": 2,
+        "unit": "adet",
+        "created_at": "2025-11-03T07:32:54.671471+00:00"
+      },
+      {
+        "id": "8e640687-6ea3-4dc1-bf8d-650393faf378",
+        "plan_id": "cd102de3-c377-42fd-a035-ce4111c04a77",
+        "material_id": "bcea84e1-b124-4d3a-af06-1812196f3454",
+        "material_type": "semi",
+        "material_name": "TRX1_Gövde_Grubu",
+        "material_code": "TRX1_Gövde_Grubu",
+        "quantity_needed": 1,
+        "unit": "adet",
+        "created_at": "2025-11-03T07:32:54.671471+00:00"
+      }
+    ],
+    "missing_finished": true,
+    "missing_materials": [
+      {
+        "material_id": "11dae487-139d-4671-8c87-2615314d8509",
+        "material_type": "raw",
+        "material_code": "TRX1_Dış_Koli_",
+        "material_name": "TRX1_Dış_Koli_",
+        "quantity_needed": 1,
+        "expected_consumption": 1
+      },
+      {
+        "material_id": "bcea84e1-b124-4d3a-af06-1812196f3454",
+        "material_type": "semi",
+        "material_code": "TRX1_Gövde_Grubu",
+        "material_name": "TRX1_Gövde_Grubu",
+        "quantity_needed": 1,
+        "expected_consumption": 1
+      },
+      {
+        "material_id": "5e3b9796-8dae-48f8-98c3-996d39c36c9a",
+        "material_type": "raw",
+        "material_code": "TRX_Siyah_Profil_575",
+        "material_name": "TRX_Siyah_Profil_575",
+        "quantity_needed": 1.36,
+        "expected_consumption": 1.36
+      },
+      {
+        "material_id": "22a7fe81-8a36-4a60-bef8-6992280c6dc8",
+        "material_type": "raw",
+        "material_code": "TRX_Profil_contası",
+        "material_name": "TRX_Profil_contası",
+        "quantity_needed": 2,
+        "expected_consumption": 2
+      },
+      {
+        "material_id": "11dae487-139d-4671-8c87-2615314d8509",
+        "material_type": "raw",
+        "material_code": "TRX1_Dış_Koli_",
+        "material_name": "TRX1_Dış_Koli_",
+        "quantity_needed": 1,
+        "expected_consumption": 1
+      },
+      {
+        "material_id": "5e3b9796-8dae-48f8-98c3-996d39c36c9a",
+        "material_type": "raw",
+        "material_code": "TRX_Siyah_Profil_575",
+        "material_name": "TRX_Siyah_Profil_575",
+        "quantity_needed": 1.36,
+        "expected_consumption": 1.36
+      },
+      {
+        "material_id": "22a7fe81-8a36-4a60-bef8-6992280c6dc8",
+        "material_type": "raw",
+        "material_code": "TRX_Profil_contası",
+        "material_name": "TRX_Profil_contası",
+        "quantity_needed": 2,
+        "expected_consumption": 2
+      },
+      {
+        "material_id": "bcea84e1-b124-4d3a-af06-1812196f3454",
+        "material_type": "semi",
+        "material_code": "TRX1_Gövde_Grubu",
+        "material_name": "TRX1_Gövde_Grubu",
+        "quantity_needed": 1,
+        "expected_consumption": 1
+      }
+    ],
+    "issue": "Nihai ürün + Malzeme tüketim hareketleri eksik"
+  },
+  {
+    "plan_id": "6df2f045-ad14-4ab9-9502-3263a13fd55d",
+    "order": "ORD-2025-101",
+    "product": "TRX-2-BLACK-84-90",
+    "product_id": "de1e79ab-3fa5-497a-9730-cd5e6ddd744f",
+    "produced": 1,
+    "operator_id": "7b043fc6-4c0a-4be2-bffc-af565e264f55",
+    "log_time": "2025-10-30T11:33:16.655019+00:00",
+    "logs": [
+      {
+        "quantity_produced": 1,
+        "timestamp": "2025-10-30T11:33:16.655019+00:00",
+        "operator_id": "7b043fc6-4c0a-4be2-bffc-af565e264f55"
+      }
+    ],
+    "bom_snapshot": [
+      {
+        "id": "1a221ed5-bcad-4421-92bd-79110d7d31ee",
+        "plan_id": "6df2f045-ad14-4ab9-9502-3263a13fd55d",
+        "material_id": "22a7fe81-8a36-4a60-bef8-6992280c6dc8",
+        "material_type": "raw",
+        "material_name": "TRX_Profil_contası",
+        "material_code": "TRX_Profil_contası",
+        "quantity_needed": 2,
+        "unit": "adet",
+        "created_at": "2025-10-30T11:27:56.354418+00:00"
+      },
+      {
+        "id": "81df8f47-4547-4645-b60f-265a940689b1",
+        "plan_id": "6df2f045-ad14-4ab9-9502-3263a13fd55d",
+        "material_id": "5e3b9796-8dae-48f8-98c3-996d39c36c9a",
+        "material_type": "raw",
+        "material_name": "TRX_Siyah_Profil_575",
+        "material_code": "TRX_Siyah_Profil_575",
+        "quantity_needed": 1.26,
+        "unit": "adet",
+        "created_at": "2025-10-30T11:27:56.354418+00:00"
+      },
+      {
+        "id": "462cdba4-c763-44a3-8e14-05ae693797b6",
+        "plan_id": "6df2f045-ad14-4ab9-9502-3263a13fd55d",
+        "material_id": "f68eb09c-98b1-46a9-baee-ec1db1a51f9a",
+        "material_type": "raw",
+        "material_name": "TRX2_Dış_Koli_",
+        "material_code": "TRX2_Dış_Koli_",
+        "quantity_needed": 1,
+        "unit": "adet",
+        "created_at": "2025-10-30T11:27:56.354418+00:00"
+      },
+      {
+        "id": "8e0ef907-665b-4825-9a73-9e6775aae091",
+        "plan_id": "6df2f045-ad14-4ab9-9502-3263a13fd55d",
+        "material_id": "40d127b9-57aa-4b71-8744-4c3f2dadc5d0",
+        "material_type": "semi",
+        "material_name": "TRX2_Gövde_Grubu",
+        "material_code": "TRX2_Gövde_Grubu",
+        "quantity_needed": 1,
+        "unit": "adet",
+        "created_at": "2025-10-30T11:27:56.354418+00:00"
+      },
+      {
+        "id": "93fde5bf-47d3-4950-997b-ac389fdeab5a",
+        "plan_id": "6df2f045-ad14-4ab9-9502-3263a13fd55d",
+        "material_id": "f68eb09c-98b1-46a9-baee-ec1db1a51f9a",
+        "material_type": "raw",
+        "material_name": "TRX2_Dış_Koli_",
+        "material_code": "TRX2_Dış_Koli_",
+        "quantity_needed": 1,
+        "unit": "adet",
+        "created_at": "2025-10-30T11:27:56.883634+00:00"
+      },
+      {
+        "id": "9bf8167e-29d3-477b-90db-21c47648da8b",
+        "plan_id": "6df2f045-ad14-4ab9-9502-3263a13fd55d",
+        "material_id": "5e3b9796-8dae-48f8-98c3-996d39c36c9a",
+        "material_type": "raw",
+        "material_name": "TRX_Siyah_Profil_575",
+        "material_code": "TRX_Siyah_Profil_575",
+        "quantity_needed": 1.26,
+        "unit": "adet",
+        "created_at": "2025-10-30T11:27:57.221433+00:00"
+      },
+      {
+        "id": "4d25312f-526b-42e0-98f2-97dd1e75da34",
+        "plan_id": "6df2f045-ad14-4ab9-9502-3263a13fd55d",
+        "material_id": "22a7fe81-8a36-4a60-bef8-6992280c6dc8",
+        "material_type": "raw",
+        "material_name": "TRX_Profil_contası",
+        "material_code": "TRX_Profil_contası",
+        "quantity_needed": 2,
+        "unit": "adet",
+        "created_at": "2025-10-30T11:27:57.521312+00:00"
+      },
+      {
+        "id": "9e21bef1-1b8e-4e42-bac1-dbacad067954",
+        "plan_id": "6df2f045-ad14-4ab9-9502-3263a13fd55d",
+        "material_id": "40d127b9-57aa-4b71-8744-4c3f2dadc5d0",
+        "material_type": "semi",
+        "material_name": "TRX2_Gövde_Grubu",
+        "material_code": "TRX2_Gövde_Grubu",
+        "quantity_needed": 1,
+        "unit": "adet",
+        "created_at": "2025-10-30T11:27:57.859082+00:00"
+      }
+    ],
+    "missing_finished": true,
+    "missing_materials": [
+      {
+        "material_id": "22a7fe81-8a36-4a60-bef8-6992280c6dc8",
+        "material_type": "raw",
+        "material_code": "TRX_Profil_contası",
+        "material_name": "TRX_Profil_contası",
+        "quantity_needed": 2,
+        "expected_consumption": 2
+      },
+      {
+        "material_id": "5e3b9796-8dae-48f8-98c3-996d39c36c9a",
+        "material_type": "raw",
+        "material_code": "TRX_Siyah_Profil_575",
+        "material_name": "TRX_Siyah_Profil_575",
+        "quantity_needed": 1.26,
+        "expected_consumption": 1.26
+      },
+      {
+        "material_id": "f68eb09c-98b1-46a9-baee-ec1db1a51f9a",
+        "material_type": "raw",
+        "material_code": "TRX2_Dış_Koli_",
+        "material_name": "TRX2_Dış_Koli_",
+        "quantity_needed": 1,
+        "expected_consumption": 1
+      },
+      {
+        "material_id": "40d127b9-57aa-4b71-8744-4c3f2dadc5d0",
+        "material_type": "semi",
+        "material_code": "TRX2_Gövde_Grubu",
+        "material_name": "TRX2_Gövde_Grubu",
+        "quantity_needed": 1,
+        "expected_consumption": 1
+      },
+      {
+        "material_id": "f68eb09c-98b1-46a9-baee-ec1db1a51f9a",
+        "material_type": "raw",
+        "material_code": "TRX2_Dış_Koli_",
+        "material_name": "TRX2_Dış_Koli_",
+        "quantity_needed": 1,
+        "expected_consumption": 1
+      },
+      {
+        "material_id": "5e3b9796-8dae-48f8-98c3-996d39c36c9a",
+        "material_type": "raw",
+        "material_code": "TRX_Siyah_Profil_575",
+        "material_name": "TRX_Siyah_Profil_575",
+        "quantity_needed": 1.26,
+        "expected_consumption": 1.26
+      },
+      {
+        "material_id": "22a7fe81-8a36-4a60-bef8-6992280c6dc8",
+        "material_type": "raw",
+        "material_code": "TRX_Profil_contası",
+        "material_name": "TRX_Profil_contası",
+        "quantity_needed": 2,
+        "expected_consumption": 2
+      },
+      {
+        "material_id": "40d127b9-57aa-4b71-8744-4c3f2dadc5d0",
+        "material_type": "semi",
+        "material_code": "TRX2_Gövde_Grubu",
+        "material_name": "TRX2_Gövde_Grubu",
+        "quantity_needed": 1,
+        "expected_consumption": 1
+      }
+    ],
+    "issue": "Nihai ürün + Malzeme tüketim hareketleri eksik"
+  },
+  {
+    "plan_id": "b7e5ce6f-5198-4636-96ad-4bed7ac8ae5d",
+    "order": "ORD-2025-097",
+    "product": "TRX-1-GRAY-90-98",
+    "product_id": "9dc067e2-5f18-4a21-96ca-2a394787acf3",
+    "produced": 1,
+    "operator_id": "7b043fc6-4c0a-4be2-bffc-af565e264f55",
+    "log_time": "2025-10-30T08:33:51.566698+00:00",
+    "logs": [
+      {
+        "quantity_produced": 1,
+        "timestamp": "2025-10-30T08:33:51.566698+00:00",
+        "operator_id": "7b043fc6-4c0a-4be2-bffc-af565e264f55"
+      }
+    ],
+    "bom_snapshot": [
+      {
+        "id": "8a4f385e-02f2-43d7-b927-cb5d968fde0f",
+        "plan_id": "b7e5ce6f-5198-4636-96ad-4bed7ac8ae5d",
+        "material_id": "11dae487-139d-4671-8c87-2615314d8509",
+        "material_type": "raw",
+        "material_name": "TRX1_Dış_Koli_",
+        "material_code": "TRX1_Dış_Koli_",
+        "quantity_needed": 1,
+        "unit": "adet",
+        "created_at": "2025-10-30T07:52:19.005822+00:00"
+      },
+      {
+        "id": "d577257c-c0d8-4814-a866-3e6b707ffa5d",
+        "plan_id": "b7e5ce6f-5198-4636-96ad-4bed7ac8ae5d",
+        "material_id": "22a7fe81-8a36-4a60-bef8-6992280c6dc8",
+        "material_type": "raw",
+        "material_name": "TRX_Profil_contası",
+        "material_code": "TRX_Profil_contası",
+        "quantity_needed": 1,
+        "unit": "adet",
+        "created_at": "2025-10-30T07:52:19.005822+00:00"
+      },
+      {
+        "id": "6c4b76ce-479a-49e0-8984-b6220809ffb9",
+        "plan_id": "b7e5ce6f-5198-4636-96ad-4bed7ac8ae5d",
+        "material_id": "7bd8b712-7bb0-4d1a-8929-91ce39786123",
+        "material_type": "raw",
+        "material_name": "TRX_Gri_Profil_575",
+        "material_code": "TRX_Gri_Profil_575",
+        "quantity_needed": 1.36,
+        "unit": "adet",
+        "created_at": "2025-10-30T07:52:19.005822+00:00"
+      },
+      {
+        "id": "415a0a40-3800-41ea-83a0-d48a7257a10a",
+        "plan_id": "b7e5ce6f-5198-4636-96ad-4bed7ac8ae5d",
+        "material_id": "bcea84e1-b124-4d3a-af06-1812196f3454",
+        "material_type": "semi",
+        "material_name": "TRX1_Gövde_Grubu",
+        "material_code": "TRX1_Gövde_Grubu",
+        "quantity_needed": 1,
+        "unit": "adet",
+        "created_at": "2025-10-30T07:52:19.005822+00:00"
+      },
+      {
+        "id": "403b6764-358a-4d9a-a48e-3ddfb9fecf6e",
+        "plan_id": "b7e5ce6f-5198-4636-96ad-4bed7ac8ae5d",
+        "material_id": "bcea84e1-b124-4d3a-af06-1812196f3454",
+        "material_type": "semi",
+        "material_name": "TRX1_Gövde_Grubu",
+        "material_code": "TRX1_Gövde_Grubu",
+        "quantity_needed": 1,
+        "unit": "adet",
+        "created_at": "2025-10-30T07:52:19.564925+00:00"
+      },
+      {
+        "id": "bc31a556-631d-4185-9c8c-7126ddc1a2bf",
+        "plan_id": "b7e5ce6f-5198-4636-96ad-4bed7ac8ae5d",
+        "material_id": "7bd8b712-7bb0-4d1a-8929-91ce39786123",
+        "material_type": "raw",
+        "material_name": "TRX_Gri_Profil_575",
+        "material_code": "TRX_Gri_Profil_575",
+        "quantity_needed": 1.36,
+        "unit": "adet",
+        "created_at": "2025-10-30T07:52:21.708379+00:00"
+      },
+      {
+        "id": "2a038ae3-f32c-4d7c-bdab-612270d02609",
+        "plan_id": "b7e5ce6f-5198-4636-96ad-4bed7ac8ae5d",
+        "material_id": "22a7fe81-8a36-4a60-bef8-6992280c6dc8",
+        "material_type": "raw",
+        "material_name": "TRX_Profil_contası",
+        "material_code": "TRX_Profil_contası",
+        "quantity_needed": 1,
+        "unit": "adet",
+        "created_at": "2025-10-30T07:52:19.887425+00:00"
+      },
+      {
+        "id": "50cbf1f3-306d-48c3-8371-99ece8f66d5b",
+        "plan_id": "b7e5ce6f-5198-4636-96ad-4bed7ac8ae5d",
+        "material_id": "11dae487-139d-4671-8c87-2615314d8509",
+        "material_type": "raw",
+        "material_name": "TRX1_Dış_Koli_",
+        "material_code": "TRX1_Dış_Koli_",
+        "quantity_needed": 1,
+        "unit": "adet",
+        "created_at": "2025-10-30T07:52:20.537545+00:00"
+      }
+    ],
+    "missing_finished": true,
+    "missing_materials": [
+      {
+        "material_id": "11dae487-139d-4671-8c87-2615314d8509",
+        "material_type": "raw",
+        "material_code": "TRX1_Dış_Koli_",
+        "material_name": "TRX1_Dış_Koli_",
+        "quantity_needed": 1,
+        "expected_consumption": 1
+      },
+      {
+        "material_id": "22a7fe81-8a36-4a60-bef8-6992280c6dc8",
+        "material_type": "raw",
+        "material_code": "TRX_Profil_contası",
+        "material_name": "TRX_Profil_contası",
+        "quantity_needed": 1,
+        "expected_consumption": 1
+      },
+      {
+        "material_id": "7bd8b712-7bb0-4d1a-8929-91ce39786123",
+        "material_type": "raw",
+        "material_code": "TRX_Gri_Profil_575",
+        "material_name": "TRX_Gri_Profil_575",
+        "quantity_needed": 1.36,
+        "expected_consumption": 1.36
+      },
+      {
+        "material_id": "bcea84e1-b124-4d3a-af06-1812196f3454",
+        "material_type": "semi",
+        "material_code": "TRX1_Gövde_Grubu",
+        "material_name": "TRX1_Gövde_Grubu",
+        "quantity_needed": 1,
+        "expected_consumption": 1
+      },
+      {
+        "material_id": "bcea84e1-b124-4d3a-af06-1812196f3454",
+        "material_type": "semi",
+        "material_code": "TRX1_Gövde_Grubu",
+        "material_name": "TRX1_Gövde_Grubu",
+        "quantity_needed": 1,
+        "expected_consumption": 1
+      },
+      {
+        "material_id": "7bd8b712-7bb0-4d1a-8929-91ce39786123",
+        "material_type": "raw",
+        "material_code": "TRX_Gri_Profil_575",
+        "material_name": "TRX_Gri_Profil_575",
+        "quantity_needed": 1.36,
+        "expected_consumption": 1.36
+      },
+      {
+        "material_id": "22a7fe81-8a36-4a60-bef8-6992280c6dc8",
+        "material_type": "raw",
+        "material_code": "TRX_Profil_contası",
+        "material_name": "TRX_Profil_contası",
+        "quantity_needed": 1,
+        "expected_consumption": 1
+      },
+      {
+        "material_id": "11dae487-139d-4671-8c87-2615314d8509",
+        "material_type": "raw",
+        "material_code": "TRX1_Dış_Koli_",
+        "material_name": "TRX1_Dış_Koli_",
+        "quantity_needed": 1,
+        "expected_consumption": 1
+      }
+    ],
+    "issue": "Nihai ürün + Malzeme tüketim hareketleri eksik"
+  },
+  {
+    "plan_id": "93f924b3-cebc-4485-a792-6d1de6847e76",
+    "order": "ORD-2025-100",
+    "product": "TRX-2-GRAY-86-94",
+    "product_id": "1f8ea1f7-030d-4a31-b52a-3308eaa04964",
+    "produced": 1,
+    "operator_id": "7b043fc6-4c0a-4be2-bffc-af565e264f55",
+    "log_time": "2025-10-30T08:33:42.327433+00:00",
+    "logs": [
+      {
+        "quantity_produced": 1,
+        "timestamp": "2025-10-30T08:33:42.327433+00:00",
+        "operator_id": "7b043fc6-4c0a-4be2-bffc-af565e264f55"
+      }
+    ],
+    "bom_snapshot": [
+      {
+        "id": "7564c8c4-0ec9-4482-83da-2c381eb51868",
+        "plan_id": "93f924b3-cebc-4485-a792-6d1de6847e76",
+        "material_id": "7bd8b712-7bb0-4d1a-8929-91ce39786123",
+        "material_type": "raw",
+        "material_name": "TRX_Gri_Profil_575",
+        "material_code": "TRX_Gri_Profil_575",
+        "quantity_needed": 1.31,
+        "unit": "adet",
+        "created_at": "2025-10-30T07:52:01.968249+00:00"
+      },
+      {
+        "id": "2f803c65-905f-4413-b4a0-636d44fb6346",
+        "plan_id": "93f924b3-cebc-4485-a792-6d1de6847e76",
+        "material_id": "22a7fe81-8a36-4a60-bef8-6992280c6dc8",
+        "material_type": "raw",
+        "material_name": "TRX_Profil_contası",
+        "material_code": "TRX_Profil_contası",
+        "quantity_needed": 2,
+        "unit": "adet",
+        "created_at": "2025-10-30T07:52:01.968249+00:00"
+      },
+      {
+        "id": "f6ffafcc-355e-42b5-8192-986b73de47c1",
+        "plan_id": "93f924b3-cebc-4485-a792-6d1de6847e76",
+        "material_id": "f68eb09c-98b1-46a9-baee-ec1db1a51f9a",
+        "material_type": "raw",
+        "material_name": "TRX2_Dış_Koli_",
+        "material_code": "TRX2_Dış_Koli_",
+        "quantity_needed": 1,
+        "unit": "adet",
+        "created_at": "2025-10-30T07:52:01.968249+00:00"
+      },
+      {
+        "id": "699c4378-eb81-45e4-90e9-ac7e01dbe4f6",
+        "plan_id": "93f924b3-cebc-4485-a792-6d1de6847e76",
+        "material_id": "40d127b9-57aa-4b71-8744-4c3f2dadc5d0",
+        "material_type": "semi",
+        "material_name": "TRX2_Gövde_Grubu",
+        "material_code": "TRX2_Gövde_Grubu",
+        "quantity_needed": 1,
+        "unit": "adet",
+        "created_at": "2025-10-30T07:52:01.968249+00:00"
+      },
+      {
+        "id": "57c5b97b-6f18-492c-97ec-3de5e68f28e6",
+        "plan_id": "93f924b3-cebc-4485-a792-6d1de6847e76",
+        "material_id": "f68eb09c-98b1-46a9-baee-ec1db1a51f9a",
+        "material_type": "raw",
+        "material_name": "TRX2_Dış_Koli_",
+        "material_code": "TRX2_Dış_Koli_",
+        "quantity_needed": 1,
+        "unit": "adet",
+        "created_at": "2025-10-30T07:52:05.190308+00:00"
+      },
+      {
+        "id": "4cbbfcad-826a-4297-9012-924d746c7ece",
+        "plan_id": "93f924b3-cebc-4485-a792-6d1de6847e76",
+        "material_id": "40d127b9-57aa-4b71-8744-4c3f2dadc5d0",
+        "material_type": "semi",
+        "material_name": "TRX2_Gövde_Grubu",
+        "material_code": "TRX2_Gövde_Grubu",
+        "quantity_needed": 1,
+        "unit": "adet",
+        "created_at": "2025-10-30T07:52:04.437276+00:00"
+      },
+      {
+        "id": "ecc5889f-2fbc-49f1-ad38-2037949c22be",
+        "plan_id": "93f924b3-cebc-4485-a792-6d1de6847e76",
+        "material_id": "7bd8b712-7bb0-4d1a-8929-91ce39786123",
+        "material_type": "raw",
+        "material_name": "TRX_Gri_Profil_575",
+        "material_code": "TRX_Gri_Profil_575",
+        "quantity_needed": 1.31,
+        "unit": "adet",
+        "created_at": "2025-10-30T07:52:06.090803+00:00"
+      },
+      {
+        "id": "60aaff50-ae83-47e3-b9cc-b3ac6274de85",
+        "plan_id": "93f924b3-cebc-4485-a792-6d1de6847e76",
+        "material_id": "22a7fe81-8a36-4a60-bef8-6992280c6dc8",
+        "material_type": "raw",
+        "material_name": "TRX_Profil_contası",
+        "material_code": "TRX_Profil_contası",
+        "quantity_needed": 2,
+        "unit": "adet",
+        "created_at": "2025-10-30T07:52:04.802885+00:00"
+      }
+    ],
+    "missing_finished": true,
+    "missing_materials": [
+      {
+        "material_id": "7bd8b712-7bb0-4d1a-8929-91ce39786123",
+        "material_type": "raw",
+        "material_code": "TRX_Gri_Profil_575",
+        "material_name": "TRX_Gri_Profil_575",
+        "quantity_needed": 1.31,
+        "expected_consumption": 1.31
+      },
+      {
+        "material_id": "22a7fe81-8a36-4a60-bef8-6992280c6dc8",
+        "material_type": "raw",
+        "material_code": "TRX_Profil_contası",
+        "material_name": "TRX_Profil_contası",
+        "quantity_needed": 2,
+        "expected_consumption": 2
+      },
+      {
+        "material_id": "f68eb09c-98b1-46a9-baee-ec1db1a51f9a",
+        "material_type": "raw",
+        "material_code": "TRX2_Dış_Koli_",
+        "material_name": "TRX2_Dış_Koli_",
+        "quantity_needed": 1,
+        "expected_consumption": 1
+      },
+      {
+        "material_id": "40d127b9-57aa-4b71-8744-4c3f2dadc5d0",
+        "material_type": "semi",
+        "material_code": "TRX2_Gövde_Grubu",
+        "material_name": "TRX2_Gövde_Grubu",
+        "quantity_needed": 1,
+        "expected_consumption": 1
+      },
+      {
+        "material_id": "f68eb09c-98b1-46a9-baee-ec1db1a51f9a",
+        "material_type": "raw",
+        "material_code": "TRX2_Dış_Koli_",
+        "material_name": "TRX2_Dış_Koli_",
+        "quantity_needed": 1,
+        "expected_consumption": 1
+      },
+      {
+        "material_id": "40d127b9-57aa-4b71-8744-4c3f2dadc5d0",
+        "material_type": "semi",
+        "material_code": "TRX2_Gövde_Grubu",
+        "material_name": "TRX2_Gövde_Grubu",
+        "quantity_needed": 1,
+        "expected_consumption": 1
+      },
+      {
+        "material_id": "7bd8b712-7bb0-4d1a-8929-91ce39786123",
+        "material_type": "raw",
+        "material_code": "TRX_Gri_Profil_575",
+        "material_name": "TRX_Gri_Profil_575",
+        "quantity_needed": 1.31,
+        "expected_consumption": 1.31
+      },
+      {
+        "material_id": "22a7fe81-8a36-4a60-bef8-6992280c6dc8",
+        "material_type": "raw",
+        "material_code": "TRX_Profil_contası",
+        "material_name": "TRX_Profil_contası",
+        "quantity_needed": 2,
+        "expected_consumption": 2
+      }
+    ],
+    "issue": "Nihai ürün + Malzeme tüketim hareketleri eksik"
+  },
+  {
+    "plan_id": "6b7737a5-88d0-4ce0-aced-fbe25490a390",
+    "order": "ORD-2025-099",
+    "product": "TRX-2-GRAY-82-90",
+    "product_id": "2244a28f-341d-43ec-b404-b2df2138cc18",
+    "produced": 1,
+    "operator_id": "7b043fc6-4c0a-4be2-bffc-af565e264f55",
+    "log_time": "2025-10-30T08:32:43.669895+00:00",
+    "logs": [
+      {
+        "quantity_produced": 1,
+        "timestamp": "2025-10-30T08:32:43.669895+00:00",
+        "operator_id": "7b043fc6-4c0a-4be2-bffc-af565e264f55"
+      }
+    ],
+    "bom_snapshot": [
+      {
+        "id": "35ba7f06-f5ad-477e-9d8a-dbffd701b073",
+        "plan_id": "6b7737a5-88d0-4ce0-aced-fbe25490a390",
+        "material_id": "f68eb09c-98b1-46a9-baee-ec1db1a51f9a",
+        "material_type": "raw",
+        "material_name": "TRX2_Dış_Koli_",
+        "material_code": "TRX2_Dış_Koli_",
+        "quantity_needed": 1,
+        "unit": "adet",
+        "created_at": "2025-10-30T07:52:31.543702+00:00"
+      },
+      {
+        "id": "4001584b-21bc-43c2-9915-6bbba5d9da25",
+        "plan_id": "6b7737a5-88d0-4ce0-aced-fbe25490a390",
+        "material_id": "22a7fe81-8a36-4a60-bef8-6992280c6dc8",
+        "material_type": "raw",
+        "material_name": "TRX_Profil_contası",
+        "material_code": "TRX_Profil_contası",
+        "quantity_needed": 2,
+        "unit": "adet",
+        "created_at": "2025-10-30T07:52:31.543702+00:00"
+      },
+      {
+        "id": "4afe09be-4141-41ad-895f-eb2013914c32",
+        "plan_id": "6b7737a5-88d0-4ce0-aced-fbe25490a390",
+        "material_id": "7bd8b712-7bb0-4d1a-8929-91ce39786123",
+        "material_type": "raw",
+        "material_name": "TRX_Gri_Profil_575",
+        "material_code": "TRX_Gri_Profil_575",
+        "quantity_needed": 1.25,
+        "unit": "adet",
+        "created_at": "2025-10-30T07:52:31.543702+00:00"
+      },
+      {
+        "id": "4eb36147-e1df-462b-8c34-e54a905759d0",
+        "plan_id": "6b7737a5-88d0-4ce0-aced-fbe25490a390",
+        "material_id": "40d127b9-57aa-4b71-8744-4c3f2dadc5d0",
+        "material_type": "semi",
+        "material_name": "TRX2_Gövde_Grubu",
+        "material_code": "TRX2_Gövde_Grubu",
+        "quantity_needed": 1,
+        "unit": "adet",
+        "created_at": "2025-10-30T07:52:31.543702+00:00"
+      },
+      {
+        "id": "bd1f093f-ffe2-4e95-8cd9-bfee8289e89c",
+        "plan_id": "6b7737a5-88d0-4ce0-aced-fbe25490a390",
+        "material_id": "22a7fe81-8a36-4a60-bef8-6992280c6dc8",
+        "material_type": "raw",
+        "material_name": "TRX_Profil_contası",
+        "material_code": "TRX_Profil_contası",
+        "quantity_needed": 2,
+        "unit": "adet",
+        "created_at": "2025-10-30T07:52:33.375423+00:00"
+      },
+      {
+        "id": "ecb4437a-8fbf-4b5f-bfca-a6651389d91e",
+        "plan_id": "6b7737a5-88d0-4ce0-aced-fbe25490a390",
+        "material_id": "7bd8b712-7bb0-4d1a-8929-91ce39786123",
+        "material_type": "raw",
+        "material_name": "TRX_Gri_Profil_575",
+        "material_code": "TRX_Gri_Profil_575",
+        "quantity_needed": 1.25,
+        "unit": "adet",
+        "created_at": "2025-10-30T07:52:32.856665+00:00"
+      },
+      {
+        "id": "bc3bc68f-93be-440e-bd21-d05e148029e8",
+        "plan_id": "6b7737a5-88d0-4ce0-aced-fbe25490a390",
+        "material_id": "f68eb09c-98b1-46a9-baee-ec1db1a51f9a",
+        "material_type": "raw",
+        "material_name": "TRX2_Dış_Koli_",
+        "material_code": "TRX2_Dış_Koli_",
+        "quantity_needed": 1,
+        "unit": "adet",
+        "created_at": "2025-10-30T07:52:34.097529+00:00"
+      },
+      {
+        "id": "61eca24b-0c1f-4ef2-8ac8-65a59b32e69c",
+        "plan_id": "6b7737a5-88d0-4ce0-aced-fbe25490a390",
+        "material_id": "40d127b9-57aa-4b71-8744-4c3f2dadc5d0",
+        "material_type": "semi",
+        "material_name": "TRX2_Gövde_Grubu",
+        "material_code": "TRX2_Gövde_Grubu",
+        "quantity_needed": 1,
+        "unit": "adet",
+        "created_at": "2025-10-30T07:52:34.806708+00:00"
+      }
+    ],
+    "missing_finished": true,
+    "missing_materials": [
+      {
+        "material_id": "f68eb09c-98b1-46a9-baee-ec1db1a51f9a",
+        "material_type": "raw",
+        "material_code": "TRX2_Dış_Koli_",
+        "material_name": "TRX2_Dış_Koli_",
+        "quantity_needed": 1,
+        "expected_consumption": 1
+      },
+      {
+        "material_id": "22a7fe81-8a36-4a60-bef8-6992280c6dc8",
+        "material_type": "raw",
+        "material_code": "TRX_Profil_contası",
+        "material_name": "TRX_Profil_contası",
+        "quantity_needed": 2,
+        "expected_consumption": 2
+      },
+      {
+        "material_id": "7bd8b712-7bb0-4d1a-8929-91ce39786123",
+        "material_type": "raw",
+        "material_code": "TRX_Gri_Profil_575",
+        "material_name": "TRX_Gri_Profil_575",
+        "quantity_needed": 1.25,
+        "expected_consumption": 1.25
+      },
+      {
+        "material_id": "40d127b9-57aa-4b71-8744-4c3f2dadc5d0",
+        "material_type": "semi",
+        "material_code": "TRX2_Gövde_Grubu",
+        "material_name": "TRX2_Gövde_Grubu",
+        "quantity_needed": 1,
+        "expected_consumption": 1
+      },
+      {
+        "material_id": "22a7fe81-8a36-4a60-bef8-6992280c6dc8",
+        "material_type": "raw",
+        "material_code": "TRX_Profil_contası",
+        "material_name": "TRX_Profil_contası",
+        "quantity_needed": 2,
+        "expected_consumption": 2
+      },
+      {
+        "material_id": "7bd8b712-7bb0-4d1a-8929-91ce39786123",
+        "material_type": "raw",
+        "material_code": "TRX_Gri_Profil_575",
+        "material_name": "TRX_Gri_Profil_575",
+        "quantity_needed": 1.25,
+        "expected_consumption": 1.25
+      },
+      {
+        "material_id": "f68eb09c-98b1-46a9-baee-ec1db1a51f9a",
+        "material_type": "raw",
+        "material_code": "TRX2_Dış_Koli_",
+        "material_name": "TRX2_Dış_Koli_",
+        "quantity_needed": 1,
+        "expected_consumption": 1
+      },
+      {
+        "material_id": "40d127b9-57aa-4b71-8744-4c3f2dadc5d0",
+        "material_type": "semi",
+        "material_code": "TRX2_Gövde_Grubu",
+        "material_name": "TRX2_Gövde_Grubu",
+        "quantity_needed": 1,
+        "expected_consumption": 1
+      }
+    ],
+    "issue": "Nihai ürün + Malzeme tüketim hareketleri eksik"
+  }
+]

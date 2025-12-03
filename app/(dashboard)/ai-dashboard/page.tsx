@@ -84,11 +84,14 @@ export default function AIDashboardPage() {
       const res = await fetch('/api/ai/dashboard');
       const data = await res.json();
       
-      if (res.ok && data.success) {
+      if (res.ok && data.success !== false) {
         console.log('✅ Dashboard data loaded:', {
           agents: data.agents?.length || 0,
           conversations: data.stats?.conversations?.total || 0,
-          logs: data.recentLogs?.length || 0
+          logs: data.recentLogs?.length || 0,
+          dailyCost: data.stats?.costs?.dailyTotal || 0,
+          byAgentKeys: Object.keys(data.stats?.costs?.byAgent || {}).length,
+          byAgent: data.stats?.costs?.byAgent
         });
         setStats(data);
         setError(null);
@@ -386,6 +389,42 @@ export default function AIDashboardPage() {
                 <strong>Bilgi:</strong> Henüz AI konuşması yapılmamış. İlk konuşmayı başlatmak için bir Order approval yapın veya Developer Agent raporu oluşturun.
               </p>
             </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Agent Bazında Maliyet */}
+      {Object.keys(dashboardStats.costs.byAgent).length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between">
+              Agent Bazında Maliyet (Bugün)
+              <Badge variant="outline">{Object.keys(dashboardStats.costs.byAgent).length} Agent</Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Agent</TableHead>
+                  <TableHead>Maliyet</TableHead>
+                  <TableHead>Token</TableHead>
+                  <TableHead>İstek</TableHead>
+                  <TableHead>Ortalama/İstek</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {Object.entries(dashboardStats.costs.byAgent).map(([agent, data]) => (
+                  <TableRow key={agent}>
+                    <TableCell className="font-medium">{agent}</TableCell>
+                    <TableCell>${data.cost.toFixed(4)}</TableCell>
+                    <TableCell>{data.tokens.toLocaleString()}</TableCell>
+                    <TableCell>{data.requests}</TableCell>
+                    <TableCell>${data.requests > 0 ? (data.cost / data.requests).toFixed(4) : '0.0000'}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           </CardContent>
         </Card>
       )}

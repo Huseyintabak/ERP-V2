@@ -96,30 +96,74 @@ export class ConsensusEngine {
 
     // Reject oyları kontrolü - esnek yaklaşım
     if (rejectVotes.length > 0) {
-      // Eğer çoğunluk approve ise (>= 0.8) ve sadece 1 reject vote varsa, consensus geçerli
       const effectiveApprovalRate = allowConditional 
         ? (approveVotes.length + conditionalVotes.length) / totalVotes
         : approvalRate;
       
-      if (rejectVotes.length === 1 && effectiveApprovalRate >= 0.8) {
-        // Çoğunluk approve, sadece 1 reject vote - consensus geçerli (ama uyarı ver)
-        isConsensus = true;
-        await agentLogger.warn({
-          action: 'consensus_with_reject',
-          decisionId: decision.agent,
-          rejectAgent: rejectVotes[0].agent,
-          rejectReason: rejectVotes[0].reasoning,
-          effectiveApprovalRate
-        });
+      // Production log validation için özel esneklik
+      const isProductionValidation = decision.action?.includes('production') || 
+                                    decision.action === 'validate_production';
+      
+      if (isProductionValidation) {
+        // Production log validation için: Eğer çoğunluk approve ise (>= 0.5) ve reject oyları sadece "reasoning eksik" gibi minor sorunlarsa, consensus geçerli
+        const hasOnlyMinorRejections = rejectVotes.every(vote => 
+          vote.reasoning.toLowerCase().includes('reasoning') || 
+          vote.reasoning.toLowerCase().includes('açıklama') ||
+          vote.reasoning.toLowerCase().includes('gerekçe') ||
+          vote.reasoning.toLowerCase().includes('bilgi') ||
+          vote.confidence < 0.7 // Düşük confidence = belirsizlik
+        );
+        
+        if (effectiveApprovalRate >= 0.5 && hasOnlyMinorRejections && rejectVotes.length <= 2) {
+          // Çoğunluk approve ve reject oyları sadece minor sorunlar - consensus geçerli (ama uyarı ver)
+          isConsensus = true;
+          await agentLogger.warn({
+            action: 'consensus_with_minor_rejects',
+            decisionId: decision.agent,
+            rejectAgents: rejectVotes.map(v => v.agent),
+            effectiveApprovalRate,
+            note: 'Production log validation - minor rejections ignored'
+          });
+        } else if (rejectVotes.length === 1 && effectiveApprovalRate >= 0.7) {
+          // Production için: 1 reject vote + %70+ approval = consensus geçerli
+          isConsensus = true;
+          await agentLogger.warn({
+            action: 'consensus_with_reject',
+            decisionId: decision.agent,
+            rejectAgent: rejectVotes[0].agent,
+            rejectReason: rejectVotes[0].reasoning,
+            effectiveApprovalRate,
+            note: 'Production log validation - single reject vote ignored'
+          });
+        } else {
+          isConsensus = false;
+        }
       } else {
-        // Çok fazla reject vote veya approval rate düşük - consensus yok
-        isConsensus = false;
+        // Diğer validation'lar için mevcut kurallar
+        if (rejectVotes.length === 1 && effectiveApprovalRate >= 0.8) {
+          // Çoğunluk approve, sadece 1 reject vote - consensus geçerli (ama uyarı ver)
+          isConsensus = true;
+          await agentLogger.warn({
+            action: 'consensus_with_reject',
+            decisionId: decision.agent,
+            rejectAgent: rejectVotes[0].agent,
+            rejectReason: rejectVotes[0].reasoning,
+            effectiveApprovalRate
+          });
+        } else {
+          // Çok fazla reject vote veya approval rate düşük - consensus yok
+          isConsensus = false;
+        }
+      }
+      
+      if (!isConsensus && rejectVotes.length > 0) {
         await agentLogger.warn({
           action: 'consensus_failed_reject_votes',
           decisionId: decision.agent,
           rejectCount: rejectVotes.length,
           rejectAgents: rejectVotes.map(v => v.agent),
-          effectiveApprovalRate
+          effectiveApprovalRate,
+          isProductionValidation
         });
       }
     }

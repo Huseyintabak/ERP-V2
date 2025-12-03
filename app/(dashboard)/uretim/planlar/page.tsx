@@ -486,6 +486,8 @@ export default function UretimPlanlariPage() {
                             <CompleteProductionDialog 
                               plan={{
                                 id: plan.id,
+                                order_id: plan.order_id,
+                                product_id: plan.product_id,
                                 order_number: plan.order?.order_number || 'N/A',
                                 product_name: plan.product?.name || 'N/A',
                                 planned_quantity: plan.target_quantity || 0,

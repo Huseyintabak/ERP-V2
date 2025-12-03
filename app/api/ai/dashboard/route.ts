@@ -9,7 +9,7 @@ import { AgentOrchestrator } from '@/lib/ai/orchestrator';
 import { agentLogger } from '@/lib/ai/utils/logger';
 import { rateLimiter } from '@/lib/ai/utils/rate-limiter';
 import { agentCache } from '@/lib/ai/utils/cache';
-import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/server';
 import { logger } from '@/lib/utils/logger';
 
 export async function GET(request: NextRequest) {
@@ -44,7 +44,8 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const supabase = await createClient();
+    // Admin client kullan (RLS bypass için) - Yetki kontrolü zaten yapıldı
+    const adminSupabase = createAdminClient();
 
     // Get agent info
     let agents: any[] = [];
@@ -107,8 +108,8 @@ export async function GET(request: NextRequest) {
     
     logger.log(`📊 Dashboard: Conversation stats:`, conversationStats);
 
-    // Get approval stats
-    const { data: approvals, error: approvalError } = await supabase
+    // Get approval stats - Admin client kullan
+    const { data: approvals, error: approvalError } = await adminSupabase
       .from('human_approvals')
       .select('status');
     
@@ -127,7 +128,7 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Get cost stats
+    // Get cost stats - Bugünün başlangıcından itibaren (UTC timezone aware)
     const costStats = {
       dailyTotal: 0,
       totalTokens: 0,
@@ -136,18 +137,35 @@ export async function GET(request: NextRequest) {
     };
     
     try {
-      const { data: costs, error: costError } = await supabase
+      // Bugünün başlangıcı (UTC): YYYY-MM-DD 00:00:00+00
+      const now = new Date();
+      const todayStartUTC = new Date(Date.UTC(
+        now.getUTCFullYear(),
+        now.getUTCMonth(),
+        now.getUTCDate(),
+        0, 0, 0, 0
+      )).toISOString();
+      
+      logger.log(`📅 Dashboard cost stats: todayStart=${todayStartUTC}`);
+      
+      const { data: costs, error: costError } = await adminSupabase
         .from('agent_costs')
         .select('agent, cost_usd, tokens_used')
-        .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
+        .gte('created_at', todayStartUTC)
+        .order('created_at', { ascending: false });
       
       if (costError) {
-        logger.warn('⚠️ Failed to get cost stats:', costError.message);
-      } else if (costs) {
+        logger.error('❌ Failed to get cost stats:', costError);
+      } else if (costs && costs.length > 0) {
         costStats.totalRequests = costs.length;
-        logger.log(`📊 Dashboard: ${costs.length} cost kaydı bulundu`);
+        logger.log(`📊 Dashboard: ${costs.length} cost kaydı bulundu (bugünden itibaren)`);
         
         costs.forEach(cost => {
+          if (!cost.agent) {
+            logger.warn('⚠️ Cost kaydında agent yok:', cost);
+            return;
+          }
+          
           costStats.dailyTotal += parseFloat(cost.cost_usd?.toString() || '0');
           costStats.totalTokens += cost.tokens_used || 0;
           
@@ -158,6 +176,10 @@ export async function GET(request: NextRequest) {
           costStats.byAgent[cost.agent].tokens += cost.tokens_used || 0;
           costStats.byAgent[cost.agent].requests += 1;
         });
+        
+        logger.log(`💰 Dashboard cost stats: dailyTotal=$${costStats.dailyTotal.toFixed(6)}, agents=${Object.keys(costStats.byAgent).length}`);
+      } else {
+        logger.log(`📊 Dashboard: Bugünden itibaren hiç cost kaydı bulunamadı`);
       }
     } catch (error: any) {
       logger.error('❌ Failed to get cost stats:', error);
@@ -170,9 +192,9 @@ export async function GET(request: NextRequest) {
       const memoryLogs = agentLogger.getLogs(undefined, 50);
       logger.log(`📊 Dashboard: ${memoryLogs.length} memory log bulundu`);
       
-      // Database'den de log çek (son 50 log)
+      // Database'den de log çek (son 50 log) - Admin client kullan
       try {
-        const { data: dbLogs, error: dbLogError } = await supabase
+        const { data: dbLogs, error: dbLogError } = await adminSupabase
           .from('agent_logs')
           .select('*')
           .order('created_at', { ascending: false })

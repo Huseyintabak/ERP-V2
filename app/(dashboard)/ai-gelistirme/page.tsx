@@ -54,6 +54,11 @@ export default function AIGelistirmePage() {
   const [focusArea, setFocusArea] = useState<'all' | 'performance' | 'security' | 'feature' | 'code_quality' | 'technical_debt'>('all');
 
   const generateReport = async () => {
+    // Eğer zaten bir rapor oluşturuluyorsa, tekrar başlatma
+    if (loading) {
+      return;
+    }
+
     setLoading(true);
     try {
       const res = await fetch('/api/ai/developer/report', {
@@ -77,7 +82,13 @@ export default function AIGelistirmePage() {
       } else {
         const errorMsg = data.error || 'Unknown error';
         console.error('❌ Developer Agent report error:', errorMsg);
-        alert(`Hata: ${errorMsg}`);
+        
+        // Conversation zaten devam ediyorsa, kullanıcıya bilgi ver
+        if (errorMsg.includes('already in progress')) {
+          alert('Bir analiz zaten devam ediyor. Lütfen tamamlanmasını bekleyin.');
+        } else {
+          alert(`Hata: ${errorMsg}`);
+        }
       }
     } catch (error: any) {
       alert(`Hata: ${error.message}`);

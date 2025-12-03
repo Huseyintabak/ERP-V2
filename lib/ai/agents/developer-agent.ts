@@ -197,11 +197,10 @@ Yanıtlarını JSON formatında ver:
    * Sistem analizi işle
    */
   private async handleSystemAnalysis(request: AgentRequest): Promise<AgentResponse> {
-    // Orchestrator'ı kullanarak konuşmaları kaydet
-    const { AgentOrchestrator } = await import('../orchestrator');
-    const orchestrator = AgentOrchestrator.getInstance();
+    // NOT: Bu metod zaten orchestrator.startConversation() içinde çağrılıyor
+    // Yeni conversation başlatmaya gerek yok - mevcut conversation kullanılıyor
     
-    // Ana konuşma ID'si
+    // Ana konuşma ID'si (mevcut conversation'dan gelir)
     const mainConversationId = request.id || `dev_analysis_${Date.now()}_${Math.random().toString(36).substring(7)}`;
     
     // Tüm agent'lara sorarak sistem geneli analiz yap
@@ -760,39 +759,11 @@ Yanıtlarını JSON formatında ver:
       summary
     };
 
-    // Orchestrator'a ana konuşmayı kaydet
-    try {
-      // Developer Agent'ın kendi yanıtını ekle
-      allAgentResponses.push(parsed);
-      
-      // Orchestrator'a konuşmayı kaydet
-      const conversationResult = await orchestrator.startConversation('developer', {
-        id: mainConversationId,
-        prompt: request.prompt || 'Sistem analizi ve iyileştirme raporu oluştur',
-        type: request.type || 'analysis',
-        context: {
-          ...request.context,
-          findings,
-          summary,
-          requestedBy: request.context?.requestedBy,
-          requestedByRole: request.context?.requestedByRole
-        },
-        urgency: request.urgency || 'medium',
-        severity: request.severity || 'medium'
-      });
-      
-      // Tüm yanıtları konuşmaya ekle
-      if (conversationResult.conversation) {
-        conversationResult.conversation.responses = allAgentResponses;
-        conversationResult.conversation.status = 'completed';
-        conversationResult.conversation.completedAt = new Date();
-      }
-      
-      logger.log(`✅ Developer Agent konuşması orchestrator'a kaydedildi: ${mainConversationId}, ${allAgentResponses.length} yanıt`);
-    } catch (error: any) {
-      logger.warn(`⚠️ Developer Agent konuşması orchestrator'a kaydedilemedi: ${error.message}`);
-      // Hata olsa bile yanıt döndürülür
-    }
+    // NOT: Orchestrator'a nested conversation başlatma - zaten orchestrator.startConversation() ile başlatıldı
+    // Bu metod bir conversation içinde çağrılıyor, yeni conversation başlatmaya gerek yok
+    // Tüm yanıtlar zaten mevcut conversation'a ekleniyor
+    
+    logger.log(`✅ Developer Agent sistem analizi tamamlandı: ${findings.length} finding, ${allAgentResponses.length} agent yanıtı`);
 
     return parsed;
   }

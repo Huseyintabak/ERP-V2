@@ -61,6 +61,8 @@ interface ZoneInventory {
   zone_id: string;
   product_id: string;
   quantity: number;
+  latest_transfer_date?: string | null;
+  latest_transfer_from?: string | null;
   product: {
     id: string;
     name: string;
@@ -84,6 +86,10 @@ export default function DepoZoneYonetimiPage() {
   const [selectedZoneInventory, setSelectedZoneInventory] = useState<ZoneInventory[]>([]);
   const [selectedZone, setSelectedZone] = useState<WarehouseZone | null>(null);
   const [centerInventory, setCenterInventory] = useState<ZoneInventory[]>([]);
+  
+  // Date filter states
+  const [filterStartDate, setFilterStartDate] = useState<string>('');
+  const [filterEndDate, setFilterEndDate] = useState<string>('');
   
   // Create zone form
   const [newZoneName, setNewZoneName] = useState('');
@@ -176,12 +182,30 @@ export default function DepoZoneYonetimiPage() {
     }
   };
 
-  const fetchZoneInventory = async (zoneId: string) => {
+  const fetchZoneInventory = async (zoneId: string, startDate?: string, endDate?: string) => {
     try {
       if (!user?.id) {
         throw new Error('Kullanıcı kimlik doğrulaması gerekli');
       }
-      const response = await fetch(`/api/warehouse/zones/${zoneId}/inventory`, {
+      
+      // Use provided dates or state dates
+      const useStartDate = startDate !== undefined ? startDate : filterStartDate;
+      const useEndDate = endDate !== undefined ? endDate : filterEndDate;
+      
+      // Build query params with date filters
+      const params = new URLSearchParams();
+      if (useStartDate) {
+        params.append('startDate', useStartDate);
+      }
+      if (useEndDate) {
+        params.append('endDate', useEndDate);
+      }
+      
+      const url = `/api/warehouse/zones/${zoneId}/inventory${params.toString() ? `?${params.toString()}` : ''}`;
+      
+      console.log('Fetching zone inventory with filters:', { zoneId, startDate: useStartDate, endDate: useEndDate, url });
+      
+      const response = await fetch(url, {
         headers: {
           'Content-Type': 'application/json',
           'x-user-id': user.id
@@ -199,11 +223,45 @@ export default function DepoZoneYonetimiPage() {
       }
       
       const result = JSON.parse(text);
+      console.log('Zone inventory result:', { count: result.data?.length, data: result.data });
       setSelectedZoneInventory(result.data || []);
       setSelectedZone(result.zone);
     } catch (error) {
       console.error('Error fetching zone inventory:', error);
       toast.error('Stok bilgileri yüklenirken hata oluştu');
+    }
+  };
+  
+  const handleApplyDateFilter = async () => {
+    if (!selectedZoneId) {
+      toast.error('Zone seçilmedi');
+      return;
+    }
+    
+    if (!filterStartDate && !filterEndDate) {
+      toast.error('Lütfen en az bir tarih seçin');
+      return;
+    }
+    
+    console.log('Applying date filter:', { filterStartDate, filterEndDate, selectedZoneId });
+    
+    try {
+      // Pass dates directly to avoid state timing issues
+      await fetchZoneInventory(selectedZoneId, filterStartDate, filterEndDate);
+      toast.success('Filtre uygulandı');
+    } catch (error) {
+      console.error('Filter error:', error);
+      toast.error('Filtreleme sırasında hata oluştu');
+    }
+  };
+  
+  const handleClearDateFilter = async () => {
+    setFilterStartDate('');
+    setFilterEndDate('');
+    if (selectedZoneId) {
+      // Pass empty strings to clear filters
+      await fetchZoneInventory(selectedZoneId, '', '');
+      toast.success('Filtreler temizlendi');
     }
   };
 
@@ -289,6 +347,9 @@ export default function DepoZoneYonetimiPage() {
   const handleViewInventory = (zoneId: string) => {
     setSelectedZoneId(zoneId);
     setIsInventoryDialogOpen(true);
+    // Reset date filters when opening
+    setFilterStartDate('');
+    setFilterEndDate('');
     fetchZoneInventory(zoneId);
   };
 
@@ -462,7 +523,7 @@ export default function DepoZoneYonetimiPage() {
 
       {/* Zone Inventory Dialog */}
       <Dialog open={isInventoryDialogOpen} onOpenChange={setIsInventoryDialogOpen}>
-        <DialogContent className="max-w-4xl">
+        <DialogContent className="zone-stock-detail-modal flex flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Eye className="h-5 w-5" />
@@ -473,11 +534,11 @@ export default function DepoZoneYonetimiPage() {
             </DialogDescription>
           </DialogHeader>
           
-          <div className="space-y-4">
+          <div className="space-y-4 flex-1 overflow-hidden flex flex-col">
             {selectedZone && (
               <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg">
                 <Building2 className="h-8 w-8 text-blue-600" />
-                <div>
+                <div className="flex-1">
                   <h3 className="font-semibold text-lg">{selectedZone.name}</h3>
                   <div className="flex items-center gap-2 mt-1">
                     <Badge variant={selectedZone.zone_type === 'center' ? 'default' : 'secondary'}>
@@ -492,46 +553,137 @@ export default function DepoZoneYonetimiPage() {
               </div>
             )}
             
+            {/* Date Filter */}
+            <div className="flex items-center gap-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+              <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <Label htmlFor="startDate" className="text-sm font-medium text-gray-700">
+                    Başlangıç Tarihi
+                  </Label>
+                  <Input
+                    id="startDate"
+                    type="date"
+                    value={filterStartDate}
+                    onChange={(e) => setFilterStartDate(e.target.value)}
+                    className="mt-1"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleApplyDateFilter();
+                      }
+                    }}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="endDate" className="text-sm font-medium text-gray-700">
+                    Bitiş Tarihi
+                  </Label>
+                  <Input
+                    id="endDate"
+                    type="date"
+                    value={filterEndDate}
+                    onChange={(e) => setFilterEndDate(e.target.value)}
+                    className="mt-1"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleApplyDateFilter();
+                      }
+                    }}
+                  />
+                </div>
+                <div className="flex items-end gap-2">
+                  <Button 
+                    onClick={(e) => {
+                      e.preventDefault();
+                      handleApplyDateFilter();
+                    }}
+                    className="flex-1"
+                    variant="default"
+                    type="button"
+                  >
+                    Filtrele
+                  </Button>
+                  {(filterStartDate || filterEndDate) && (
+                    <Button 
+                      onClick={(e) => {
+                        e.preventDefault();
+                        handleClearDateFilter();
+                      }}
+                      variant="outline"
+                      type="button"
+                    >
+                      Temizle
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </div>
+            
             {selectedZoneInventory.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
                 Bu zone'da henüz ürün bulunmuyor
               </div>
             ) : (
-              <div className="rounded-md border">
-                <div className="overflow-x-auto max-h-[400px] overflow-y-auto">
-                  <table className="w-full">
+              <div className="rounded-md border flex-1 overflow-hidden flex flex-col">
+                <div className="overflow-auto flex-1">
+                  <table className="w-full min-w-[800px]">
                     <thead className="bg-gray-50 sticky top-0 z-10">
                       <tr>
-                        <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">Ürün</th>
-                        <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">Kod</th>
-                        <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">Miktar</th>
-                        <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">Birim Fiyat</th>
-                        <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">Toplam Değer</th>
+                        <th className="px-6 py-3 text-left text-sm font-medium text-gray-700 whitespace-nowrap">Ürün</th>
+                        <th className="px-6 py-3 text-left text-sm font-medium text-gray-700 whitespace-nowrap">Kod</th>
+                        <th className="px-6 py-3 text-left text-sm font-medium text-gray-700 whitespace-nowrap">Miktar</th>
+                        <th className="px-6 py-3 text-left text-sm font-medium text-gray-700 whitespace-nowrap">Birim Fiyat</th>
+                        <th className="px-6 py-3 text-left text-sm font-medium text-gray-700 whitespace-nowrap">Toplam Değer</th>
+                        <th className="px-6 py-3 text-left text-sm font-medium text-gray-700 whitespace-nowrap">Son Sevkiyat Tarihi</th>
+                        <th className="px-6 py-3 text-left text-sm font-medium text-gray-700 whitespace-nowrap">Gönderen Zone</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-200">
+                    <tbody className="divide-y divide-gray-200 bg-white">
                       {selectedZoneInventory.map((inventory) => (
                         <tr key={inventory.id} className="hover:bg-gray-50">
-                          <td className="px-4 py-3">
+                          <td className="px-6 py-4">
                             <div className="font-medium">{inventory.product?.name || 'Ürün Yok'}</div>
                           </td>
-                          <td className="px-4 py-3 text-sm text-gray-500">
+                          <td className="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">
                             {inventory.product?.code || 'N/A'}
                           </td>
-                          <td className="px-4 py-3">
+                          <td className="px-6 py-4 whitespace-nowrap">
                             <Badge variant="secondary">{inventory.quantity} adet</Badge>
                           </td>
-                          <td className="px-4 py-3">
+                          <td className="px-6 py-4 whitespace-nowrap">
                             {(inventory.product?.unit_price || 0).toLocaleString('tr-TR', {
                               style: 'currency',
                               currency: 'TRY'
                             })}
                           </td>
-                          <td className="px-4 py-3 font-medium">
+                          <td className="px-6 py-4 font-medium whitespace-nowrap">
                             {(inventory.quantity * (inventory.product?.unit_price || 0)).toLocaleString('tr-TR', {
                               style: 'currency',
                               currency: 'TRY'
                             })}
+                          </td>
+                          <td className="px-6 py-4 text-sm whitespace-nowrap">
+                            {inventory.latest_transfer_date ? (
+                              <span className="text-gray-700">
+                                {new Date(inventory.latest_transfer_date).toLocaleDateString('tr-TR', {
+                                  day: '2-digit',
+                                  month: '2-digit',
+                                  year: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                })}
+                              </span>
+                            ) : (
+                              <span className="text-gray-400">-</span>
+                            )}
+                          </td>
+                          <td className="px-6 py-4 text-sm whitespace-nowrap">
+                            {inventory.latest_transfer_from ? (
+                              <Badge variant="outline">{inventory.latest_transfer_from}</Badge>
+                            ) : (
+                              <span className="text-gray-400">-</span>
+                            )}
                           </td>
                         </tr>
                       ))}

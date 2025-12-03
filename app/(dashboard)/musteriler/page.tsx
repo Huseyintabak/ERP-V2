@@ -118,14 +118,27 @@ export default function MusterilerPage() {
           console.warn('Redirect to login detected');
           return;
         }
-        const result = JSON.parse(errorText);
-        throw new Error(result.error || 'Müşteri silinemedi');
+        
+        try {
+          const result = JSON.parse(errorText);
+          const errorMessage = result.error || 'Müşteri silinemedi';
+          
+          // 400 Bad Request durumlarını bilgilendirme olarak göster (exception throw etme)
+          // Bu durumlar kullanıcı hatası değil, sistemin bilgilendirmesidir
+          toast.error(errorMessage);
+          return;
+        } catch (parseError) {
+          // JSON parse hatası
+          toast.error('Beklenmeyen bir hata oluştu');
+          return;
+        }
       }
 
       toast.success('Müşteri başarıyla silindi');
       fetchCustomers();
     } catch (error: any) {
-      console.error('Error deleting customer:', error);
+      // Sadece gerçek network exception'lar için log
+      console.error('Unexpected error deleting customer:', error);
       toast.error(error.message || 'Bir hata oluştu');
     } finally {
       setDeleteCustomerId(null);

@@ -257,7 +257,9 @@ export default function ProductionDetailModal({
   const progress = (production.produced_quantity / production.planned_quantity) * 100;
   const isCompleted = progress >= 100;
   const canReverse = (log: ProductionLog) => {
+    if (!log.timestamp) return false; // Timestamp yoksa reverse yapılamaz
     const logTime = new Date(log.timestamp);
+    if (isNaN(logTime.getTime())) return false; // Geçersiz tarih
     const now = new Date();
     const diffMinutes = (now.getTime() - logTime.getTime()) / (1000 * 60);
     return diffMinutes <= 5; // Son 5 dakika
@@ -471,7 +473,7 @@ export default function ProductionDetailModal({
                             <code className="text-sm font-mono">{log.barcode_scanned}</code>
                           </div>
                           <div className="text-sm text-muted-foreground mt-1">
-                            {log.quantity_produced} adet - {formatDateTime(log.timestamp)}
+                            {log.quantity_produced} adet - {log.timestamp ? formatDateTime(log.timestamp) : 'Tarih yok'}
                           </div>
                         </div>
                         

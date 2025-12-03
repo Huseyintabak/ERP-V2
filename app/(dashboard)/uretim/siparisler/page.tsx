@@ -187,7 +187,7 @@ export default function SiparislerPage() {
                 Yeni Sipariş
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl">
+            <DialogContent className="order-create-modal flex flex-col">
               <DialogHeader>
                 <DialogTitle>Yeni Sipariş Oluştur</DialogTitle>
               </DialogHeader>

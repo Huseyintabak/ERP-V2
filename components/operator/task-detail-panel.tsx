@@ -53,7 +53,8 @@ interface ProductionLog {
   plan_id: string;
   barcode_scanned: string;
   quantity_produced: number;
-  created_at: string;
+  timestamp?: string; // production_logs tablosunda timestamp column'u var
+  created_at?: string; // Fallback için
   operator_id: string;
   operator?: {
     name: string;
@@ -315,7 +316,25 @@ export function TaskDetailPanel({ task, onRefresh }: TaskDetailPanelProps) {
         throw new Error(data.error || '❌ Üretim kaydı oluşturulamadı!\n\n🔍 Problem: Bilinmeyen hata\n💡 Çözüm: Lütfen sistem yöneticisi ile iletişime geçin.');
       }
 
-      toast.success(`Üretim kaydı başarıyla eklendi (+${quantity} adet)`);
+      // Response'dan stok bilgilerini al
+      const stockInfo = data.stockUpdates;
+      const productInfo = data.planProgress;
+      
+      // Detaylı başarı mesajı
+      let successMessage = `✅ Üretim kaydı başarıyla eklendi (+${quantity} adet)`;
+      if (stockInfo?.finishedProduct) {
+        successMessage += `\n📦 Ürün stoku: ${stockInfo.finishedProduct.before} → ${stockInfo.finishedProduct.after} adet`;
+      }
+      if (productInfo) {
+        const percentage = productInfo.percentage || 0;
+        successMessage += `\n📊 İlerleme: %${percentage} (${productInfo.produced}/${productInfo.planned} adet)`;
+      }
+      
+      toast.success('Üretim Tamamlandı', {
+        description: successMessage,
+        duration: 5000,
+      });
+      
       setBarcode('');
       setQuantity(1);
       
@@ -737,7 +756,15 @@ export function TaskDetailPanel({ task, onRefresh }: TaskDetailPanelProps) {
                       </div>
                       <div className="font-bold text-base">{log.barcode_scanned}</div>
                       <div className="text-sm text-muted-foreground">
-                        {new Date(log.created_at).toLocaleTimeString('tr-TR')}
+                        {(log.timestamp || log.created_at) ? (
+                          new Date(log.timestamp || log.created_at || '').toLocaleTimeString('tr-TR', {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            second: '2-digit'
+                          })
+                        ) : (
+                          'Tarih yok'
+                        )}
                       </div>
                       <Badge variant="secondary" className="text-lg px-4 py-2 font-bold">
                         +{log.quantity_produced}

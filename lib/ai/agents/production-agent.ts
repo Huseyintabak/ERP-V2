@@ -1239,6 +1239,32 @@ Yanıtlarını JSON formatında ver:
                      stockValidation.isAvailable && 
                      operatorCapacity.available;
 
+    // Reasoning mesajını daha açıklayıcı yap
+    let reasoning: string;
+    if (allValid) {
+      reasoning = 'BOM doğru, stok yeterli, operatör kapasitesi mevcut, üretim yapılabilir';
+    } else {
+      // Issues varsa detaylı açıkla, yoksa her bir kontrolü açıkla
+      if (issues.length > 0) {
+        reasoning = `Production validation failed: ${issues.join('; ')}`;
+      } else {
+        // Her kontrolün durumunu açıkla
+        const failureReasons: string[] = [];
+        if (bomValidation.decision !== 'approve') {
+          failureReasons.push(`BOM validation failed: ${bomValidation.reasoning || 'BOM doğrulaması başarısız'}`);
+        }
+        if (!stockValidation.isAvailable) {
+          failureReasons.push(`Stock validation failed: ${stockValidation.shortages?.join('; ') || 'Stok yetersiz'}`);
+        }
+        if (!operatorCapacity.available) {
+          failureReasons.push(`Operator capacity insufficient: ${operatorCapacity.reasoning || 'Operatör kapasitesi yetersiz'}`);
+        }
+        reasoning = failureReasons.length > 0 
+          ? `Production validation failed: ${failureReasons.join('; ')}`
+          : 'Production validation failed: Unknown validation error';
+      }
+    }
+
     return {
       id: request.id,
       agent: this.name,
@@ -1257,11 +1283,9 @@ Yanıtlarını JSON formatında ver:
           maxCapacity: operatorCapacity.data?.maxCapacity || 0
         }
       },
-      reasoning: allValid
-        ? 'BOM doğru, stok yeterli, operatör kapasitesi mevcut, üretim yapılabilir'
-        : `Production validation failed: ${issues.join('; ')}`,
+      reasoning,
       confidence: allValid ? 0.99 : 0.5,
-      issues,
+      issues: issues.length > 0 ? issues : (allValid ? [] : ['Production validation check failed']),
       recommendations,
       timestamp: new Date()
     };

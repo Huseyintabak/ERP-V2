@@ -345,7 +345,15 @@ export function ProductionLogModal({ task, isOpen, onClose, onSuccess }: Product
                             <div>
                               <div className="font-bold text-base">{log.barcode_scanned}</div>
                               <div className="text-sm text-muted-foreground">
-                                {new Date(log.timestamp).toLocaleTimeString('tr-TR')}
+                                {log.timestamp ? (
+                                  new Date(log.timestamp).toLocaleTimeString('tr-TR', {
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                    second: '2-digit'
+                                  })
+                                ) : (
+                                  'Tarih yok'
+                                )}
                               </div>
                             </div>
                           </div>
