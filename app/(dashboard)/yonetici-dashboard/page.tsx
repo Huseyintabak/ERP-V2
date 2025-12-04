@@ -21,7 +21,8 @@ import {
   Bot,
   MessageSquare,
   Brain,
-  Sparkles
+  Sparkles,
+  Calendar
 } from 'lucide-react';
 import { useDashboardStats, useDashboardActions, useDashboardLoading } from '@/stores/dashboard-stats-store';
 import { useRoleBasedRealtime } from '@/lib/hooks/use-realtime-store';
@@ -116,6 +117,7 @@ export default function YoneticiDashboard() {
     inProductionOrders: 0,
     completedOrders: 0,
     activeProductionPlans: 0,
+    totalCustomers: 0,
     totalRawMaterials: 0,
     totalSemiFinished: 0,
     totalFinished: 0,
@@ -287,32 +289,21 @@ export default function YoneticiDashboard() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <BarChart3 className="h-5 w-5 text-blue-600" />
-              Stok Analizi
+              <Calendar className="h-5 w-5 text-teal-600" />
+              Aktif Üretim Planları
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Hammaddeler</span>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-muted-foreground">{currentStats.totalRawMaterials}</span>
-                  <Badge variant="outline">₺{(currentStats.totalRawMaterials * 800).toLocaleString()}</Badge>
-                </div>
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-3xl font-bold">{currentStats.activeProductionPlans}</div>
+                <p className="text-sm text-muted-foreground mt-1">Devam eden plan sayısı</p>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Yarı Mamuller</span>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-muted-foreground">{currentStats.totalSemiFinished}</span>
-                  <Badge variant="outline">₺{(currentStats.totalSemiFinished * 1200).toLocaleString()}</Badge>
-                </div>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Nihai Ürünler</span>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-muted-foreground">{currentStats.totalFinished}</span>
-                  <Badge variant="outline">₺{(currentStats.totalFinished * 2000).toLocaleString()}</Badge>
-                </div>
+              <div className="text-right">
+                <Badge variant="outline" className="text-xs">
+                  {currentStats.inProductionOrders > 0 ? `${currentStats.inProductionOrders} sipariş` : 'Aktif yok'}
+                </Badge>
+                <p className="text-xs text-muted-foreground mt-2">Üretimdeki siparişler</p>
               </div>
             </div>
           </CardContent>
@@ -321,27 +312,21 @@ export default function YoneticiDashboard() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Factory className="h-5 w-5 text-orange-600" />
-              Performans Metrikleri
+              <Users className="h-5 w-5 text-emerald-600" />
+              Toplam Müşteri
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Toplam Sipariş</span>
-                <Badge variant="secondary">{currentStats.totalOrders}</Badge>
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-3xl font-bold">{currentStats.totalCustomers}</div>
+                <p className="text-sm text-muted-foreground mt-1">Kayıtlı müşteri sayısı</p>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Zamanında Teslimat</span>
-                <Badge variant="default">{currentStats.onTimeDelivery.toFixed(1)}%</Badge>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Operatör Kullanımı</span>
-                <Badge variant="outline">{currentStats.operatorUtilization.toFixed(1)}%</Badge>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Üretimde Sipariş</span>
-                <Badge variant="destructive">{currentStats.inProductionOrders} sipariş</Badge>
+              <div className="text-right">
+                <Badge variant="outline" className="text-xs">
+                  Aktif
+                </Badge>
+                <p className="text-xs text-muted-foreground mt-2">Tüm müşteriler</p>
               </div>
             </div>
           </CardContent>

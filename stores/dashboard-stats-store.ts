@@ -21,6 +21,7 @@ export interface DashboardStats {
   inProductionOrders: number;
   completedOrders: number;
   activeProductionPlans: number;
+  totalCustomers: number;
   
   // Stock KPIs (Depo & Yönetici)
   totalRawMaterials: number;
@@ -156,6 +157,7 @@ const initialDashboardStats: DashboardStats = {
   inProductionOrders: 0,
   completedOrders: 0,
   activeProductionPlans: 0,
+  totalCustomers: 0,
   
   // Stock KPIs
   totalRawMaterials: 0,
@@ -208,7 +210,7 @@ const calculateRoleStats = async (role: keyof RoleBasedStats): Promise<Dashboard
   
   try {
     // Fetch all necessary data in parallel
-    const [ordersResponse, productionResponse, stockResponse, movementsResponse] = await Promise.all([
+    const [ordersResponse, productionResponse, stockResponse, movementsResponse, customersResponse] = await Promise.all([
       fetch('/api/orders?limit=1000'),
       fetch('/api/production/plans?limit=1000'),
       Promise.all([
@@ -217,13 +219,15 @@ const calculateRoleStats = async (role: keyof RoleBasedStats): Promise<Dashboard
         fetch('/api/stock/finished?limit=1000'),
       ]),
       fetch('/api/stock/movements?limit=100'),
+      fetch('/api/customers?limit=1').catch(() => Promise.resolve({ json: async () => ({ pagination: { total: 0 } }) })),
     ]);
     
-    const [ordersResult, productionResult, stockResults, movementsResult] = await Promise.all([
+    const [ordersResult, productionResult, stockResults, movementsResult, customersResult] = await Promise.all([
       ordersResponse.json(),
       productionResponse.json(),
       Promise.all(stockResponse.map(r => r.json())),
       movementsResponse.json(),
+      customersResponse.json(),
     ]);
     
     const orders = ordersResult.data || [];
@@ -381,6 +385,9 @@ const calculateRoleStats = async (role: keyof RoleBasedStats): Promise<Dashboard
     stats.activeProductionPlans = productionPlans.filter((plan: any) => 
       plan.status === 'devam_ediyor' || plan.status === 'planlandi'
     ).length;
+    
+    // Total customers count
+    stats.totalCustomers = customersResult?.pagination?.total || 0;
     
     // Calculate stock KPIs
     stats.totalRawMaterials = rawMaterials.length;
