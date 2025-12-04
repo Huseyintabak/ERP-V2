@@ -107,6 +107,11 @@ export default function YoneticiDashboard() {
     totalOrders: 0,
     averageOrderValue: 0,
     totalStockValue: 0,
+    stockValueBreakdown: {
+      rawMaterials: { count: 0, quantity: 0, value: 0 },
+      semiFinished: { count: 0, quantity: 0, value: 0 },
+      finishedProducts: { count: 0, quantity: 0, value: 0 }
+    },
     pendingOrders: 0,
     inProductionOrders: 0,
     completedOrders: 0,
@@ -177,7 +182,44 @@ export default function YoneticiDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">₺{currentStats.totalStockValue.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">Toplam stok değeri</p>
+            <p className="text-xs text-muted-foreground mb-3">Toplam stok değeri (işçilik hariç)</p>
+            
+            {/* Detailed Breakdown - Table Format */}
+            <div className="mt-3 pt-3 border-t">
+              <div className="space-y-2">
+                {/* Header */}
+                <div className="grid grid-cols-4 gap-2 text-xs font-semibold text-muted-foreground pb-1 border-b">
+                  <div>Tip</div>
+                  <div className="text-right">Adet</div>
+                  <div className="text-right">Miktar</div>
+                  <div className="text-right">Değer</div>
+                </div>
+                
+                {/* Hammaddeler */}
+                <div className="grid grid-cols-4 gap-2 text-xs">
+                  <div className="font-medium">Hammaddeler</div>
+                  <div className="text-right">{currentStats.stockValueBreakdown?.rawMaterials?.count || 0}</div>
+                  <div className="text-right">{(currentStats.stockValueBreakdown?.rawMaterials?.quantity || 0).toLocaleString('tr-TR', { maximumFractionDigits: 2 })}</div>
+                  <div className="text-right font-semibold">₺{(currentStats.stockValueBreakdown?.rawMaterials?.value || 0).toLocaleString('tr-TR', { maximumFractionDigits: 2 })}</div>
+                </div>
+                
+                {/* Yarı Mamuller */}
+                <div className="grid grid-cols-4 gap-2 text-xs">
+                  <div className="font-medium">Yarı Mamuller</div>
+                  <div className="text-right">{currentStats.stockValueBreakdown?.semiFinished?.count || 0}</div>
+                  <div className="text-right">{(currentStats.stockValueBreakdown?.semiFinished?.quantity || 0).toLocaleString('tr-TR', { maximumFractionDigits: 2 })}</div>
+                  <div className="text-right font-semibold">₺{(currentStats.stockValueBreakdown?.semiFinished?.value || 0).toLocaleString('tr-TR', { maximumFractionDigits: 2 })}</div>
+                </div>
+                
+                {/* Nihai Ürünler */}
+                <div className="grid grid-cols-4 gap-2 text-xs">
+                  <div className="font-medium">Nihai Ürünler</div>
+                  <div className="text-right">{currentStats.stockValueBreakdown?.finishedProducts?.count || 0}</div>
+                  <div className="text-right">{(currentStats.stockValueBreakdown?.finishedProducts?.quantity || 0).toLocaleString('tr-TR', { maximumFractionDigits: 2 })}</div>
+                  <div className="text-right font-semibold">₺{(currentStats.stockValueBreakdown?.finishedProducts?.value || 0).toLocaleString('tr-TR', { maximumFractionDigits: 2 })}</div>
+                </div>
+              </div>
+            </div>
           </CardContent>
         </Card>
 

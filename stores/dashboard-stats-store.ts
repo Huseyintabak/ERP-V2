@@ -10,6 +10,11 @@ export interface DashboardStats {
   totalOrders: number;
   averageOrderValue: number;
   totalStockValue: number;
+  stockValueBreakdown: {
+    rawMaterials: { count: number; quantity: number; value: number };
+    semiFinished: { count: number; quantity: number; value: number };
+    finishedProducts: { count: number; quantity: number; value: number };
+  };
   
   // Operational KPIs (All roles)
   pendingOrders: number;
@@ -140,6 +145,11 @@ const initialDashboardStats: DashboardStats = {
   totalOrders: 0,
   averageOrderValue: 0,
   totalStockValue: 0,
+  stockValueBreakdown: {
+    rawMaterials: { count: 0, quantity: 0, value: 0 },
+    semiFinished: { count: 0, quantity: 0, value: 0 },
+    finishedProducts: { count: 0, quantity: 0, value: 0 }
+  },
   
   // Operational KPIs
   pendingOrders: 0,
@@ -272,15 +282,23 @@ const calculateRoleStats = async (role: keyof RoleBasedStats): Promise<Dashboard
       // Raw materials: unit_price (cost) - maliyet fiyatı
       // Semi-finished: unit_cost (cost) - maliyet fiyatı  
       // Finished products: cost_price (if available) - BOM bazlı maliyet, yoksa 0 (sale_price kullanma!)
+      // EXCLUDE: "iscilik" related items (not physical inventory - labor costs)
       const stockValueCalculation = [
-        ...rawMaterials.map((item: any) => ({
-          type: 'raw',
-          code: item.code,
-          name: item.name,
-          quantity: item.quantity || 0,
-          cost: item.unit_price || 0,
-          value: (item.quantity || 0) * (item.unit_price || 0)
-        })),
+        ...rawMaterials
+          .filter((item: any) => {
+            // Exclude labor/cost items that shouldn't be in inventory
+            const code = (item.code || '').toLowerCase();
+            const name = (item.name || '').toLowerCase();
+            return !code.includes('iscilik') && !name.includes('iscilik');
+          })
+          .map((item: any) => ({
+            type: 'raw',
+            code: item.code,
+            name: item.name,
+            quantity: item.quantity || 0,
+            cost: item.unit_price || 0,
+            value: (item.quantity || 0) * (item.unit_price || 0)
+          })),
         ...semiFinished.map((item: any) => ({
           type: 'semi',
           code: item.code,
@@ -301,15 +319,34 @@ const calculateRoleStats = async (role: keyof RoleBasedStats): Promise<Dashboard
       
       stats.totalStockValue = stockValueCalculation.reduce((sum: number, item: any) => sum + (item.value || 0), 0);
       
+      // Calculate breakdown by type
+      const rawItems = stockValueCalculation.filter(i => i.type === 'raw');
+      const semiItems = stockValueCalculation.filter(i => i.type === 'semi');
+      const finishedItems = stockValueCalculation.filter(i => i.type === 'finished');
+      
+      stats.stockValueBreakdown = {
+        rawMaterials: {
+          count: rawItems.length,
+          quantity: rawItems.reduce((sum, i) => sum + (i.quantity || 0), 0),
+          value: rawItems.reduce((sum, i) => sum + (i.value || 0), 0)
+        },
+        semiFinished: {
+          count: semiItems.length,
+          quantity: semiItems.reduce((sum, i) => sum + (i.quantity || 0), 0),
+          value: semiItems.reduce((sum, i) => sum + (i.value || 0), 0)
+        },
+        finishedProducts: {
+          count: finishedItems.length,
+          quantity: finishedItems.reduce((sum, i) => sum + (i.quantity || 0), 0),
+          value: finishedItems.reduce((sum, i) => sum + (i.value || 0), 0)
+        }
+      };
+      
       // Debug: Log large values (optional, can be removed later)
       if (stats.totalStockValue > 1000000) {
         console.warn('⚠️ High stock value detected:', {
           total: stats.totalStockValue,
-          breakdown: {
-            raw: stockValueCalculation.filter(i => i.type === 'raw').reduce((s, i) => s + i.value, 0),
-            semi: stockValueCalculation.filter(i => i.type === 'semi').reduce((s, i) => s + i.value, 0),
-            finished: stockValueCalculation.filter(i => i.type === 'finished').reduce((s, i) => s + i.value, 0)
-          },
+          breakdown: stats.stockValueBreakdown,
           topItems: stockValueCalculation
             .filter(i => i.value > 10000)
             .sort((a, b) => b.value - a.value)
