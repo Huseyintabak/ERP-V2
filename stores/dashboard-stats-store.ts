@@ -268,11 +268,55 @@ const calculateRoleStats = async (role: keyof RoleBasedStats): Promise<Dashboard
       
       stats.averageOrderValue = orders.length > 0 ? stats.totalRevenue / orders.length : 0;
       
-      stats.totalStockValue = [
-        ...rawMaterials,
-        ...semiFinished,
-        ...finishedProducts,
-      ].reduce((sum: number, item: any) => sum + ((item.quantity || 0) * (item.unit_price || item.sale_price || 0)), 0);
+      // Calculate stock value using COST prices (not sale prices)
+      // Raw materials: unit_price (cost) - maliyet fiyatı
+      // Semi-finished: unit_cost (cost) - maliyet fiyatı  
+      // Finished products: cost_price (if available) - BOM bazlı maliyet, yoksa 0 (sale_price kullanma!)
+      const stockValueCalculation = [
+        ...rawMaterials.map((item: any) => ({
+          type: 'raw',
+          code: item.code,
+          name: item.name,
+          quantity: item.quantity || 0,
+          cost: item.unit_price || 0,
+          value: (item.quantity || 0) * (item.unit_price || 0)
+        })),
+        ...semiFinished.map((item: any) => ({
+          type: 'semi',
+          code: item.code,
+          name: item.name,
+          quantity: item.quantity || 0,
+          cost: item.unit_cost || 0,
+          value: (item.quantity || 0) * (item.unit_cost || 0)
+        })),
+        ...finishedProducts.map((item: any) => ({
+          type: 'finished',
+          code: item.code,
+          name: item.name,
+          quantity: item.quantity || 0,
+          cost: item.cost_price || 0, // Use cost_price, not sale_price for inventory value
+          value: (item.quantity || 0) * (item.cost_price || 0)
+        }))
+      ];
+      
+      stats.totalStockValue = stockValueCalculation.reduce((sum: number, item: any) => sum + (item.value || 0), 0);
+      
+      // Debug: Log large values (optional, can be removed later)
+      if (stats.totalStockValue > 1000000) {
+        console.warn('⚠️ High stock value detected:', {
+          total: stats.totalStockValue,
+          breakdown: {
+            raw: stockValueCalculation.filter(i => i.type === 'raw').reduce((s, i) => s + i.value, 0),
+            semi: stockValueCalculation.filter(i => i.type === 'semi').reduce((s, i) => s + i.value, 0),
+            finished: stockValueCalculation.filter(i => i.type === 'finished').reduce((s, i) => s + i.value, 0)
+          },
+          topItems: stockValueCalculation
+            .filter(i => i.value > 10000)
+            .sort((a, b) => b.value - a.value)
+            .slice(0, 10)
+            .map(i => ({ type: i.type, code: i.code, name: i.name, qty: i.quantity, cost: i.cost, value: i.value }))
+        });
+      }
     }
     
     // Calculate operational KPIs
