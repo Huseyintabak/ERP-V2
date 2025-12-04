@@ -56,71 +56,90 @@ class AgentLogger {
         return;
       }
       
-      try {
-        // AI agent'lar server-side çalıştığı için service role client kullan (RLS bypass)
-        // Test ortamında test client kullan, production'da admin client
-        let supabase;
-        if (isTestEnv) {
-          const { createTestClient } = await import('@/lib/supabase/test-client');
-          supabase = createTestClient(true); // Service role key kullan (RLS bypass)
-        } else {
-          const { createAdminClient } = await import('@/lib/supabase/server');
-          supabase = createAdminClient(); // Service role key kullan (RLS bypass)
-        }
-        
-        // Supabase client oluşturulamadıysa skip et
-        if (!supabase) {
-          return;
-        }
-        
-        // Extract database fields from entry
-        // agent kolonu NOT NULL olduğu için null olduğunda default değer kullan
-        const dbEntry: any = {
-          agent: entry.agent || 'system', // NOT NULL constraint için default değer
-          action: entry.action,
-          level: logEntry.level,
-          data: entry, // Tüm entry'yi JSONB olarak kaydet
-          conversation_id: entry.conversation_id || entry.conversationId || null,
-          request_id: entry.request_id || entry.requestId || null,
-          order_id: entry.order_id || entry.orderId || null,
-          plan_id: entry.plan_id || entry.planId || null,
-          material_id: entry.material_id || entry.materialId || null,
-          final_decision: entry.final_decision || entry.finalDecision || null,
-          created_at: new Date().toISOString()
-        };
-        
-        // Null değerleri temizle (agent hariç - NOT NULL)
-        Object.keys(dbEntry).forEach(key => {
-          if (key !== 'agent' && (dbEntry[key] === null || dbEntry[key] === undefined)) {
-            delete dbEntry[key];
+      // Production'da database logging'i async olarak yap (block etmesin)
+      // Hata durumunda silent fail - memory logging yeterli
+      (async () => {
+        try {
+          // AI agent'lar server-side çalıştığı için service role client kullan (RLS bypass)
+          // Test ortamında test client kullan, production'da admin client
+          let supabase;
+          if (isTestEnv) {
+            const { createTestClient } = await import('@/lib/supabase/test-client');
+            supabase = createTestClient(true); // Service role key kullan (RLS bypass)
+          } else {
+            const { createAdminClient } = await import('@/lib/supabase/server');
+            supabase = createAdminClient(); // Service role key kullan (RLS bypass)
           }
-        });
-        
-        const { error } = await supabase.from('agent_logs').insert(dbEntry);
-        
-        if (error) {
-          // Sadece development'ta error log, production'da silent fail
-          if (process.env.NODE_ENV === 'development') {
+          
+          // Supabase client oluşturulamadıysa skip et
+          if (!supabase) {
+            return;
+          }
+          
+          // Extract database fields from entry
+          // agent kolonu NOT NULL olduğu için null olduğunda default değer kullan
+          const dbEntry: any = {
+            agent: entry.agent || 'system', // NOT NULL constraint için default değer
+            action: entry.action,
+            level: logEntry.level,
+            data: entry, // Tüm entry'yi JSONB olarak kaydet
+            conversation_id: entry.conversation_id || entry.conversationId || null,
+            request_id: entry.request_id || entry.requestId || null,
+            order_id: entry.order_id || entry.orderId || null,
+            plan_id: entry.plan_id || entry.planId || null,
+            material_id: entry.material_id || entry.materialId || null,
+            final_decision: entry.final_decision || entry.finalDecision || null,
+            created_at: new Date().toISOString()
+          };
+          
+          // Null değerleri temizle (agent hariç - NOT NULL)
+          Object.keys(dbEntry).forEach(key => {
+            if (key !== 'agent' && (dbEntry[key] === null || dbEntry[key] === undefined)) {
+              delete dbEntry[key];
+            }
+          });
+          
+          // Timeout ile insert (5 saniye) - production'da fetch failed hatalarını önlemek için
+          const insertPromise = supabase.from('agent_logs').insert(dbEntry);
+          const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Database insert timeout')), 5000)
+          );
+          
+          const { error } = await Promise.race([insertPromise, timeoutPromise]) as any;
+          
+          if (error) {
+            // Sadece development'ta error log, production'da TAMAMEN silent fail
+            // Fetch failed, network errors, timeout - hepsi production'da silent
+            if (process.env.NODE_ENV === 'development') {
+              console.error('Failed to save agent log to database:', {
+                message: error.message,
+                code: error.code,
+                details: error.details
+              });
+            }
+            // Database hatası olsa bile memory log devam eder
+          }
+        } catch (error: any) {
+          // Network errors (fetch failed), timeout, veya diğer beklenmedik hatalar
+          // Production'da TAMAMEN silent fail - hiçbir şekilde log yazma
+          // Sadece development'ta ve önemli hatalarda log
+          const isNetworkError = error?.message?.includes('fetch failed') || 
+                                 error?.message?.includes('timeout') ||
+                                 error?.name === 'TypeError' ||
+                                 error?.code === 'ENOTFOUND' ||
+                                 error?.code === 'ECONNREFUSED';
+          
+          if (process.env.NODE_ENV === 'development' && !isNetworkError) {
+            // Development'ta ve network hatası değilse log
             console.error('Failed to save agent log to database:', {
-              message: error.message,
-              code: error.code,
-              details: error.details
+              message: error?.message || 'Unknown error',
+              name: error?.name,
+              stack: error?.stack
             });
           }
-          // Database hatası olsa bile memory log devam eder
+          // Network hatası veya production: TAMAMEN silent - memory logging yeterli
         }
-      } catch (error: any) {
-        // Network errors veya diğer beklenmedik hatalar için silent fail
-        // Sadece development'ta log, production'da memory logging yeterli
-        if (process.env.NODE_ENV === 'development') {
-          console.error('Failed to save agent log to database:', {
-            message: error?.message || 'Unknown error',
-            name: error?.name,
-            stack: error?.stack
-          });
-        }
-        // Hata olsa bile memory log devam eder
-      }
+      })();
     }
   }
   

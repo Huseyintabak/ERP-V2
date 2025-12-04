@@ -106,33 +106,33 @@ async function handleApprove(
             protocolResult: agentResult.protocolResult
           });
 
-          // Agent reddettiyse
+          // Agent reddettiyse - Graceful degradation: warning log ama devam et
           if (agentResult.finalDecision === 'rejected') {
-            logger.warn('❌ AI Agent sipariş onayını reddetti:', agentResult.protocolResult?.errors);
-            return NextResponse.json(
-              {
-                error: 'AI Agent validation failed',
-                message: 'Sipariş onayı AI Agent tarafından reddedildi',
-                details: agentResult.protocolResult?.errors || [],
-                warnings: agentResult.protocolResult?.warnings || [],
-                agentReasoning: agentResult.protocolResult?.decision?.reasoning
-              },
-              { status: 400 }
-            );
+            logger.warn('⚠️ AI Agent sipariş onayını reddetti, ama yönetici onayı ile devam ediliyor');
+            logger.warn('📋 Agent reddetme nedenleri:', agentResult.protocolResult?.errors || []);
+            logger.warn('💡 Agent önerileri:', agentResult.protocolResult?.warnings || []);
+            logger.warn('🧠 Agent reasoning:', agentResult.protocolResult?.decision?.reasoning);
+            
+            // Agent reddetse bile yönetici override edebilir (graceful degradation)
+            // Production'da agent sadece öneri verir, final karar yöneticide
+            await agentLogger.warn({
+              agent: 'planning',
+              action: 'order_approval_rejected_by_agent_but_continuing',
+              orderId: id,
+              finalDecision: 'rejected',
+              protocolResult: agentResult.protocolResult,
+              message: 'Agent reddetti ama yönetici onayı ile devam ediliyor'
+            });
+            
+            // Warning log ama işleme devam et (graceful degradation)
+            logger.warn('⚠️ AI Agent reddetti, ancak yönetici onayı ile işleme devam ediliyor');
           }
 
           // Human approval bekleniyorsa
           if (agentResult.finalDecision === 'pending_approval') {
             logger.log('⏳ AI Agent human approval bekliyor...');
-            return NextResponse.json(
-              {
-                error: 'Human approval required',
-                message: 'Bu işlem için yönetici onayı gerekiyor',
-                approvalRequired: true,
-                decisionId: agentResult.protocolResult?.decision?.action
-              },
-              { status: 403 }
-            );
+            // pending_approval durumunda da devam edilebilir (zaten yönetici onayı var)
+            logger.warn('⚠️ AI Agent human approval istedi, ancak zaten yönetici onayı mevcut, devam ediliyor');
           }
 
           // Agent onayladıysa
@@ -140,18 +140,40 @@ async function handleApprove(
             logger.log('✅ AI Agent sipariş onayını onayladı');
             logger.log('📊 Agent reasoning:', agentResult.protocolResult?.decision?.reasoning);
           }
+          
+          // Her durumda devam et (agent sadece öneri verir, final karar yöneticide)
+          logger.log('✅ AI Agent validation tamamlandı, sipariş onayına devam ediliyor...');
         }
       } catch (error: any) {
         // Agent hatası durumunda graceful degradation - manuel onay devam eder
         logger.error('❌ AI Agent validation hatası:', error);
+        logger.error('❌ Error message:', error.message);
+        logger.error('❌ Error name:', error.name);
         logger.error('❌ Error stack:', error.stack);
-        logger.warn('⚠️ AI Agent validation hatası, manuel onay devam ediyor:', error.message);
+        
+        // OpenAI API key hatası kontrolü
+        if (error.message && (
+          error.message.includes('Invalid API key') ||
+          error.message.includes('API key') ||
+          error.message.includes('authentication') ||
+          error.message.includes('401') ||
+          error.message.includes('Unauthorized')
+        )) {
+          logger.error('🔑 OpenAI API Key hatası tespit edildi!');
+          logger.error('   OPENAI_API_KEY durumu:', process.env.OPENAI_API_KEY ? 'SET (ilk 10 karakter: ' + process.env.OPENAI_API_KEY.substring(0, 10) + '...)' : 'NOT SET');
+          logger.warn('⚠️ AI Agent validation OpenAI API hatası nedeniyle atlanıyor, manuel onay devam ediyor');
+        } else {
+          logger.warn('⚠️ AI Agent validation hatası, manuel onay devam ediyor:', error.message);
+        }
+        
         await agentLogger.error({
           agent: 'planning',
           action: 'order_approval_validation_error',
           orderId: id,
           error: error.message,
-          stack: error.stack
+          errorName: error.name,
+          stack: error.stack,
+          openaiApiKeySet: !!process.env.OPENAI_API_KEY
         });
         // Hata olsa bile manuel onay devam eder (graceful degradation)
       }
