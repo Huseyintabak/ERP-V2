@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
         customer:customers(id, name, company, email),
         items:order_items(
           *,
-          product:finished_products(id, name, code)
+          product:finished_products(id, name, code, sale_price, unit_price)
         ),
         created_by:users!orders_created_by_fkey(id, name, email)
       `, { count: 'exact' });

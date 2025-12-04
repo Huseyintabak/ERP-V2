@@ -6,6 +6,7 @@ export interface DashboardStats {
   // Financial KPIs (Yönetici only)
   totalRevenue: number;
   monthlyRevenue: number;
+  dailyRevenue: number;
   totalOrders: number;
   averageOrderValue: number;
   totalStockValue: number;
@@ -135,6 +136,7 @@ const initialDashboardStats: DashboardStats = {
   // Financial KPIs
   totalRevenue: 0,
   monthlyRevenue: 0,
+  dailyRevenue: 0,
   totalOrders: 0,
   averageOrderValue: 0,
   totalStockValue: 0,
@@ -221,28 +223,80 @@ const calculateRoleStats = async (role: keyof RoleBasedStats): Promise<Dashboard
     
     // Calculate financial KPIs (only for yonetici)
     if (role === 'yonetici') {
-      stats.totalRevenue = orders.reduce((sum: number, order: any) => sum + (order.total_price || 0), 0);
+      // Calculate order revenue from order_items and finished_products
+      // First, get all finished products with prices (fallback if product info not in order_items)
+      const productPriceMap = new Map<string, number>();
+      finishedProducts.forEach((product: any) => {
+        productPriceMap.set(product.id, product.sale_price || product.unit_price || 0);
+      });
+      
+      // Calculate total revenue from orders
+      const calculateOrderRevenue = (order: any): number => {
+        if (!order.items || !Array.isArray(order.items)) return 0;
+        return order.items.reduce((sum: number, item: any) => {
+          // Try to get price from product in order_items first, then fallback to productPriceMap
+          const price = item.product?.sale_price || 
+                       item.product?.unit_price || 
+                       productPriceMap.get(item.product_id) || 
+                       0;
+          return sum + ((item.quantity || 0) * price);
+        }, 0);
+      };
+      
+      stats.totalRevenue = orders.reduce((sum: number, order: any) => sum + calculateOrderRevenue(order), 0);
+      
+      // Monthly revenue (current month)
+      const now = new Date();
       stats.monthlyRevenue = orders
         .filter((order: any) => {
           const orderDate = new Date(order.created_at);
-          const now = new Date();
           return orderDate.getMonth() === now.getMonth() && orderDate.getFullYear() === now.getFullYear();
         })
-        .reduce((sum: number, order: any) => sum + (order.total_price || 0), 0);
+        .reduce((sum: number, order: any) => sum + calculateOrderRevenue(order), 0);
+      
+      // Daily revenue (today's completed orders)
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      stats.dailyRevenue = orders
+        .filter((order: any) => {
+          if (order.status !== 'tamamlandi') return false;
+          const completedDate = new Date(order.updated_at);
+          completedDate.setHours(0, 0, 0, 0);
+          return completedDate.getTime() === today.getTime();
+        })
+        .reduce((sum: number, order: any) => sum + calculateOrderRevenue(order), 0);
       
       stats.averageOrderValue = orders.length > 0 ? stats.totalRevenue / orders.length : 0;
+      
       stats.totalStockValue = [
         ...rawMaterials,
         ...semiFinished,
         ...finishedProducts,
-      ].reduce((sum: number, item: any) => sum + ((item.quantity || 0) * (item.unit_price || 0)), 0);
+      ].reduce((sum: number, item: any) => sum + ((item.quantity || 0) * (item.unit_price || item.sale_price || 0)), 0);
     }
     
     // Calculate operational KPIs
     stats.totalOrders = orders.length;
-    stats.pendingOrders = orders.filter((order: any) => order.status === 'beklemede').length;
+    
+    // Pending orders - daily (today's pending orders)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    stats.pendingOrders = orders.filter((order: any) => {
+      if (order.status !== 'beklemede') return false;
+      const orderDate = new Date(order.created_at);
+      orderDate.setHours(0, 0, 0, 0);
+      return orderDate.getTime() === today.getTime();
+    }).length;
+    
     stats.inProductionOrders = orders.filter((order: any) => order.status === 'uretimde').length;
-    stats.completedOrders = orders.filter((order: any) => order.status === 'tamamlandi').length;
+    
+    // Completed orders - daily (today's completed orders)
+    stats.completedOrders = orders.filter((order: any) => {
+      if (order.status !== 'tamamlandi') return false;
+      const completedDate = new Date(order.updated_at);
+      completedDate.setHours(0, 0, 0, 0);
+      return completedDate.getTime() === today.getTime();
+    }).length;
     stats.activeProductionPlans = productionPlans.filter((plan: any) => 
       plan.status === 'devam_ediyor' || plan.status === 'planlandi'
     ).length;
