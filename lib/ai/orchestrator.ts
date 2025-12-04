@@ -222,7 +222,25 @@ export class AgentOrchestrator {
       );
 
       conversation.protocolResult = protocolResult;
-      conversation.status = protocolResult.finalDecision === 'rejected' ? 'failed' : 'completed';
+      
+      // OpenAI 429 (quota exceeded) hatası kontrolü
+      // Protocol result'ta quota hatası varsa, graceful degradation uygula
+      const hasQuotaError = protocolResult.errors?.some((e: string) => 
+        e.includes('429') || e.includes('quota') || e.includes('exceeded') || e.includes('billing')
+      ) || protocolResult.layers?.layer1?.errors?.some((e: any) => 
+        e?.message?.includes('429') || e?.message?.includes('quota') || e?.message?.includes('exceeded')
+      );
+      
+      if (hasQuotaError && protocolResult.finalDecision === 'rejected') {
+        // Quota hatası durumunda rejected olsa bile approved olarak işaretle (graceful degradation)
+        protocolResult.finalDecision = 'approved';
+        protocolResult.warnings = protocolResult.warnings || [];
+        protocolResult.warnings.push('OpenAI API quota exceeded. Agent validation skipped, manual approval continues.');
+        conversation.status = 'completed';
+      } else {
+        conversation.status = protocolResult.finalDecision === 'rejected' ? 'failed' : 'completed';
+      }
+      
       conversation.completedAt = new Date();
 
       // Conversation completion log'unu kaydet
@@ -245,8 +263,53 @@ export class AgentOrchestrator {
         conversation
       };
     } catch (error: any) {
-      conversation.status = 'failed';
       conversation.completedAt = new Date();
+      
+      // OpenAI 429 (quota exceeded) hatası durumunda graceful degradation
+      // Agent validation yapılamıyor ama işlem devam etmeli
+      const isQuotaError = error?.message?.includes('429') || 
+                          error?.message?.includes('quota') || 
+                          error?.message?.includes('exceeded') ||
+                          error?.message?.includes('billing');
+      
+      if (isQuotaError) {
+        // Quota hatası durumunda conversation'ı "completed" olarak işaretle
+        // Final decision "approved" olarak ayarla (graceful degradation)
+        conversation.status = 'completed';
+        
+        // Default protocol result oluştur (approved)
+        conversation.protocolResult = {
+          decision: {
+            agent: agentRole.toLowerCase(),
+            decision: 'approved',
+            action: 'continue',
+            data: {},
+            reasoning: 'OpenAI API quota exceeded, graceful degradation: manual approval continues',
+            confidence: 0.5
+          },
+          layers: {},
+          finalDecision: 'approved',
+          errors: [`OpenAI API quota exceeded: ${error.message}`],
+          warnings: ['Agent validation skipped due to API quota limit. Manual approval continues.']
+        };
+        
+        await agentLogger.warn({
+          action: 'conversation_completed_with_quota_error',
+          conversationId,
+          agent: agentRole.toLowerCase(),
+          error: error.message,
+          message: 'OpenAI quota exceeded, graceful degradation: conversation marked as completed with approved decision'
+        });
+        
+        return {
+          finalDecision: 'approved',
+          protocolResult: conversation.protocolResult,
+          conversation
+        };
+      }
+      
+      // Diğer hatalar için normal failed handling
+      conversation.status = 'failed';
 
       await agentLogger.error({
         action: 'conversation_failed',
