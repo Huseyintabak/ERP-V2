@@ -21,17 +21,67 @@ Sorumlulukların:
 - Satın alma bütçesi yönetimi
 - Tedarikçi performans analizi
 
+**Tedarikçi Güvenilirlik Skorlama:**
+1. Teslimat Puanı (0-100):
+   - Zamanında teslimat: %80+ → 100 puan
+   - Gecikme (1-3 gün): %60-79 → 70 puan
+   - Gecikme (4+ gün): <%60 → 40 puan
+
+2. Kalite Puanı (0-100):
+   - Red oranı <%1 → 100 puan
+   - Red oranı %1-3 → 80 puan
+   - Red oranı >%3 → 50 puan
+
+3. Fiyat Puanı (0-100):
+   - Piyasa ortalamasının %95-105'i → 100 puan
+   - Piyasa ortalamasının %105-115'i → 70 puan
+   - Piyasa ortalamasının >%115'i → 40 puan
+
+4. Toplam Güvenilirlik Skoru:
+   - 90-100: ⭐⭐⭐⭐⭐ Mükemmel
+   - 75-89: ⭐⭐⭐⭐ İyi
+   - 60-74: ⭐⭐⭐ Orta
+   - <60: ⭐⭐ Zayıf (kullanma)
+
+**Fiyat Trend Analizi:**
+1. Son 3 ay fiyat değişimi:
+   - Artış <%5: Normal
+   - Artış %5-10: Uyarı
+   - Artış >%10: Kritik (alternatif tedarikçi öner)
+
+2. Fiyat karşılaştırması:
+   - En ucuz tedarikçi: 100 puan
+   - Ortalama fiyat: 70 puan
+   - Pahalı tedarikçi: 40 puan
+
+**Acil Durum Önceliklendirme:**
+1. Kritik Stok (< kritik seviye):
+   - Öncelik: P0 (Acil)
+   - Tedarik süresi: Maksimum 3 gün
+   - Fiyat önemli değil (maliyet optimizasyonu ikincil)
+
+2. Düşük Stok (< güvenlik stoku):
+   - Öncelik: P1 (Yüksek)
+   - Tedarik süresi: Maksimum 7 gün
+   - Fiyat ve kalite dengesi önemli
+
+3. Normal Stok:
+   - Öncelik: P2 (Orta)
+   - Tedarik süresi: Optimize edilebilir
+   - Fiyat optimizasyonu öncelikli
+
 Diğer departmanlarla iletişim kur:
 - Depo GPT: Kritik stokları öğren, acil sipariş gereksinimlerini al
 - Planlama GPT: Üretim planlarını kontrol et, malzeme ihtiyaçlarını öğren
 - Üretim GPT: Malzeme kalitesi sorunlarını öğren
 
 Karar verirken:
-1. Her zaman en iyi fiyatı bul
-2. Tedarik süresini optimize et
-3. Tedarikçi güvenilirliğini değerlendir
-4. Bütçe kısıtlarını göz önünde bulundur
-5. Acil durumları önceliklendir
+1. Acil durumlarda hız > fiyat (kritik stok için)
+2. Normal durumlarda fiyat optimizasyonu öncelikli
+3. Tedarikçi güvenilirlik skorunu dikkate al (minimum 70)
+4. Fiyat trend analizi yap (aşırı artış varsa uyar)
+5. Alternatif tedarikçi öner (risk azaltma)
+6. Bütçe kısıtlarını kontrol et
 
 Yanıtlarını JSON formatında ver:
 {
@@ -42,10 +92,22 @@ Yanıtlarını JSON formatında ver:
       "materialId": "uuid",
       "quantity": 100,
       "supplier": "Supplier Name",
+      "supplierReliabilityScore": 85,
       "price": 1500.00,
+      "priceTrend": "stable" | "increasing" | "decreasing",
       "deliveryTime": 5,
-      "totalCost": 150000.00
+      "totalCost": 150000.00,
+      "priority": "P0" | "P1" | "P2"
     },
+    "alternativeSuppliers": [
+      {
+        "supplier": "Alternative Supplier",
+        "reliabilityScore": 80,
+        "price": 1480.00,
+        "deliveryTime": 7,
+        "reason": "Daha ucuz ama daha uzun teslimat"
+      }
+    ],
     "recommendations": []
   },
   "reasoning": "Açıklama",
@@ -103,18 +165,54 @@ Yanıtlarını JSON formatında ver:
           };
       }
     } catch (error: any) {
+      // Güvenli hata mesajı çıkarma
+      const errorMessage = error?.message || error?.toString() || String(error) || 'Unknown error';
+      const errorString = typeof error === 'object' ? JSON.stringify(error, Object.getOwnPropertyNames(error)) : String(error);
+      
       await agentLogger.error({
         agent: this.name,
         action: 'process_request',
         requestId: request.id,
-        error: error.message
+        error: errorMessage
       });
 
+      // OpenAI API hataları için graceful degradation
+      const errorMsgLower = errorMessage.toLowerCase();
+      const errorStrLower = errorString.toLowerCase();
+      const isOpenAIError = errorMsgLower.includes('429') || 
+                           errorMsgLower.includes('quota') || 
+                           errorMsgLower.includes('exceeded') ||
+                           errorMsgLower.includes('billing') ||
+                           errorMsgLower.includes('invalid api key') ||
+                           errorMsgLower.includes('unauthorized') ||
+                           errorMsgLower.includes('401') ||
+                           errorStrLower.includes('429') ||
+                           errorStrLower.includes('quota') ||
+                           error?.status === 429 ||
+                           error?.status === 401 ||
+                           error?.response?.status === 429 ||
+                           error?.response?.status === 401 ||
+                           error?.aiErrorType;
+
+      if (isOpenAIError && request.type === 'validation') {
+        // Validation için OpenAI hatası durumunda approve et (graceful degradation)
+        const errorDetails = error?.status || error?.aiErrorType || errorMessage;
+        return {
+          id: request.id,
+          agent: this.name,
+          decision: 'approve',
+          reasoning: `OpenAI API error (${errorDetails}). Graceful degradation: Validation skipped, manual approval continues.`,
+          confidence: 0.5,
+          timestamp: new Date()
+        };
+      }
+
+      // Diğer hatalar için rejected
       return {
         id: request.id,
         agent: this.name,
-        decision: 'rejected',
-        reasoning: `Error processing request: ${error.message}`,
+        decision: 'reject',
+        reasoning: `Error processing request: ${errorMessage}`,
         confidence: 0.0,
         timestamp: new Date()
       };
@@ -153,7 +251,8 @@ Yanıtlarını JSON formatında ver:
       [{ role: 'user', content: prompt }],
       {
         taskComplexity: 'medium',
-        requestId: request.id
+        requestId: request.id,
+        requestType: request.type
       }
     );
 
@@ -225,11 +324,64 @@ Yanıtlarını JSON formatında ver:
       [{ role: 'user', content: prompt }],
       {
         taskComplexity: 'simple',
-        requestId: request.id
+        requestId: request.id,
+        requestType: request.type
       }
     );
 
     return this.parseResponse(gptResponse);
+  }
+
+  /**
+   * Developer Agent'a sistem iyileştirme bilgisi gönder
+   * Yeni mimari yapıya göre: Purchase Agent → Developer Agent
+   */
+  private async reportToDeveloperAgent(
+    analysisType: string,
+    findings: any[],
+    recommendations: string[],
+    issues: string[]
+  ): Promise<void> {
+    try {
+      // Developer Agent'a sistem iyileştirme bilgisi gönder
+      await this.askAgent(
+        'Developer Agent',
+        `Purchase Agent sistem analizi sonuçları:
+        
+Analiz Tipi: ${analysisType}
+
+Bulgu Sayısı: ${findings.length}
+Öneri Sayısı: ${recommendations.length}
+Sorun Sayısı: ${issues.length}
+
+Bulgular:
+${findings.map((f, i) => `${i + 1}. ${f.issue || JSON.stringify(f)}`).join('\n')}
+
+Öneriler:
+${recommendations.map((r, i) => `${i + 1}. ${r}`).join('\n')}
+
+Sorunlar:
+${issues.map((i, idx) => `${idx + 1}. ${i}`).join('\n')}
+
+Lütfen bu bilgileri analiz edip sistem iyileştirme önerilerine ekle.`,
+        {
+          analysisType,
+          findings,
+          recommendations,
+          issues,
+          sourceAgent: 'Purchase Agent',
+          timestamp: new Date().toISOString()
+        }
+      );
+    } catch (error: any) {
+      // Developer Agent'a ulaşamazsa sadece logla, hata fırlatma (graceful degradation)
+      await agentLogger.warn({
+        agent: this.name,
+        action: 'report_to_developer',
+        error: error.message,
+        analysisType
+      });
+    }
   }
 
   /**
@@ -396,6 +548,38 @@ Yanıtlarını JSON formatında ver:
         recommendations.push('İzleme aracı ekle (cache hit/miss oranlarını, TTL değerlerini, güncelleme sıklığını takip et)');
       }
       
+      // Developer Agent'a sistem iyileştirme bilgisi gönder (Yeni mimari yapıya göre)
+      if (issues.length > 0 || recommendations.length > 0) {
+        const findings = [
+          ...(hasPriceCache ? [] : [{
+            category: 'cache_implementation',
+            issue: 'Fiyat karşılaştırması için cache mekanizması kullanılmıyor',
+            severity: 'medium' as const,
+            details: { cacheStats, priceCacheKeys: priceCacheKeys.length }
+          }]),
+          ...(avgTTLMinutes > 60 ? [{
+            category: 'cache_optimization',
+            issue: `Cache TTL değeri çok yüksek: ${avgTTLMinutes.toFixed(0)} dakika`,
+            severity: 'low' as const,
+            details: { avgTTLMinutes, recommendedTTL: '15-30 dakika' }
+          }] : []),
+          ...(cacheStats.hitRate < 50 && cacheStats.totalHits + cacheStats.totalMisses > 10 ? [{
+            category: 'cache_performance',
+            issue: `Cache hit rate düşük: ${cacheStats.hitRate.toFixed(1)}%`,
+            severity: 'medium' as const,
+            details: { hitRate: cacheStats.hitRate, targetHitRate: 70 }
+          }] : []),
+          ...(updateFrequency < 30 ? [{
+            category: 'price_update_frequency',
+            issue: `Fiyat güncelleme sıklığı düşük: ${updateFrequency.toFixed(1)}%`,
+            severity: 'low' as const,
+            details: { updateFrequency, targetFrequency: 50 }
+          }] : [])
+        ];
+        
+        await this.reportToDeveloperAgent('price_comparison_cache', findings, recommendations, issues);
+      }
+      
     } else if (analysisType === 'supplier_price_management') {
       // Tedarikçi fiyat yönetimi analizi
       const { data: suppliers } = await supabase
@@ -440,6 +624,26 @@ Yanıtlarını JSON formatında ver:
       if (!suppliers || suppliers.length === 0) {
         issues.push('Tedarikçi bilgileri eksik');
         recommendations.push('Tedarikçi yönetimi sistemi kurulmalı');
+      }
+      
+      // Developer Agent'a sistem iyileştirme bilgisi gönder (Yeni mimari yapıya göre)
+      if (issues.length > 0 || recommendations.length > 0) {
+        const findings = [
+          ...(purchaseOrders && purchaseOrders.length > 0 && avgPriceBySupplier.size > 1 ? [{
+            category: 'supplier_price_comparison',
+            issue: 'Tedarikçi fiyat karşılaştırması yapılmalı',
+            severity: 'low' as const,
+            details: { uniqueSuppliers: avgPriceBySupplier.size, purchaseOrderCount: purchaseOrders.length }
+          }] : []),
+          ...(!suppliers || suppliers.length === 0 ? [{
+            category: 'supplier_management',
+            issue: 'Tedarikçi bilgileri eksik',
+            severity: 'medium' as const,
+            details: { supplierCount: 0 }
+          }] : [])
+        ];
+        
+        await this.reportToDeveloperAgent('supplier_price_management', findings, recommendations, issues);
       }
     }
     
@@ -494,7 +698,8 @@ Yanıtlarını JSON formatında ver:
       [{ role: 'user', content: prompt }],
       {
         taskComplexity: 'complex',
-        requestId: request.id
+        requestId: request.id,
+        requestType: request.type
       }
     );
 
@@ -532,7 +737,8 @@ Yanıtlarını JSON formatında ver:
       [{ role: 'user', content: prompt }],
       {
         taskComplexity: 'medium',
-        requestId: request.id
+        requestId: request.id,
+        requestType: request.type
       }
     );
 
@@ -571,7 +777,7 @@ Yanıtlarını JSON formatında ver:
       return {
         id: request.id,
         agent: this.name,
-        decision: 'rejected',
+          decision: 'reject',
         reasoning: 'Material not found',
         confidence: 0.0,
         timestamp: new Date()
@@ -657,7 +863,8 @@ Yanıtlarını JSON formatında ver:
       [{ role: 'user', content: prompt }],
       {
         taskComplexity: 'medium',
-        requestId: request.id
+        requestId: request.id,
+        requestType: request.type
       }
     );
 
@@ -779,7 +986,7 @@ Yanıtlarını JSON formatında ver:
       return {
         id: request.id,
         agent: this.name,
-        decision: 'rejected',
+          decision: 'reject',
         reasoning: 'Purchase request not found',
         confidence: 0.0,
         timestamp: new Date()

@@ -65,6 +65,8 @@ interface TransferItem {
 interface ZoneTransferDialogProps {
   zones: WarehouseZone[];
   selectedZoneId?: string;
+  isOpen?: boolean;
+  onOpenChange?: (open: boolean) => void;
   onTransferComplete?: () => void;
   children?: React.ReactNode;
 }
@@ -72,10 +74,16 @@ interface ZoneTransferDialogProps {
 export function ZoneTransferDialog({ 
   zones, 
   selectedZoneId,
+  isOpen: controlledIsOpen,
+  onOpenChange: controlledOnOpenChange,
   onTransferComplete,
   children 
 }: ZoneTransferDialogProps) {
-  const [isOpen, setIsOpen] = useState(false);
+  const [internalIsOpen, setInternalIsOpen] = useState(false);
+  
+  // Use controlled state if provided, otherwise use internal state
+  const isOpen = controlledIsOpen !== undefined ? controlledIsOpen : internalIsOpen;
+  const setIsOpen = controlledOnOpenChange || setInternalIsOpen;
   const [isLoading, setIsLoading] = useState(false);
   const { user } = useAuthStore();
   
@@ -94,13 +102,23 @@ export function ZoneTransferDialog({
   const [selectedProduct, setSelectedProduct] = useState<FinishedProduct | null>(null);
   const [availableQuantity, setAvailableQuantity] = useState(0);
 
+  // Update fromZoneId when selectedZoneId changes
+  useEffect(() => {
+    if (selectedZoneId) {
+      setFromZoneId(selectedZoneId);
+      if (controlledIsOpen !== false) {
+        setIsOpen(true);
+      }
+    }
+  }, [selectedZoneId, controlledIsOpen, setIsOpen]);
+
   // SearchableSelect için product options'ı hazırla
   const productOptions: SearchableSelectOption[] = sourceInventory.map((inventory, index) => ({
-    value: inventory.product_id,
+    value: inventory.product_id || inventory.material_id || '',
     label: inventory.product.name,
     description: inventory.product.code,
     badge: `${inventory.quantity} adet`,
-    key: `${inventory.product_id}-${index}`, // Unique key için index ekle
+    key: `${inventory.product_id || inventory.material_id}-${index}`, // Unique key için index ekle
   }));
 
   // Load source zone inventory when fromZoneId changes
@@ -117,7 +135,9 @@ export function ZoneTransferDialog({
   // Update available quantity when product changes
   useEffect(() => {
     if (productId && sourceInventory.length > 0) {
-      const inventory = sourceInventory.find(inv => inv.product_id === productId);
+      const inventory = sourceInventory.find(inv => 
+        (inv.product_id === productId) || (inv.material_id === productId)
+      );
       if (inventory) {
         setSelectedProduct(inventory.product);
         setAvailableQuantity(inventory.quantity);
@@ -137,7 +157,15 @@ export function ZoneTransferDialog({
         throw new Error('Kullanıcı kimlik doğrulaması gerekli');
       }
 
-      const response = await fetch(`/api/warehouse/zones/${zoneId}/inventory`, {
+      // Check if this is center zone
+      const sourceZone = zones.find(z => z.id === zoneId);
+      const isCenterZone = sourceZone?.zone_type === 'center';
+      
+      const apiUrl = isCenterZone 
+        ? '/api/warehouse/zones/center/inventory'
+        : `/api/warehouse/zones/${zoneId}/inventory`;
+
+      const response = await fetch(apiUrl, {
         headers: {
           'x-user-id': user.id
         }
@@ -145,6 +173,8 @@ export function ZoneTransferDialog({
       if (!response.ok) throw new Error('Failed to fetch inventory');
       
       const result = await response.json();
+      // Center zone API returns { data: [...], zone: {...} }
+      // Regular zone API returns { data: [...] }
       setSourceInventory(result.data || []);
     } catch (error) {
       logger.error('Error fetching zone inventory:', error);

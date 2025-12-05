@@ -74,9 +74,35 @@ export async function PUT(
         
         // Warehouse Agent ile konuşma başlat
         const orchestrator = AgentOrchestrator.getInstance();
+        const quantityChange = updateData.quantity - (currentMaterial?.quantity || 0);
+        const isDecrease = quantityChange < 0;
+        const isCriticalDecrease = updateData.quantity < (currentMaterial?.critical_level || 0);
+        const isLargeChange = Math.abs(quantityChange) > 100;
+        
+        // Daha detaylı ve açıklayıcı prompt
+        const prompt = `Hammadde stok güncelleme doğrulaması:
+
+Malzeme: ${currentMaterial?.name || 'Bilinmiyor'} (${currentMaterial?.code || id})
+Mevcut Stok: ${currentMaterial?.quantity || 0} ${currentMaterial?.unit || ''}
+Yeni Stok: ${updateData.quantity} ${currentMaterial?.unit || ''}
+Değişim: ${quantityChange > 0 ? '+' : ''}${quantityChange} ${currentMaterial?.unit || ''}
+Kritik Seviye: ${currentMaterial?.critical_level || 0} ${currentMaterial?.unit || ''}
+
+Güncelleme tipi: ${isDecrease ? 'Stok azalışı' : 'Stok artışı'}
+${isLargeChange ? '⚠️ BÜYÜK DEĞİŞİM (100+ birim)' : ''}
+${isCriticalDecrease ? '🔴 KRİTİK SEVİYE UYARISI: Yeni stok kritik seviyenin altında!' : ''}
+
+Bu güncellemeyi doğrula:
+1. Stok değişimi mantıklı mı? (Ani büyük değişimler şüpheli olabilir)
+2. Kritik seviye ihlali var mı?
+3. Stok azalışı varsa, rezervasyon durumu kontrol edilmeli mi?
+4. Bu bir sayım düzeltmesi mi, normal hareket mi?
+
+Yönetici/Planlama tarafından yapılan güncelleme - otomatik onay gerektirebilir.`;
+
         const agentResult = await orchestrator.startConversation('warehouse', {
           id: `raw_material_update_${id}_${Date.now()}`,
-          prompt: `Bu hammadde stok güncellemesini doğrula: ${currentMaterial?.name || id}`,
+          prompt: prompt,
           type: 'validation',
           context: {
             materialId: id,
@@ -84,14 +110,18 @@ export async function PUT(
             materialCode: currentMaterial?.code,
             currentQuantity: currentMaterial?.quantity,
             newQuantity: updateData.quantity,
-            quantityChange: updateData.quantity - (currentMaterial?.quantity || 0),
+            quantityChange: quantityChange,
             criticalLevel: currentMaterial?.critical_level,
+            unit: currentMaterial?.unit,
+            isDecrease: isDecrease,
+            isCriticalDecrease: isCriticalDecrease,
+            isLargeChange: isLargeChange,
             updateData: updateData,
             requestedBy: payload.userId,
             requestedByRole: payload.role
           },
-          urgency: Math.abs(updateData.quantity - (currentMaterial?.quantity || 0)) > 100 ? 'high' : 'medium',
-          severity: updateData.quantity < (currentMaterial?.critical_level || 0) ? 'high' : 'medium'
+          urgency: isLargeChange ? 'high' : 'medium',
+          severity: isCriticalDecrease ? 'high' : 'medium'
         });
 
         await agentLogger.log({
@@ -104,19 +134,56 @@ export async function PUT(
           protocolResult: agentResult.protocolResult
         });
 
+        // OpenAI API hataları kontrolü (429, quota, billing, invalid key, etc.)
+        // Bu hatalar durumunda graceful degradation: işlem devam etmeli
+        const reasoning = agentResult.protocolResult?.decision?.reasoning || '';
+        const errors = agentResult.protocolResult?.errors || [];
+        const warnings = agentResult.protocolResult?.warnings || [];
+        
+        // Tüm error mesajlarını tek bir string'e birleştir
+        const allErrorTexts = [
+          reasoning,
+          ...errors.map((e: any) => typeof e === 'string' ? e : JSON.stringify(e)),
+          ...warnings.map((w: any) => typeof w === 'string' ? w : JSON.stringify(w))
+        ].join(' ').toLowerCase();
+        
+        // OpenAI API hataları kontrolü
+        const hasOpenAIError = 
+          allErrorTexts.includes('429') || 
+          allErrorTexts.includes('quota') || 
+          allErrorTexts.includes('exceeded') || 
+          allErrorTexts.includes('billing') ||
+          allErrorTexts.includes('invalid api key') ||
+          allErrorTexts.includes('unauthorized') ||
+          allErrorTexts.includes('401') ||
+          allErrorTexts.includes('you exceeded your current quota') ||
+          allErrorTexts.includes('error processing request');
+
         // Agent reddettiyse
         if (agentResult.finalDecision === 'rejected') {
-          logger.warn('❌ AI Agent hammadde güncellemesini reddetti:', agentResult.protocolResult?.errors);
-          return NextResponse.json(
-            {
-              error: 'AI Agent validation failed',
-              message: 'Hammadde güncellemesi AI Agent tarafından reddedildi',
-              details: agentResult.protocolResult?.errors || [],
-              warnings: agentResult.protocolResult?.warnings || [],
-              agentReasoning: agentResult.protocolResult?.decision?.reasoning
-            },
-            { status: 400 }
-          );
+          // OpenAI API hatası varsa, graceful degradation: uyarı ver ama devam et
+          if (hasOpenAIError) {
+            logger.warn('⚠️ OpenAI API hatası nedeniyle AI Agent validation atlandı, manuel güncelleme devam ediyor');
+            logger.warn('⚠️ Agent Result:', { 
+              finalDecision: agentResult.finalDecision, 
+              reasoning: reasoning.substring(0, 200), // İlk 200 karakter
+              errors: errors.slice(0, 3) // İlk 3 error
+            });
+            // OpenAI hatası durumunda işleme devam et (graceful degradation)
+          } else {
+            // Normal rejection (OpenAI hatası değil)
+            logger.warn('❌ AI Agent hammadde güncellemesini reddetti:', agentResult.protocolResult?.errors);
+            return NextResponse.json(
+              {
+                error: 'AI Agent validation failed',
+                message: 'Hammadde güncellemesi AI Agent tarafından reddedildi',
+                details: agentResult.protocolResult?.errors || [],
+                warnings: agentResult.protocolResult?.warnings || [],
+                agentReasoning: agentResult.protocolResult?.decision?.reasoning
+              },
+              { status: 400 }
+            );
+          }
         }
 
         // Human approval bekleniyorsa
@@ -144,14 +211,34 @@ export async function PUT(
           }
         }
       } catch (error: any) {
-        // Agent hatası durumunda graceful degradation - manuel güncelleme devam eder
-        logger.warn('⚠️ AI Agent validation hatası, manuel güncelleme devam ediyor:', error.message);
-        await agentLogger.error({
-          agent: 'warehouse',
-          action: 'raw_material_update_validation_error',
-          materialId: id,
-          error: error.message
-        });
+        // OpenAI API key veya quota hataları için özel handling
+        const isOpenAIError = error?.message?.includes('429') || 
+                             error?.message?.includes('quota') || 
+                             error?.message?.includes('exceeded') ||
+                             error?.message?.includes('billing') ||
+                             error?.message?.includes('Invalid API key') ||
+                             error?.message?.includes('401') ||
+                             error?.message?.includes('Unauthorized');
+        
+        if (isOpenAIError) {
+          logger.warn('⚠️ OpenAI API hatası (quota/key), AI Agent validation atlandı, manuel güncelleme devam ediyor:', error.message);
+          await agentLogger.warn({
+            agent: 'warehouse',
+            action: 'raw_material_update_validation_openai_error',
+            materialId: id,
+            error: error.message,
+            message: 'OpenAI API error, graceful degradation: manual update continues'
+          });
+        } else {
+          // Diğer hatalar için normal logging
+          logger.warn('⚠️ AI Agent validation hatası, manuel güncelleme devam ediyor:', error.message);
+          await agentLogger.error({
+            agent: 'warehouse',
+            action: 'raw_material_update_validation_error',
+            materialId: id,
+            error: error.message
+          });
+        }
         // Hata olsa bile manuel güncelleme devam eder (graceful degradation)
       }
     }

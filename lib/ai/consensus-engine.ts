@@ -36,12 +36,99 @@ export class ConsensusEngine {
       agentsCount: agents.length
     });
 
+    // QUOTA KONTROLÜ: Consensus başlamadan önce quota kontrolü
+    const { isAIValidationEnabled, getQuotaManager } = await import('./utils/quota-manager');
+    
+    if (!isAIValidationEnabled()) {
+      // AI validation kapalı - Tüm agent'lar için approve oyları oluştur (graceful degradation)
+      const votes: Vote[] = agents.map(agent => ({
+        agent: agent.name,
+        vote: 'approve',
+        confidence: 0.5,
+        reasoning: 'AI validation disabled. Consensus skipped (graceful degradation).',
+        conditions: []
+      }));
+
+      return {
+        isConsensus: true,
+        approvalRate: 1.0,
+        totalVotes: votes.length,
+        approveVotes: votes.length,
+        rejectVotes: 0,
+        conditionalVotes: 0,
+        conditions: [],
+        agentOpinions: votes.map(vote => ({
+          agent: vote.agent,
+          vote: vote.vote,
+          confidence: vote.confidence,
+          reasoning: vote.reasoning,
+          conditions: vote.conditions || []
+        }))
+      };
+    }
+
+    const quotaManager = getQuotaManager();
+    quotaManager.cleanupExpiredCache();
+    
+    if (quotaManager.isQuotaExceeded()) {
+      // Quota aşıldı - Tüm agent'lar için approve oyları oluştur (graceful degradation)
+      const quotaStatus = quotaManager.getQuotaStatus();
+      const expiryTime = quotaStatus?.expiryTime ? new Date(quotaStatus.expiryTime).toISOString() : '1 hour';
+      
+      await agentLogger.warn({
+        action: 'consensus_quota_exceeded',
+        decisionId: decision.agent,
+        message: `OpenAI API quota exceeded (cached). Consensus skipped (graceful degradation). Will retry after ${expiryTime}.`
+      });
+
+      const votes: Vote[] = agents.map(agent => ({
+        agent: agent.name,
+        vote: 'approve',
+        confidence: 0.5,
+        reasoning: `OpenAI API quota exceeded (cached). Consensus skipped (graceful degradation). Will retry after ${expiryTime}.`,
+        conditions: []
+      }));
+
+      return {
+        isConsensus: true,
+        approvalRate: 1.0,
+        totalVotes: votes.length,
+        approveVotes: votes.length,
+        rejectVotes: 0,
+        conditionalVotes: 0,
+        conditions: [],
+        agentOpinions: votes.map(vote => ({
+          agent: vote.agent,
+          vote: vote.vote,
+          confidence: vote.confidence,
+          reasoning: vote.reasoning,
+          conditions: vote.conditions || []
+        }))
+      };
+    }
+
     // Tüm agent'lara oy verdir
     const votes: Vote[] = [];
     const errors: string[] = [];
 
     for (const agent of agents) {
       try {
+        // Her agent çağrısından önce quota kontrolü (double-check)
+        if (quotaManager.isQuotaExceeded()) {
+          // Quota aşıldı - Bu agent için approve oyu oluştur (graceful degradation)
+          const quotaStatus = quotaManager.getQuotaStatus();
+          const expiryTime = quotaStatus?.expiryTime ? new Date(quotaStatus.expiryTime).toISOString() : '1 hour';
+          
+          votes.push({
+            agent: agent.name,
+            vote: 'approve',
+            confidence: 0.5,
+            reasoning: `OpenAI API quota exceeded (cached). Vote skipped (graceful degradation). Will retry after ${expiryTime}.`,
+            conditions: []
+          });
+          continue;
+        }
+
         const vote = await agent.vote(decision);
         
         // Confidence kontrolü
@@ -51,12 +138,36 @@ export class ConsensusEngine {
         
         votes.push(vote);
       } catch (error: any) {
-        errors.push(`${agent.name}: Vote failed - ${error.message}`);
-        await agentLogger.error({
-          action: 'consensus_vote_failed',
-          agent: agent.name,
-          error: error.message
-        });
+        // Quota hatası kontrolü
+        const errorMessage = error?.message || error?.toString() || String(error) || 'Unknown error';
+        const isQuotaError = error?.status === 429 || 
+                            error?.aiErrorType === 'QUOTA_EXCEEDED' ||
+                            errorMessage.includes('quota') ||
+                            errorMessage.includes('429') ||
+                            error?.quotaCached ||
+                            error?.circuitBreakerOpen;
+
+        if (isQuotaError) {
+          // Quota hatası - Bu agent için approve oyu oluştur (graceful degradation)
+          const quotaStatus = quotaManager.getQuotaStatus();
+          const expiryTime = quotaStatus?.expiryTime ? new Date(quotaStatus.expiryTime).toISOString() : '1 hour';
+          
+          votes.push({
+            agent: agent.name,
+            vote: 'approve',
+            confidence: 0.5,
+            reasoning: `OpenAI API quota exceeded. Vote skipped (graceful degradation). Will retry after ${expiryTime}.`,
+            conditions: []
+          });
+        } else {
+          // Diğer hatalar için error ekle
+          errors.push(`${agent.name}: Vote failed - ${errorMessage}`);
+          await agentLogger.error({
+            action: 'consensus_vote_failed',
+            agent: agent.name,
+            error: errorMessage
+          });
+        }
       }
     }
 

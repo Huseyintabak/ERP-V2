@@ -36,10 +36,32 @@ export class AgentOrchestrator {
   private eventBus: AgentEventBus;
   private agents: Map<string, BaseAgent> = new Map();
   private conversations: Map<string, ConversationContext> = new Map();
+  private priorityQueue: import('./utils/priority-queue').ConversationPriorityQueue | null = null;
 
   private constructor() {
     this.eventBus = AgentEventBus.getInstance();
     this.initializeAgents();
+    // Priority queue will be initialized lazily when needed
+  }
+  
+  /**
+   * Initialize priority queue (lazy initialization)
+   */
+  private async initializePriorityQueue(): Promise<void> {
+    if (!this.priorityQueue) {
+      const { getConversationPriorityQueue } = await import('./utils/priority-queue');
+      this.priorityQueue = getConversationPriorityQueue();
+    }
+  }
+  
+  /**
+   * Initialize priority queue (lazy initialization)
+   */
+  private async initializePriorityQueue(): Promise<void> {
+    if (!this.priorityQueue) {
+      const { getConversationPriorityQueue } = await import('./utils/priority-queue');
+      this.priorityQueue = getConversationPriorityQueue();
+    }
   }
 
   static getInstance(): AgentOrchestrator {
@@ -98,9 +120,115 @@ export class AgentOrchestrator {
       severity?: 'low' | 'medium' | 'high' | 'critical';
     }
   ): Promise<{ finalDecision: string; protocolResult: ProtocolResult; conversation: ConversationContext }> {
+    // Initialize priority queue if needed
+    await this.initializePriorityQueue();
+    
+    // QUOTA KONTROLÜ: AI Validation başlamadan ÖNCE kontrol et
+    const { isAIValidationEnabled, getQuotaManager } = await import('./utils/quota-manager');
+    
+    if (!isAIValidationEnabled()) {
+      // AI validation kapalı - direkt approve et (graceful degradation)
+      const conversationId = request.id || `conv_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+      const conversation: ConversationContext = {
+        id: conversationId,
+        prompt: request.prompt,
+        type: request.type,
+        context: request.context,
+        urgency: request.urgency || 'medium',
+        severity: request.severity || 'medium',
+        startedAt: new Date(),
+        status: 'completed',
+        responses: []
+      };
+      
+      const protocolResult: ProtocolResult = {
+        finalDecision: 'approved',
+        layers: [],
+        errors: [],
+        warnings: ['AI validation disabled (AGENT_ENABLED=false or OPENAI_API_KEY not set). Request approved automatically.'],
+        consensus: {
+          approve: 1,
+          reject: 0,
+          conditional: 0,
+          total: 1
+        }
+      };
+      
+      conversation.protocolResult = protocolResult;
+      conversation.completedAt = new Date();
+      this.conversations.set(conversationId, conversation);
+      
+      await agentLogger.warn({
+        action: 'conversation_ai_disabled',
+        conversationId,
+        agentRole,
+        message: 'AI validation disabled, request approved automatically'
+      });
+      
+      return {
+        finalDecision: 'approved',
+        protocolResult,
+        conversation
+      };
+    }
+    
+    // Quota kontrolü (cache'den)
+    const quotaManager = getQuotaManager();
+    quotaManager.cleanupExpiredCache();
+    
+    if (quotaManager.isQuotaExceeded()) {
+      // Quota aşıldı - direkt approve et (graceful degradation)
+      const conversationId = request.id || `conv_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+      const quotaStatus = quotaManager.getQuotaStatus();
+      const expiryTime = quotaStatus?.expiryTime ? new Date(quotaStatus.expiryTime).toISOString() : '1 hour';
+      
+      const conversation: ConversationContext = {
+        id: conversationId,
+        prompt: request.prompt,
+        type: request.type,
+        context: request.context,
+        urgency: request.urgency || 'medium',
+        severity: request.severity || 'medium',
+        startedAt: new Date(),
+        status: 'completed',
+        responses: []
+      };
+      
+      const protocolResult: ProtocolResult = {
+        finalDecision: 'approved',
+        layers: [],
+        errors: [],
+        warnings: [`OpenAI API quota exceeded (cached). Will retry after ${expiryTime}. Request approved automatically (graceful degradation).`],
+        consensus: {
+          approve: 1,
+          reject: 0,
+          conditional: 0,
+          total: 1
+        }
+      };
+      
+      conversation.protocolResult = protocolResult;
+      conversation.completedAt = new Date();
+      this.conversations.set(conversationId, conversation);
+      
+      await agentLogger.warn({
+        action: 'conversation_quota_exceeded_cached',
+        conversationId,
+        agentRole,
+        message: `Quota exceeded (cached). Request approved automatically. Will retry after ${expiryTime}`,
+        quotaExpiry: expiryTime
+      });
+      
+      return {
+        finalDecision: 'approved',
+        protocolResult,
+        conversation
+      };
+    }
+    
     const conversationId = request.id || `conv_${Date.now()}_${Math.random().toString(36).substring(7)}`;
     
-    // Eğer aynı ID ile bir conversation zaten varsa ve in_progress durumundaysa, yeni conversation başlatma
+    // Priority queue'ya ekle (eğer aynı ID'li conversation zaten varsa atla)
     const existingConversation = this.conversations.get(conversationId);
     if (existingConversation && existingConversation.status === 'in_progress') {
       await agentLogger.warn({
@@ -185,7 +313,9 @@ export class AgentOrchestrator {
       agentRole,
       type: request.type,
       urgency: request.urgency,
-      severity: request.severity
+      severity: request.severity,
+      // Priority bilgisi database'e kaydedilsin
+      priority: request.urgency || request.severity || 'medium'
     });
 
     try {
@@ -194,6 +324,17 @@ export class AgentOrchestrator {
       if (!agent) {
         throw new Error(`Agent not found: ${agentRole}`);
       }
+
+      // Circuit breaker protection for agent processRequest
+      const { getCircuitBreakerManager } = await import('./utils/circuit-breaker');
+      const circuitManager = getCircuitBreakerManager();
+      const circuitKey = `orchestrator_${agentRole.toLowerCase()}`;
+      const circuitBreaker = circuitManager.getBreaker(circuitKey, {
+        failureThreshold: 5,
+        successThreshold: 2,
+        timeout: 60000,
+        monitoringPeriod: 60000
+      });
 
       // Agent'a istek gönder
       const agentRequest: AgentRequest = {
@@ -205,8 +346,68 @@ export class AgentOrchestrator {
         severity: request.severity
       };
 
-      const agentResponse = await agent.processRequest(agentRequest);
+      // Agent'ın processRequest metodunu circuit breaker ile korumalı çağır
+      let agentResponse: AgentResponse;
+      try {
+        agentResponse = await circuitBreaker.execute(
+          async () => await agent.processRequest(agentRequest),
+          // Fallback: Return a default response if circuit is open
+          async () => {
+            await agentLogger.warn({
+              agent: agent.name,
+              action: 'orchestrator_circuit_open',
+              conversationId,
+              message: `Circuit breaker is OPEN for ${agentRole}, using fallback response`
+            });
+            
+            return {
+              id: conversationId,
+              agent: agent.name,
+              decision: 'pending',
+              reasoning: `Circuit breaker is OPEN for ${agentRole}. Agent is currently unavailable.`,
+              confidence: 0.0,
+              issues: [`Circuit breaker OPEN: ${agentRole} is currently unavailable`],
+              timestamp: new Date()
+            };
+          }
+        );
+      } catch (error: any) {
+        // If circuit breaker throws, log and return fallback
+        await agentLogger.error({
+          agent: agent.name,
+          action: 'orchestrator_agent_error',
+          conversationId,
+          error: error.message,
+          circuitKey
+        });
+        
+        agentResponse = {
+          id: conversationId,
+          agent: agent.name,
+          decision: 'pending',
+          reasoning: `Error processing request: ${error.message}`,
+          confidence: 0.0,
+          issues: [error.message],
+          timestamp: new Date()
+        };
+      }
       conversation.responses.push(agentResponse);
+
+      // Agent response'ı database'e kaydet
+      await agentLogger.log({
+        agent: agentResponse.agent || agent.name,
+        action: request.type === 'validation' && request.context?.planId ? 'production_log_validation' : 'agent_response',
+        conversationId,
+        requestId: conversationId,
+        data: {
+          decision: agentResponse.decision,
+          reasoning: agentResponse.reasoning,
+          confidence: agentResponse.confidence,
+          issues: agentResponse.issues || [],
+          data: agentResponse.data
+        },
+        final_decision: agentResponse.decision
+      });
 
       // Zero Error Protocol'ü çalıştır
       const protocolResult = await this.executeZeroErrorProtocol(
@@ -225,11 +426,33 @@ export class AgentOrchestrator {
       
       // OpenAI 429 (quota exceeded) hatası kontrolü
       // Protocol result'ta quota hatası varsa, graceful degradation uygula
-      const hasQuotaError = protocolResult.errors?.some((e: string) => 
-        e.includes('429') || e.includes('quota') || e.includes('exceeded') || e.includes('billing')
-      ) || protocolResult.layers?.layer1?.errors?.some((e: any) => 
-        e?.message?.includes('429') || e?.message?.includes('quota') || e?.message?.includes('exceeded')
-      );
+      // reasoning, errors ve warnings içinde quota hatası aramalıyız
+      const reasoning = protocolResult.decision?.reasoning || '';
+      const errors = protocolResult.errors || [];
+      const warnings = protocolResult.warnings || [];
+      
+      // Tüm hata mesajlarını birleştir ve kontrol et
+      const allErrorTexts = [
+        reasoning,
+        ...errors.map((e: any) => typeof e === 'string' ? e : JSON.stringify(e)),
+        ...warnings.map((w: any) => typeof w === 'string' ? w : JSON.stringify(w)),
+        ...(protocolResult.layers?.layer1?.errors || []).map((e: any) => 
+          typeof e === 'string' ? e : (e?.message || JSON.stringify(e))
+        ),
+        ...(protocolResult.layers?.layer2?.errors || []).map((e: any) => 
+          typeof e === 'string' ? e : (e?.message || JSON.stringify(e))
+        )
+      ].join(' ').toLowerCase();
+      
+      const hasQuotaError = 
+        allErrorTexts.includes('429') || 
+        allErrorTexts.includes('quota') || 
+        allErrorTexts.includes('exceeded') || 
+        allErrorTexts.includes('billing') ||
+        allErrorTexts.includes('you exceeded your current quota') ||
+        allErrorTexts.includes('invalid api key') ||
+        allErrorTexts.includes('unauthorized') ||
+        allErrorTexts.includes('error processing request');
       
       if (hasQuotaError && protocolResult.finalDecision === 'rejected') {
         // Quota hatası durumunda rejected olsa bile approved olarak işaretle (graceful degradation)
@@ -243,12 +466,19 @@ export class AgentOrchestrator {
       
       conversation.completedAt = new Date();
 
+      // Priority queue'dan conversation'ı kaldır
+      if (this.priorityQueue) {
+        this.priorityQueue.remove(conversationId);
+      }
+
       // Conversation completion log'unu kaydet
       await agentLogger.log({
         action: conversation.status === 'completed' ? 'conversation_completed' : 'conversation_failed',
         conversationId,
         agent: agent.name,
         finalDecision: protocolResult.finalDecision,
+        urgency: request.urgency,
+        severity: request.severity,
         data: {
           conversationId,
           status: conversation.status,
@@ -468,6 +698,34 @@ export class AgentOrchestrator {
     const errors: string[] = [];
     const warnings: string[] = [];
 
+    // QUOTA KONTROLÜ: Layer 2 başlamadan önce quota kontrolü yap
+    const { isAIValidationEnabled, getQuotaManager } = await import('./utils/quota-manager');
+    
+    if (!isAIValidationEnabled()) {
+      // AI validation kapalı - Layer 2'yi skip et, direkt approve
+      warnings.push('AI validation disabled. Cross-validation skipped (graceful degradation).');
+      return {
+        isValid: true, // Quota aşıldıysa da geçerli say (graceful degradation)
+        errors: [],
+        warnings: warnings
+      };
+    }
+
+    const quotaManager = getQuotaManager();
+    quotaManager.cleanupExpiredCache();
+    
+    if (quotaManager.isQuotaExceeded()) {
+      // Quota aşıldı - Layer 2'yi skip et, direkt approve (graceful degradation)
+      const quotaStatus = quotaManager.getQuotaStatus();
+      const expiryTime = quotaStatus?.expiryTime ? new Date(quotaStatus.expiryTime).toISOString() : '1 hour';
+      warnings.push(`OpenAI API quota exceeded (cached). Cross-validation skipped (graceful degradation). Will retry after ${expiryTime}.`);
+      return {
+        isValid: true, // Quota aşıldıysa da geçerli say (graceful degradation)
+        errors: [],
+        warnings: warnings
+      };
+    }
+
     // İlgili agent'lara sor
     const relatedAgents = this.getRelatedAgents(decision.agent);
 
@@ -479,18 +737,46 @@ export class AgentOrchestrator {
           continue;
         }
 
+        // Agent çağrısından önce tekrar quota kontrolü (double check)
+        if (quotaManager.isQuotaExceeded()) {
+          warnings.push(`${agentName}: OpenAI API quota exceeded (cached). Validation skipped (graceful degradation).`);
+          continue; // Bu agent'ı skip et, devam et
+        }
+
         const validation = await agent.validateWithOtherAgents(decision.data);
         if (!validation.isValid) {
           errors.push(`${agentName}: ${validation.issues.join(', ')}`);
         }
       } catch (error: any) {
-        warnings.push(`${agentName} validation failed: ${error.message}`);
+        // Quota hatası kontrolü
+        const errorMessage = error?.message || error?.toString() || String(error) || 'Unknown error';
+        const isQuotaError = error?.status === 429 || 
+                            error?.aiErrorType === 'QUOTA_EXCEEDED' ||
+                            errorMessage.includes('quota') ||
+                            errorMessage.includes('429') ||
+                            error?.quotaCached ||
+                            error?.circuitBreakerOpen;
+
+        if (isQuotaError) {
+          // Quota hatası - graceful degradation uygula
+          const quotaStatus = quotaManager.getQuotaStatus();
+          const expiryTime = quotaStatus?.expiryTime ? new Date(quotaStatus.expiryTime).toISOString() : '1 hour';
+          warnings.push(`${agentName}: OpenAI API quota exceeded (${expiryTime}). Validation skipped (graceful degradation).`);
+          // Quota hatası errors'a eklenmez, sadece warning
+        } else {
+          // Diğer hatalar için warning ekle
+          warnings.push(`${agentName} validation failed: ${errorMessage}`);
+        }
       }
     }
 
+    // Quota hatası durumunda errors varsa bile isValid = true (graceful degradation)
+    const hasQuotaWarnings = warnings.some(w => w.includes('quota exceeded') || w.includes('quota'));
+    const finalIsValid = hasQuotaWarnings ? true : errors.length === 0;
+
     return {
-      isValid: errors.length === 0,
-      errors,
+      isValid: finalIsValid,
+      errors: hasQuotaWarnings ? [] : errors, // Quota hatası varsa errors'ı temizle
       warnings
     };
   }
@@ -503,6 +789,44 @@ export class AgentOrchestrator {
     const warnings: string[] = [];
 
     try {
+      // QUOTA KONTROLÜ: Layer 3 başlamadan önce quota kontrolü
+      const { isAIValidationEnabled, getQuotaManager } = await import('./utils/quota-manager');
+      
+      if (!isAIValidationEnabled()) {
+        // AI validation kapalı - Consensus'ü skip et, direkt approve
+        warnings.push('AI validation disabled. Consensus skipped (graceful degradation).');
+        return {
+          isValid: true,
+          errors: [],
+          warnings: warnings,
+          approvalRate: 1.0,
+          totalVotes: 0,
+          approveVotes: 0,
+          rejectVotes: 0,
+          conditionalVotes: 0
+        };
+      }
+
+      const quotaManager = getQuotaManager();
+      quotaManager.cleanupExpiredCache();
+      
+      if (quotaManager.isQuotaExceeded()) {
+        // Quota aşıldı - Consensus'ü skip et, direkt approve (graceful degradation)
+        const quotaStatus = quotaManager.getQuotaStatus();
+        const expiryTime = quotaStatus?.expiryTime ? new Date(quotaStatus.expiryTime).toISOString() : '1 hour';
+        warnings.push(`OpenAI API quota exceeded (cached). Consensus skipped (graceful degradation). Will retry after ${expiryTime}.`);
+        return {
+          isValid: true,
+          errors: [],
+          warnings: warnings,
+          approvalRate: 1.0,
+          totalVotes: 0,
+          approveVotes: 0,
+          rejectVotes: 0,
+          conditionalVotes: 0
+        };
+      }
+
       // Production log validation için daha esnek kurallar
       // Çünkü operatörler gerçek üretim yapıyor ve validation çok katı olmamalı
       const isProductionLogValidation = decision.action === 'validate_production' || 
@@ -529,6 +853,29 @@ export class AgentOrchestrator {
       );
 
       if (!consensusResult.isConsensus) {
+        // Quota hatası varsa (agentOpinions içinde quota mesajı varsa), isValid = true (graceful degradation)
+        const hasQuotaErrors = consensusResult.agentOpinions.some(op => 
+          op.reasoning?.includes('quota exceeded') || 
+          op.reasoning?.includes('quota')
+        );
+
+        if (hasQuotaErrors) {
+          // Quota hatası durumunda consensus'ü approve say
+          warnings.push('Consensus failed due to quota errors, but approved via graceful degradation.');
+          return {
+            isValid: true,
+            errors: [],
+            warnings: warnings,
+            approvalRate: consensusResult.approvalRate,
+            totalVotes: consensusResult.totalVotes,
+            approveVotes: consensusResult.approveVotes,
+            rejectVotes: consensusResult.rejectVotes,
+            conditionalVotes: consensusResult.conditionalVotes,
+            agentOpinions: consensusResult.agentOpinions,
+            conditions: consensusResult.conditions
+          };
+        }
+
         const analysis = ConsensusEngine.analyzeConsensus(consensusResult);
         errors.push(analysis.message);
         if (analysis.recommendations.length > 0) {
@@ -555,7 +902,29 @@ export class AgentOrchestrator {
         conditions: consensusResult.conditions
       };
     } catch (error: any) {
-      errors.push(`Consensus error: ${error.message}`);
+      // Quota hatası kontrolü
+      const errorMessage = error?.message || error?.toString() || String(error) || 'Unknown error';
+      const isQuotaError = error?.status === 429 || 
+                          error?.aiErrorType === 'QUOTA_EXCEEDED' ||
+                          errorMessage.includes('quota') ||
+                          errorMessage.includes('429');
+
+      if (isQuotaError) {
+        // Quota hatası - graceful degradation
+        warnings.push(`Consensus error due to quota: ${errorMessage}. Approved via graceful degradation.`);
+        return {
+          isValid: true,
+          errors: [],
+          warnings: warnings,
+          approvalRate: 1.0,
+          totalVotes: 0,
+          approveVotes: 0,
+          rejectVotes: 0,
+          conditionalVotes: 0
+        };
+      }
+
+      errors.push(`Consensus error: ${errorMessage}`);
       return {
         isValid: false,
         errors,
@@ -678,25 +1047,76 @@ export class AgentOrchestrator {
   private async layer5_HumanApproval(
     decision: AgentDecision,
     severity: 'low' | 'medium' | 'high' | 'critical'
-  ): Promise<LayerResult> {
+  ): Promise<LayerResult & { requiresApproval?: boolean; status?: 'pending' | 'approved' | 'rejected' }> {
     const errors: string[] = [];
     const warnings: string[] = [];
 
     // Severity'ye göre onay gereksinimi
     const requiresApproval = severity === 'critical' || severity === 'high';
+    
+    // Decision'da explicit olarak human approval gereksinimi var mı kontrol et
+    const data = decision.data || {};
+    const explicitApprovalRequired = data.requiresHumanApproval === true || 
+                                     data.requiresApproval === true ||
+                                     decision.action === 'strategic_recommendation' ||
+                                     decision.action === 'approve_critical_operation';
 
-    if (requiresApproval) {
+    const needsApproval = requiresApproval || explicitApprovalRequired;
+
+    if (needsApproval) {
       try {
+        // Mevcut pending approval var mı kontrol et (duplicate önlemek için)
+        const supabase = createAdminClient();
+        const decisionId = `${decision.agent}_${decision.action}_${Date.now()}`;
+        
+        const { data: existingApprovals } = await supabase
+          .from('human_approvals')
+          .select('id, status')
+          .eq('agent', decision.agent)
+          .eq('action', decision.action || 'unknown')
+          .eq('status', 'pending')
+          .limit(1);
+
+        // Eğer aynı agent ve action için zaten pending approval varsa, yeni kayıt oluşturma
+        if (existingApprovals && existingApprovals.length > 0) {
+          warnings.push(`Pending approval already exists for ${decision.agent} - ${decision.action}`);
+          return {
+            isValid: true,
+            requiresApproval: true,
+            status: 'pending',
+            errors,
+            warnings
+          };
+        }
+
         // Human approval kaydı oluştur
-        await this.createHumanApprovalRequest(decision, severity);
-        warnings.push(`Human approval required for ${severity} severity decision`);
+        const approvalId = await this.createHumanApprovalRequest(decision, severity, decisionId);
+        warnings.push(`Human approval required for ${severity} severity decision (ID: ${approvalId})`);
+        
+        return {
+          isValid: true, // Human approval bekleniyor, hata değil
+          requiresApproval: true,
+          status: 'pending',
+          errors,
+          warnings
+        };
       } catch (error: any) {
         errors.push(`Failed to create human approval request: ${error.message}`);
+        // Approval oluşturulamazsa, decision'ı pending olarak işaretle
+        return {
+          isValid: false,
+          requiresApproval: true,
+          status: 'pending',
+          errors,
+          warnings
+        };
       }
     }
 
     return {
-      isValid: true, // Human approval bekleniyor, hata değil
+      isValid: true,
+      requiresApproval: false,
+      status: 'approved', // Approval gerekmiyorsa otomatik approve
       errors,
       warnings
     };
@@ -704,11 +1124,13 @@ export class AgentOrchestrator {
 
   /**
    * Human approval kaydı oluştur
+   * @returns Approval ID
    */
   private async createHumanApprovalRequest(
     decision: AgentDecision,
-    severity: 'low' | 'medium' | 'high' | 'critical'
-  ): Promise<void> {
+    severity: 'low' | 'medium' | 'high' | 'critical',
+    decisionId?: string
+  ): Promise<string> {
     try {
       // AI agent'lar için her zaman admin client kullan (RLS bypass)
       // AI agent'lar service role ile çalışmalı, authenticated user değil
@@ -718,35 +1140,75 @@ export class AgentOrchestrator {
       const expiryAt = new Date();
       expiryAt.setHours(expiryAt.getHours() + 24);
 
-      const { error } = await supabase
+      // Benzersiz decision_id oluştur
+      const uniqueDecisionId = decisionId || `${decision.agent}_${decision.action || 'unknown'}_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+
+      // Risk skorunu hesapla (decision.data içinde olabilir)
+      const riskScore = (decision.data as any)?.totalRiskScore || 
+                        (severity === 'critical' ? 90 : severity === 'high' ? 75 : severity === 'medium' ? 50 : 25);
+
+      const { data, error } = await supabase
         .from('human_approvals')
         .insert({
-          decision_id: `${decision.agent}_${Date.now()}`,
+          decision_id: uniqueDecisionId,
           agent: decision.agent,
           action: decision.action || 'unknown',
-          data: decision.data || {},
+          data: {
+            ...(decision.data || {}),
+            riskScore,
+            confidence: decision.confidence || 0.5,
+            issues: decision.issues || [],
+            recommendations: decision.recommendations || []
+          },
           reasoning: decision.reasoning || '',
           severity,
           status: 'pending',
-          expiry_at: expiryAt.toISOString()
-        });
+          expiry_at: expiryAt.toISOString(),
+          created_at: new Date().toISOString()
+        })
+        .select('id')
+        .single();
 
       if (error) {
         // Duplicate key hatası olabilir, ignore et
-        if (error.code !== '23505') {
-          throw error;
+        if (error.code === '23505') {
+          // Duplicate varsa, mevcut approval'ı getir
+          const { data: existing } = await supabase
+            .from('human_approvals')
+            .select('id')
+            .eq('decision_id', uniqueDecisionId)
+            .single();
+          
+          if (existing) {
+            await agentLogger.log({
+              action: 'human_approval_already_exists',
+              decisionId: uniqueDecisionId,
+              approvalId: existing.id,
+              severity
+            });
+            return existing.id;
+          }
         }
+        throw error;
       }
+
+      const approvalId = data?.id || uniqueDecisionId;
 
       await agentLogger.log({
         action: 'human_approval_created',
-        decisionId: decision.agent,
-        severity
+        decisionId: uniqueDecisionId,
+        approvalId,
+        severity,
+        riskScore
       });
+
+      return approvalId;
     } catch (error: any) {
       await agentLogger.error({
         action: 'human_approval_create_failed',
-        error: error.message
+        error: error.message,
+        decisionId: decisionId || 'unknown',
+        severity
       });
       throw error;
     }

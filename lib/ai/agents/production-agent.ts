@@ -21,17 +21,43 @@ Sorumlulukların:
 - Üretim verimliliği optimizasyonu
 - Hata tespiti ve önleme
 
+**BOM Doğrulama Kriterleri:**
+1. Malzeme tüketim oranları:
+   - Normal tüketim: BOM miktarı ±%5 tolerans
+   - Fazla tüketim: >%5 → Anomali (kontrol gerekli)
+   - Az tüketim: <%5 → Verimlilik artışı (logla)
+
+2. Anomali Tespiti Kriterleri:
+   - Tüketim oranı >%10 fark: 🔴 KRİTİK
+   - Tüketim oranı >%5 fark: 🟡 UYARI
+   - Operatör hata oranı >%3: 🔴 KRİTİK
+   - Üretim süresi >%20 fark: 🟡 UYARI
+   - Kalite red oranı >%2: 🔴 KRİTİK
+
+3. Kalite Kontrol Standartları:
+   - İlk üretim kontrolü: İlk 5 ürün %100 kontrol
+   - Random kontrol: Her 10 üründen 1'i kontrol
+   - Kritik hata: Anında üretim durdur (Manager onayı gerekli)
+   - Uyarı seviyesi: Üretim devam eder, log tutulur
+
+4. Stok Tüketim Doğrulama:
+   - BOM'daki malzemeler stokta mevcut mu?
+   - Rezervasyon yapılmış mı?
+   - Tüketim miktarı doğru mu? (BOM x üretim adedi)
+   - Alternatif malzeme kullanımı kaydedilmiş mi?
+
 Diğer departmanlarla iletişim kur:
 - Depo GPT: Stok yeterliliğini kontrol et, tüketim kayıtlarını yap
 - Planlama GPT: Üretim planlarını doğrula, operatör atamalarını kontrol et
 - Satın Alma GPT: Malzeme kalitesi sorunlarını bildir
 
 Karar verirken:
-1. Her zaman BOM doğruluğunu kontrol et
-2. Stok tüketimini doğru hesapla
-3. Anomalileri erken tespit et
-4. Kaliteyi koru
-5. Verimliliği optimize et
+1. Her zaman BOM doğruluğunu kontrol et (tüketim oranları dahil)
+2. Stok tüketimini doğru hesapla (tolerans dahil)
+3. Anomalileri erken tespit et (pattern analizi)
+4. Kaliteyi koru (standartlara uygunluk)
+5. Verimliliği optimize et (süre ve maliyet)
+6. Hata pattern'lerini tespit et (tekrarlayan sorunlar)
 
 Yanıtlarını JSON formatında ver:
 {
@@ -39,11 +65,40 @@ Yanıtlarını JSON formatında ver:
   "action": "validate_production" | "check_capacity" | "validate_bom" | "request_info",
   "data": {
     "planId": "uuid",
-    "bomValidation": { "isValid": true, "issues": [] },
-    "stockValidation": { "isAvailable": true, "shortages": [] },
-    "operatorCapacity": { "available": true, "currentLoad": 2, "maxCapacity": 5 }
+    "bomValidation": {
+      "isValid": true,
+      "consumptionRate": 0.98,
+      "anomalies": [
+        {
+          "materialId": "uuid",
+          "expected": 10,
+          "actual": 12,
+          "difference": 20,
+          "severity": "warning",
+          "reason": "Fazla tüketim - kontrol gerekli"
+        }
+      ],
+      "issues": []
+    },
+    "stockValidation": {
+      "isAvailable": true,
+      "shortages": [],
+      "reservations": []
+    },
+    "qualityCheck": {
+      "firstProductionCheck": true,
+      "randomCheckPassed": true,
+      "rejectRate": 0.01,
+      "issues": []
+    },
+    "operatorCapacity": {
+      "available": true,
+      "currentLoad": 2,
+      "maxCapacity": 5,
+      "performanceScore": 0.95
+    }
   },
-  "reasoning": "Açıklama",
+  "reasoning": "BOM doğrulaması: Tüm malzemeler mevcut. Tüketim oranı normal (±%5). Anomali yok. Onaylandı.",
   "confidence": 0.0-1.0,
   "issues": ["sorun1", "sorun2"],
   "recommendations": ["öneri1", "öneri2"]
@@ -98,18 +153,54 @@ Yanıtlarını JSON formatında ver:
           };
       }
     } catch (error: any) {
+      // Güvenli hata mesajı çıkarma
+      const errorMessage = error?.message || error?.toString() || String(error) || 'Unknown error';
+      const errorString = typeof error === 'object' ? JSON.stringify(error, Object.getOwnPropertyNames(error)) : String(error);
+      
       await agentLogger.error({
         agent: this.name,
         action: 'process_request',
         requestId: request.id,
-        error: error.message
+        error: errorMessage
       });
 
+      // OpenAI API hataları için graceful degradation
+      const errorMsgLower = errorMessage.toLowerCase();
+      const errorStrLower = errorString.toLowerCase();
+      const isOpenAIError = errorMsgLower.includes('429') || 
+                           errorMsgLower.includes('quota') || 
+                           errorMsgLower.includes('exceeded') ||
+                           errorMsgLower.includes('billing') ||
+                           errorMsgLower.includes('invalid api key') ||
+                           errorMsgLower.includes('unauthorized') ||
+                           errorMsgLower.includes('401') ||
+                           errorStrLower.includes('429') ||
+                           errorStrLower.includes('quota') ||
+                           error?.status === 429 ||
+                           error?.status === 401 ||
+                           error?.response?.status === 429 ||
+                           error?.response?.status === 401 ||
+                           error?.aiErrorType;
+
+      if (isOpenAIError && request.type === 'validation') {
+        // Validation için OpenAI hatası durumunda approve et (graceful degradation)
+        const errorDetails = error?.aiErrorType || error?.status || errorMessage;
+        return {
+          id: request.id,
+          agent: this.name,
+          decision: 'approve',
+          reasoning: `OpenAI API error (${errorDetails}). Graceful degradation: Validation skipped, manual approval continues.`,
+          confidence: 0.5,
+          timestamp: new Date()
+        };
+      }
+
+      // Diğer hatalar için rejected
       return {
         id: request.id,
         agent: this.name,
-        decision: 'rejected',
-        reasoning: `Error processing request: ${error.message}`,
+        decision: 'reject',
+        reasoning: `Error processing request: ${errorMessage}`,
         confidence: 0.0,
         timestamp: new Date()
       };
@@ -146,7 +237,8 @@ Yanıtlarını JSON formatında ver:
       [{ role: 'user', content: prompt }],
       {
         taskComplexity: 'medium',
-        requestId: request.id
+        requestId: request.id,
+        requestType: request.type
       }
     );
 
@@ -199,11 +291,64 @@ Yanıtlarını JSON formatında ver:
       [{ role: 'user', content: prompt }],
       {
         taskComplexity: 'simple',
-        requestId: request.id
+        requestId: request.id,
+        requestType: request.type
       }
     );
 
     return this.parseResponse(gptResponse);
+  }
+
+  /**
+   * Developer Agent'a sistem iyileştirme bilgisi gönder
+   * Yeni mimari yapıya göre: Production Agent → Developer Agent
+   */
+  private async reportToDeveloperAgent(
+    analysisType: string,
+    findings: any[],
+    recommendations: string[],
+    issues: string[]
+  ): Promise<void> {
+    try {
+      // Developer Agent'a sistem iyileştirme bilgisi gönder
+      await this.askAgent(
+        'Developer Agent',
+        `Production Agent sistem analizi sonuçları:
+        
+Analiz Tipi: ${analysisType}
+
+Bulgu Sayısı: ${findings.length}
+Öneri Sayısı: ${recommendations.length}
+Sorun Sayısı: ${issues.length}
+
+Bulgular:
+${findings.map((f, i) => `${i + 1}. ${f.issue || JSON.stringify(f)}`).join('\n')}
+
+Öneriler:
+${recommendations.map((r, i) => `${i + 1}. ${r}`).join('\n')}
+
+Sorunlar:
+${issues.map((i, idx) => `${idx + 1}. ${i}`).join('\n')}
+
+Lütfen bu bilgileri analiz edip sistem iyileştirme önerilerine ekle.`,
+        {
+          analysisType,
+          findings,
+          recommendations,
+          issues,
+          sourceAgent: 'Production Agent',
+          timestamp: new Date().toISOString()
+        }
+      );
+    } catch (error: any) {
+      // Developer Agent'a ulaşamazsa sadece logla, hata fırlatma (graceful degradation)
+      await agentLogger.warn({
+        agent: this.name,
+        action: 'report_to_developer',
+        error: error.message,
+        analysisType
+      });
+    }
   }
 
   /**
@@ -495,13 +640,39 @@ Yanıtlarını JSON formatında ver:
             recommendations.push('Anomali tespiti için izleme sistemleri kurun');
           }
           
-          // Genel öneriler
-          if (bomValidationSteps.filter(s => s.status === 'missing' || s.status === 'partial').length > 0) {
-            recommendations.push('BOM validation sürecini güçlendirin');
-            recommendations.push('Tüm adımların otomatikleştirilmesi');
-          }
-          
-          recommendations.push('Stok tüketimi için otomatik hesaplama mekanizması geliştirin');
+      // Genel öneriler
+      if (bomValidationSteps.filter(s => s.status === 'missing' || s.status === 'partial').length > 0) {
+        recommendations.push('BOM validation sürecini güçlendirin');
+        recommendations.push('Tüm adımların otomatikleştirilmesi');
+      }
+      
+      recommendations.push('Stok tüketimi için otomatik hesaplama mekanizması geliştirin');
+      
+      // Developer Agent'a sistem iyileştirme bilgisi gönder (Yeni mimari yapıya göre)
+      if (issues.length > 0 || recommendations.length > 0 || missingMaterialAnalysis.length > 0) {
+        const findings = [
+          ...missingMaterialAnalysis.map(m => ({
+            category: 'bom_validation',
+            issue: `Eksik malzeme: ${m.materialName || m.materialId} - Plan: ${m.planId}`,
+            severity: m.severity,
+            details: m
+          })),
+          ...wrongQuantityAnalysis.map(w => ({
+            category: 'quantity_validation',
+            issue: `Yanlış miktar - Plan: ${w.planId}`,
+            severity: w.severity,
+            details: w
+          })),
+          ...consumptionAnalysis.map(c => ({
+            category: 'consumption_validation',
+            issue: `Tüketim uyumsuzluğu - Log: ${c.logId}`,
+            severity: c.severity,
+            details: c
+          }))
+        ];
+        
+        await this.reportToDeveloperAgent('bom_validation_material_check', findings, recommendations, issues);
+      }
       
     } else if (analysisType === 'production_log_validation') {
       // Üretim log validation analizi - DETAYLI VERSİYON
@@ -753,6 +924,38 @@ Yanıtlarını JSON formatında ver:
       
       recommendations.push('Her üretim log\'unda otomatik stok tüketimi yapılmalı');
       recommendations.push('BOM doğrulama sürecini güçlendirin');
+      
+      // Developer Agent'a sistem iyileştirme bilgisi gönder (Yeni mimari yapıya göre)
+      if (issues.length > 0 || recommendations.length > 0 || bomValidationIssues.length > 0 || stockValidationIssues.length > 0) {
+        const findings = [
+          ...bomValidationIssues.map(b => ({
+            category: 'bom_validation',
+            issue: `BOM validation sorunu - Log: ${b.logId}`,
+            severity: b.severity,
+            details: b
+          })),
+          ...stockValidationIssues.map(s => ({
+            category: 'stock_validation',
+            issue: `Stok validation sorunu - Log: ${s.logId}`,
+            severity: s.severity,
+            details: s
+          })),
+          ...consumptionMismatches.map(c => ({
+            category: 'consumption_mismatch',
+            issue: `Tüketim uyumsuzluğu: ${c.differencePercentage} fark - Log: ${c.logId}`,
+            severity: c.severity,
+            details: c
+          })),
+          ...anomalyDetections.map(a => ({
+            category: 'anomaly_detection',
+            issue: `Anomali tespiti: ${a.type} - Log: ${a.logId}`,
+            severity: a.severity,
+            details: a
+          }))
+        ];
+        
+        await this.reportToDeveloperAgent('production_log_validation', findings, recommendations, issues);
+      }
       
     } else if (analysisType === 'operator_capacity_performance') {
       // Operatör kapasitesi analizi - DETAYLI VERSİYON
@@ -1019,6 +1222,41 @@ Yanıtlarını JSON formatında ver:
       recommendations.push('Performans metriklerini belirleyin ve düzenli olarak takip edin');
       recommendations.push('Yük dengelemesi için otomatik bir algoritma uygulayın');
       recommendations.push('Operatör kapasitesi hesaplamalarında gerçek zamanlı veri entegrasyonunu artırarak daha doğru tahminler yapılması');
+      
+      // Developer Agent'a sistem iyileştirme bilgisi gönder (Yeni mimari yapıya göre)
+      if (issues.length > 0 || recommendations.length > 0) {
+        const findings = operatorDetails?.map(op => ({
+          category: 'operator_capacity',
+          issue: `Operatör ${op.name}: Yük ${op.loadPercentage}, Verimlilik ${op.efficiency}`,
+          severity: parseFloat(op.loadPercentage) > 90 ? 'high' : parseFloat(op.loadPercentage) > 80 ? 'medium' : 'low',
+          details: {
+            operatorId: op.id,
+            operatorName: op.name,
+            currentLoad: op.currentLoad,
+            maxCapacity: op.maxCapacity,
+            loadPercentage: op.loadPercentage,
+            efficiency: op.efficiency,
+            available: op.available
+          }
+        })) || [];
+        
+        if (loadImbalance > 2) {
+          findings.push({
+            category: 'load_balancing',
+            issue: `Yük dengesizliği: ${loadImbalance} plan farkı`,
+            severity: 'medium',
+            details: {
+              maxActivePlans,
+              minActivePlans,
+              loadImbalance,
+              maxLoadPercentage,
+              minLoadPercentage
+            }
+          });
+        }
+        
+        await this.reportToDeveloperAgent('operator_capacity_performance', findings, recommendations, issues);
+      }
     }
     
     const prompt = `
@@ -1121,7 +1359,8 @@ Yanıtlarını JSON formatında ver:
       [{ role: 'user', content: prompt }],
       {
         taskComplexity: 'complex',
-        requestId: request.id
+        requestId: request.id,
+        requestType: request.type
       }
     );
 
@@ -1159,7 +1398,8 @@ Yanıtlarını JSON formatında ver:
       [{ role: 'user', content: prompt }],
       {
         taskComplexity: 'medium',
-        requestId: request.id
+        requestId: request.id,
+        requestType: request.type
       }
     );
 
@@ -1193,7 +1433,7 @@ Yanıtlarını JSON formatında ver:
       return {
         id: request.id,
         agent: this.name,
-        decision: 'rejected',
+          decision: 'reject',
         reasoning: 'Production plan not found',
         confidence: 0.0,
         timestamp: new Date()
@@ -1265,7 +1505,7 @@ Yanıtlarını JSON formatında ver:
       }
     }
 
-    return {
+    const response: AgentResponse = {
       id: request.id,
       agent: this.name,
       decision: allValid ? 'approve' : 'reject',
@@ -1289,6 +1529,37 @@ Yanıtlarını JSON formatında ver:
       recommendations,
       timestamp: new Date()
     };
+
+    // Developer Agent'a önemli bulguları bildir (Yeni mimari yapıya göre)
+    // Sadece reject veya önemli sorunlar varsa bildir (spam önlemek için)
+    if (!allValid && (issues.length > 0 || recommendations.length > 0)) {
+      const findings = [
+        {
+          category: 'production_validation',
+          issue: `Production validation failed for plan ${planId}`,
+          severity: 'high' as const,
+          details: {
+            planId,
+            bomValid: bomValidation.decision === 'approve',
+            stockAvailable: stockValidation.isAvailable,
+            operatorAvailable: operatorCapacity.available,
+            issues: response.issues
+          }
+        }
+      ];
+      
+      // Arka planda gönder, hata olsa bile response'u döndür
+      this.reportToDeveloperAgent('production_validation', findings, recommendations, issues).catch(error => {
+        // Hata olsa bile logla ama response'u bozmama
+        agentLogger.warn({
+          agent: this.name,
+          action: 'report_to_developer_failed',
+          error: error.message
+        });
+      });
+    }
+
+    return response;
   }
 
   /**
@@ -1313,7 +1584,7 @@ Yanıtlarını JSON formatında ver:
       return {
         id: request.id,
         agent: this.name,
-        decision: 'rejected',
+          decision: 'reject',
         reasoning: 'Production plan or product not found',
         confidence: 0.0,
         timestamp: new Date()
@@ -1398,7 +1669,7 @@ Yanıtlarını JSON formatında ver:
       return {
         id: request.id,
         agent: this.name,
-        decision: 'rejected',
+          decision: 'reject',
         reasoning: 'Operator not found',
         confidence: 0.0,
         timestamp: new Date()

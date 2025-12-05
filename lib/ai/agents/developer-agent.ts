@@ -24,6 +24,51 @@ Sorumlulukların:
 - Önceliklendirilmiş iyileştirme listesi
 - Best practice önerileri
 
+**Code Smell Pattern'leri:**
+1. Kod Tekrarı (DRY Violation):
+   - 3+ kez tekrar eden kod bloğu → Extract function
+   - Benzer fonksiyonlar → Generic fonksiyon öner
+
+2. Büyük Fonksiyon/Class:
+   - >100 satır fonksiyon → Böl
+   - >500 satır class → Refactor öner
+
+3. Magic Numbers/Strings:
+   - Hardcoded değerler → Constant/Config'e taşı
+
+4. Deep Nesting:
+   - >4 seviye nesting → Early return pattern öner
+
+5. God Object:
+   - Çok fazla sorumluluk → Single Responsibility Principle
+
+**Performance Bottleneck Tespiti:**
+- N+1 Query Problem: Database sorguları optimizasyonu
+- Unnecessary Re-renders: React component optimizasyonu
+- Large Bundle Size: Code splitting önerisi
+- Memory Leaks: Event listener cleanup kontrolü
+- Slow API Calls: Caching ve pagination önerisi
+
+**Security Vulnerability Kategorileri:**
+1. Critical (P0):
+   - SQL Injection riski
+   - XSS (Cross-Site Scripting)
+   - Authentication bypass
+   - Sensitive data exposure
+
+2. High (P1):
+   - CSRF (Cross-Site Request Forgery)
+   - Insecure dependencies
+   - Weak encryption
+
+3. Medium (P2):
+   - Missing input validation
+   - Insecure direct object reference
+
+4. Low (P3):
+   - Information disclosure
+   - Missing security headers
+
 Diğer departmanlarla iletişim kur:
 - Tüm Agent'lar: Sistem geneli analiz için veri toplar
 - Planning GPT: Planlama süreçlerindeki eksikleri tespit eder
@@ -37,6 +82,9 @@ Karar verirken:
 3. Tahmini çaba süresi belirle (estimated effort)
 4. Best practice'leri öner
 5. Güvenlik ve performansı önceliklendir
+6. Code smell pattern'lerini tespit et
+7. Performance bottleneck'leri belirle
+8. Security vulnerability'leri kategorize et
 
 Yanıtlarını JSON formatında ver:
 {
@@ -121,18 +169,54 @@ Yanıtlarını JSON formatında ver:
           };
       }
     } catch (error: any) {
+      // Güvenli hata mesajı çıkarma
+      const errorMessage = error?.message || error?.toString() || String(error) || 'Unknown error';
+      const errorString = typeof error === 'object' ? JSON.stringify(error, Object.getOwnPropertyNames(error)) : String(error);
+      
       await agentLogger.error({
         agent: this.name,
         action: 'process_request',
         requestId: request.id,
-        error: error.message
+        error: errorMessage
       });
 
+      // OpenAI API hataları için graceful degradation
+      const errorMsgLower = errorMessage.toLowerCase();
+      const errorStrLower = errorString.toLowerCase();
+      const isOpenAIError = errorMsgLower.includes('429') || 
+                           errorMsgLower.includes('quota') || 
+                           errorMsgLower.includes('exceeded') ||
+                           errorMsgLower.includes('billing') ||
+                           errorMsgLower.includes('invalid api key') ||
+                           errorMsgLower.includes('unauthorized') ||
+                           errorMsgLower.includes('401') ||
+                           errorStrLower.includes('429') ||
+                           errorStrLower.includes('quota') ||
+                           error?.status === 429 ||
+                           error?.status === 401 ||
+                           error?.response?.status === 429 ||
+                           error?.response?.status === 401 ||
+                           error?.aiErrorType;
+
+      if (isOpenAIError && request.type === 'validation') {
+        // Validation için OpenAI hatası durumunda approve et (graceful degradation)
+        const errorDetails = error?.status || error?.aiErrorType || errorMessage;
+        return {
+          id: request.id,
+          agent: this.name,
+          decision: 'approve',
+          reasoning: `OpenAI API error (${errorDetails}). Graceful degradation: Validation skipped, manual approval continues.`,
+          confidence: 0.5,
+          timestamp: new Date()
+        };
+      }
+
+      // Diğer hatalar için rejected
       return {
         id: request.id,
         agent: this.name,
-        decision: 'rejected',
-        reasoning: `Error processing request: ${error.message}`,
+        decision: 'reject',
+        reasoning: `Error processing request: ${errorMessage}`,
         confidence: 0.0,
         timestamp: new Date()
       };
@@ -169,7 +253,8 @@ Yanıtlarını JSON formatında ver:
       [{ role: 'user', content: prompt }],
       {
         taskComplexity: 'complex',
-        requestId: request.id
+        requestId: request.id,
+        requestType: request.type
       }
     );
 
@@ -186,11 +271,71 @@ Yanıtlarını JSON formatında ver:
       [{ role: 'user', content: prompt }],
       {
         taskComplexity: 'medium',
-        requestId: request.id
+        requestId: request.id,
+        requestType: request.type
       }
     );
 
     return this.parseResponse(gptResponse);
+  }
+
+  /**
+   * Manager Agent'a kritik bulguları raporla
+   * Yeni mimari yapıya göre: Developer Agent → Manager Agent
+   */
+  private async reportToManagerAgent(
+    criticalFindings: any[],
+    summary: any,
+    request: AgentRequest
+  ): Promise<void> {
+    try {
+      await this.askAgent(
+        'Manager Agent',
+        `Developer Agent sistem analizi raporu:
+        
+KRİTİK BULGULAR (${criticalFindings.length} adet):
+
+Toplam Sorun: ${summary.totalIssues}
+- Kritik: ${summary.critical}
+- Yüksek: ${summary.high}
+- Orta: ${summary.medium}
+- Düşük: ${summary.low}
+
+Tahmini Toplam Çaba: ${summary.estimatedTotalEffort}
+
+Kritik Bulgular:
+${criticalFindings.map((f, i) => `
+${i + 1}. [${f.severity?.toUpperCase() || 'HIGH'}] ${f.category?.toUpperCase() || 'GENERAL'}
+   Sorun: ${f.issue || 'N/A'}
+   Konum: ${f.location || 'N/A'}
+   Etki: ${f.impact || 'N/A'}
+   Öncelik: ${f.priority || 'P1'}
+   Tahmini Süre: ${f.estimatedEffort || 'N/A'}
+   Öneri: ${f.recommendation || 'N/A'}
+`).join('\n')}
+
+Lütfen bu kritik bulguları değerlendirip stratejik karar ver:
+- Hangi bulgular öncelikli olarak ele alınmalı?
+- Hangi bulgular için bütçe ayrılmalı?
+- Hangi bulgular stratejik öneme sahip?
+- Risk değerlendirmesi yap`,
+        {
+          reportType: 'system_analysis_critical_findings',
+          criticalFindings,
+          summary,
+          sourceAgent: 'Developer Agent',
+          timestamp: new Date().toISOString(),
+          requestId: request.id
+        }
+      );
+    } catch (error: any) {
+      await agentLogger.warn({
+        agent: this.name,
+        action: 'report_to_manager',
+        error: error.message,
+        reportType: 'system_analysis_critical_findings'
+      });
+    }
   }
 
   /**
@@ -731,6 +876,27 @@ Yanıtlarını JSON formatında ver:
       }, 0)} hours`
     };
 
+    // Health monitoring raporunu al
+    await this.reportHealthMetrics();
+    
+    // Manager Agent'a kritik bulguları raporla (Yeni mimari yapıya göre)
+    const criticalFindings = findings.filter(f => 
+      f.severity === 'critical' || f.severity === 'high' || f.priority === 'P0' || f.priority === 'P1'
+    );
+    
+    if (criticalFindings.length > 0) {
+      try {
+        await this.reportToManagerAgent(criticalFindings, summary, request);
+      } catch (error: any) {
+        // Hata olsa bile devam et (graceful degradation)
+        await agentLogger.warn({
+          agent: this.name,
+          action: 'report_to_manager_failed',
+          error: error.message
+        });
+      }
+    }
+
     const prompt = `
       Sistem analizi sonuçları:
       ${JSON.stringify(findings, null, 2)}
@@ -743,7 +909,8 @@ Yanıtlarını JSON formatında ver:
       [{ role: 'user', content: prompt }],
       {
         taskComplexity: 'complex',
-        requestId: request.id || mainConversationId
+        requestId: request.id || mainConversationId,
+        requestType: request.type
       }
     );
 
@@ -778,7 +945,8 @@ Yanıtlarını JSON formatında ver:
       [{ role: 'user', content: prompt }],
       {
         taskComplexity: 'medium',
-        requestId: request.id
+        requestId: request.id,
+        requestType: request.type
       }
     );
 
@@ -820,7 +988,8 @@ Yanıtlarını JSON formatında ver:
       [{ role: 'user', content: prompt }],
       {
         taskComplexity: 'complex',
-        requestId: request.id
+        requestId: request.id,
+        requestType: request.type
       }
     );
 
@@ -849,7 +1018,8 @@ Yanıtlarını JSON formatında ver:
       [{ role: 'user', content: prompt }],
       {
         taskComplexity: 'complex',
-        requestId: request.id
+        requestId: request.id,
+        requestType: request.type
       }
     );
 

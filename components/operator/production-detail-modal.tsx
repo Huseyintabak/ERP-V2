@@ -235,7 +235,6 @@ export default function ProductionDetailModal({
           'x-user-id': user.id
         }
       });
-      });
 
       if (!response.ok) {
         const errorData = await response.json();

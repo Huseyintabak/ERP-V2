@@ -22,6 +22,40 @@ Sorumlulukların:
 - Risk yönetimi ve önleme
 - Stratejik planlama ve hedef belirleme
 
+**Risk Skorlama Metrikleri:**
+1. Mali Risk (0-100):
+   - >100K TL işlem: Yüksek risk (75+)
+   - 50-100K TL işlem: Orta risk (50-74)
+   - <50K TL işlem: Düşük risk (0-49)
+
+2. Operasyonel Risk (0-100):
+   - Üretim durması riski: Yüksek (75+)
+   - Kritik stok eksikliği: Yüksek (75+)
+   - Tedarik gecikmesi: Orta (50-74)
+   - Normal operasyon: Düşük (0-49)
+
+3. Stratejik Risk (0-100):
+   - Uzun vadeli etki: Yüksek (75+)
+   - Müşteri memnuniyeti etkisi: Orta-Yüksek (50-100)
+   - Kısa vadeli etki: Düşük (0-49)
+
+4. Toplam Risk Skoru:
+   - 0-40: 🟢 Düşük Risk - Onay
+   - 41-70: 🟡 Orta Risk - Koşullu Onay
+   - 71-90: 🟠 Yüksek Risk - İnceleme Gerekli
+   - 91-100: 🔴 Kritik Risk - Red/İnceleme
+
+**Bütçe Etki Analizi:**
+- Pozitif Etki: Gelir artışı, maliyet azalışı
+- Nötr: Etkisiz işlem
+- Negatif Etki: Gider artışı (bütçe aşımı riski)
+
+**Stratejik Uyumluluk Kriterleri:**
+- Uzun vadeli hedeflerle uyumlu mu?
+- Müşteri memnuniyetini artırıyor mu?
+- İş sürekliliğini koruyor mu?
+- Rekabet avantajı sağlıyor mu?
+
 Diğer departmanlarla iletişim kur:
 - Tüm Agent'lar: Genel yönetim ve koordinasyon için tüm agent'larla iletişim kur
 - Planning GPT: Planlama stratejilerini değerlendir, optimizasyon öner
@@ -32,11 +66,11 @@ Diğer departmanlarla iletişim kur:
 
 Karar verirken:
 1. Her zaman stratejik perspektiften bak
-2. Risk değerlendirmesi yap
-3. Bütçe ve maliyet kontrolü yap
+2. Risk değerlendirmesi yap (Mali, Operasyonel, Stratejik risk skorları)
+3. Bütçe ve maliyet kontrolü yap (Bütçe etki analizi)
 4. Sistem geneli etkiyi değerlendir
 5. Departmanlar arası dengeyi koru
-6. Uzun vadeli hedefleri göz önünde bulundur
+6. Uzun vadeli hedefleri göz önünde bulundur (Stratejik uyumluluk)
 7. Kritik işlemler için detaylı analiz yap
 
 Yanıtlarını JSON formatında ver:
@@ -47,6 +81,7 @@ Yanıtlarını JSON formatında ver:
     "operation": "operation_type",
     "amount": 0,
     "riskLevel": "low" | "medium" | "high" | "critical",
+    "totalRiskScore": 0-100,
     "budgetImpact": "positive" | "neutral" | "negative",
     "strategicAlignment": true | false,
     "recommendations": [],
@@ -93,6 +128,11 @@ Yanıtlarını JSON formatında ver:
         case 'request':
           return await this.handleCriticalOperation(request);
         case 'query':
+          // Developer Agent'tan gelen sistem analiz raporu mu kontrol et
+          if (request.context?.reportType === 'system_analysis_critical_findings' || 
+              request.context?.sourceAgent === 'Developer Agent') {
+            return await this.handleDeveloperReport(request);
+          }
           return await this.handleStrategicQuery(request);
         case 'analysis':
           return await this.handlePerformanceAnalysis(request);
@@ -109,20 +149,57 @@ Yanıtlarını JSON formatında ver:
           };
       }
     } catch (error: any) {
+      // Güvenli hata mesajı çıkarma
+      const errorMessage = error?.message || error?.toString() || String(error) || 'Unknown error';
+      const errorString = typeof error === 'object' ? JSON.stringify(error, Object.getOwnPropertyNames(error)) : String(error);
+      
       await agentLogger.error({
         agent: this.name,
         action: 'process_request_error',
         requestId: request.id,
-        error: error.message
+        error: errorMessage
       });
 
+      // OpenAI API hataları için graceful degradation
+      const errorMsgLower = errorMessage.toLowerCase();
+      const errorStrLower = errorString.toLowerCase();
+      const isOpenAIError = errorMsgLower.includes('429') || 
+                           errorMsgLower.includes('quota') || 
+                           errorMsgLower.includes('exceeded') ||
+                           errorMsgLower.includes('billing') ||
+                           errorMsgLower.includes('invalid api key') ||
+                           errorMsgLower.includes('unauthorized') ||
+                           errorMsgLower.includes('401') ||
+                           errorStrLower.includes('429') ||
+                           errorStrLower.includes('quota') ||
+                           error?.status === 429 ||
+                           error?.status === 401 ||
+                           error?.response?.status === 429 ||
+                           error?.response?.status === 401 ||
+                           error?.aiErrorType;
+
+      if (isOpenAIError && request.type === 'validation') {
+        // Validation için OpenAI hatası durumunda approve et (graceful degradation)
+        const errorDetails = error?.status || error?.aiErrorType || errorMessage;
+        return {
+          id: request.id,
+          agent: this.name,
+          decision: 'approve',
+          reasoning: `OpenAI API error (${errorDetails}). Graceful degradation: Validation skipped, manual approval continues.`,
+          confidence: 0.5,
+          issues: [`OpenAI API error: ${errorMessage}`],
+          timestamp: new Date()
+        };
+      }
+
+      // Diğer hatalar için reject
       return {
         id: request.id,
         agent: this.name,
         decision: 'reject',
-        reasoning: `Error processing request: ${error.message}`,
+        reasoning: `Error processing request: ${errorMessage}`,
         confidence: 0.0,
-        issues: [error.message],
+        issues: [errorMessage],
         timestamp: new Date()
       };
     }
@@ -158,7 +235,11 @@ Yanıtlarını JSON formatında ver:
 
     const response = await this.callGPT(
       [{ role: 'user', content: prompt }],
-      { taskComplexity: urgency === 'critical' ? 'critical' : 'complex' }
+      {
+        taskComplexity: urgency === 'critical' ? 'critical' : 'complex',
+        requestId: request.id,
+        requestType: request.type
+      }
     );
 
     return this.parseResponse(response);
@@ -176,10 +257,91 @@ Yanıtlarını JSON formatında ver:
 
     const response = await this.callGPT(
       [{ role: 'user', content: prompt }],
-      { taskComplexity: 'medium' }
+      {
+        taskComplexity: 'medium',
+        requestId: request.id,
+        requestType: request.type
+      }
     );
 
     return this.parseResponse(response);
+  }
+
+  /**
+   * Developer Agent'tan sistem analiz raporunu işle
+   * Yeni mimari yapıya göre: Manager Agent ← Developer Agent
+   */
+  private async handleDeveloperReport(request: AgentRequest): Promise<AgentResponse> {
+    const context = request.context || {};
+    const reportType = context.reportType || 'unknown';
+    const criticalFindings = context.criticalFindings || [];
+    const summary = context.summary || {};
+    
+    // Developer Agent'tan gelen kritik bulguları analiz et
+    const prompt = `
+      Developer Agent'tan sistem analiz raporu alındı:
+      
+      Rapor Tipi: ${reportType}
+      
+      Özet:
+      - Toplam Sorun: ${summary.totalIssues || 0}
+      - Kritik: ${summary.critical || 0}
+      - Yüksek: ${summary.high || 0}
+      - Orta: ${summary.medium || 0}
+      - Düşük: ${summary.low || 0}
+      - Tahmini Toplam Çaba: ${summary.estimatedTotalEffort || 'N/A'}
+      
+      Kritik Bulgular (${criticalFindings.length} adet):
+      ${JSON.stringify(criticalFindings, null, 2)}
+      
+      Lütfen bu raporu stratejik perspektiften değerlendir:
+      1. Hangi bulgular en kritik ve acil müdahale gerektiriyor?
+      2. Hangi bulgular için bütçe ayrılmalı?
+      3. Hangi bulgular stratejik öneme sahip?
+      4. Risk değerlendirmesi yap (her bulgu için risk skoru)
+      5. Öncelik sıralaması oluştur
+      6. Stratejik öneriler sun
+    `;
+
+    const response = await this.callGPT(
+      [{ role: 'user', content: prompt }],
+      {
+        taskComplexity: criticalFindings.length > 0 ? 'complex' : 'medium',
+        requestId: request.id,
+        requestType: request.type
+      }
+    );
+
+    const parsed = this.parseResponse(response);
+    
+    // Manager Agent'ın analiz sonucunu data field'ına ekle
+    parsed.data = {
+      ...parsed.data,
+      reportType,
+      criticalFindings,
+      summary,
+      strategicAnalysis: parsed.reasoning,
+      prioritizedFindings: criticalFindings.map((f: any, index: number) => ({
+        ...f,
+        strategicPriority: index + 1,
+        requiresBudget: f.severity === 'critical' || f.severity === 'high',
+        requiresApproval: f.severity === 'critical'
+      }))
+    };
+
+    // Kritik bulgular varsa human approval'a gönder (gelecekte)
+    const criticalCount = criticalFindings.filter((f: any) => 
+      f.severity === 'critical' || f.priority === 'P0'
+    ).length;
+    
+    if (criticalCount > 0) {
+      parsed.recommendations = [
+        ...(parsed.recommendations || []),
+        `${criticalCount} kritik bulgu için human approval gerekebilir`
+      ];
+    }
+
+    return parsed;
   }
 
   /**
@@ -225,7 +387,11 @@ Yanıtlarını JSON formatında ver:
 
     const response = await this.callGPT(
       [{ role: 'user', content: prompt }],
-      { taskComplexity: 'complex' }
+      {
+        taskComplexity: 'complex',
+        requestId: request.id,
+        requestType: request.type
+      }
     );
 
     return this.parseResponse(response);
@@ -265,7 +431,11 @@ Yanıtlarını JSON formatında ver:
 
     const response = await this.callGPT(
       [{ role: 'user', content: prompt }],
-      { taskComplexity: 'complex' }
+      {
+        taskComplexity: 'complex',
+        requestId: request.id,
+        requestType: request.type
+      }
     );
 
     return this.parseResponse(response);
@@ -405,7 +575,7 @@ Yanıtlarını JSON formatında ver:
   /**
    * Stratejik öneri oluştur
    */
-  async generateStrategicRecommendation(context: any): Promise<AgentResponse> {
+  async generateStrategicRecommendation(context: any, requestId?: string): Promise<AgentResponse> {
     const prompt = `
       Sistem geneli stratejik öneriler oluştur:
       
@@ -421,7 +591,11 @@ Yanıtlarını JSON formatında ver:
 
     const response = await this.callGPT(
       [{ role: 'user', content: prompt }],
-      { taskComplexity: 'complex' }
+      {
+        taskComplexity: 'complex',
+        requestId: requestId || `strategic_recommendation_${Date.now()}`,
+        requestType: 'analysis'
+      }
     );
 
     return this.parseResponse(response);

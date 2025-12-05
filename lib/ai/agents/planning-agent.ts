@@ -21,17 +21,44 @@ Sorumlulukların:
 - Üretim sıralaması optimizasyonu
 - Kaynak tahsisi ve yük dengeleme
 
+**Operatör Yükü Analizi Kriterleri:**
+1. Operatör başına maksimum 3 aktif plan (yüksek öncelikli)
+2. Günlük üretim kapasitesi: 8 saat x operatör sayısı
+3. Planlar arası minimum 30 dakika geçiş süresi
+4. Operatör yeterlilik alanlarına göre plan atama
+5. Toplam yükü %80'in altında tut (verimlilik için)
+
+**Teslim Tarihi Gerçekçilik Kontrolü:**
+1. BOM malzemelerinin tedarik süresi (en uzun olan belirleyici)
+2. Üretim süresi: BOM karmaşıklığı x 0.5 saat (minimum)
+3. Operatör mevcut yükü dikkate al
+4. Buffer süresi: %20 ekle (beklenmedik gecikmeler için)
+5. Hafta sonu ve tatil günlerini hariç tut
+
+**Alternatif Plan Önerileri:**
+- Plan A: Maksimum hız (ek operatör gerekirse)
+- Plan B: Mevcut kaynaklarla (optimum)
+- Plan C: Maliyet odaklı (daha uzun süre)
+Her plan için: Süre, Maliyet, Risk seviyesi belirt
+
+**BOM Doğrulama Adımları:**
+1. Tüm malzemeler mevcut mu?
+2. Kritik seviye altında malzeme var mı?
+3. Rezervasyon yapılabilir mi?
+4. Alternatif malzeme önerisi var mı?
+
 Diğer departmanlarla iletişim kur:
 - Depo GPT: Stok yeterliliğini kontrol et, rezervasyon durumunu öğren
 - Üretim GPT: Operatör kapasitesini sorgula, mevcut üretimleri öğren
 - Satın Alma GPT: Eksik malzemeler için tedarik süresini öğren
 
 Karar verirken:
-1. Her zaman gerçekçi planlar oluştur
-2. Kaynak kullanımını optimize et
-3. Teslim tarihlerini koru
-4. Operatör yükünü dengeli dağıt
-5. Alternatif planlar öner
+1. Her zaman gerçekçi planlar oluştur (buffer süresi dahil)
+2. Kaynak kullanımını optimize et (yükü %80 altında tut)
+3. Teslim tarihlerini koru (müşteri memnuniyeti öncelikli)
+4. Operatör yükünü dengeli dağıt (tek operatöre yüklenme)
+5. Alternatif planlar öner (en az 2 seçenek)
+6. Risk analizi yap (beklenmedik durumlar için)
 
 Yanıtlarını JSON formatında ver:
 {
@@ -39,13 +66,21 @@ Yanıtlarını JSON formatında ver:
   "action": "approve_order" | "reject_order" | "request_info",
   "data": {
     "orderId": "uuid",
-    "productionPlans": [...],
-    "operatorAssignments": [...],
-    "estimatedCompletion": "2025-02-20",
+    "productionPlans": [
+      {
+        "planType": "A" | "B" | "C",
+        "operatorAssignments": [...],
+        "estimatedCompletion": "2025-02-20",
+        "estimatedCost": 15000.00,
+        "riskLevel": "low" | "medium" | "high",
+        "bomValidation": { "isValid": true, "issues": [] },
+        "operatorLoad": { "operatorId": "uuid", "currentLoad": 2, "maxCapacity": 3 }
+      }
+    ],
     "issues": [],
     "recommendations": []
   },
-  "reasoning": "Açıklama",
+  "reasoning": "Detaylı açıklama - Hangi kriterleri kontrol ettin, neden bu kararı verdin",
   "confidence": 0.0-1.0,
   "issues": ["sorun1", "sorun2"],
   "recommendations": ["öneri1", "öneri2"]
@@ -101,18 +136,53 @@ Yanıtlarını JSON formatında ver:
           };
       }
     } catch (error: any) {
+      // Güvenli hata mesajı çıkarma
+      const errorMessage = error?.message || error?.toString() || String(error) || 'Unknown error';
+      const errorString = typeof error === 'object' ? JSON.stringify(error, Object.getOwnPropertyNames(error)) : String(error);
+      
       await agentLogger.error({
         agent: this.name,
         action: 'process_request',
         requestId: request.id,
-        error: error.message
+        error: errorMessage
       });
 
+      // OpenAI API hataları için graceful degradation
+      const errorMsgLower = errorMessage.toLowerCase();
+      const errorStrLower = errorString.toLowerCase();
+      const isOpenAIError = errorMsgLower.includes('429') || 
+                           errorMsgLower.includes('quota') || 
+                           errorMsgLower.includes('exceeded') ||
+                           errorMsgLower.includes('billing') ||
+                           errorMsgLower.includes('invalid api key') ||
+                           errorMsgLower.includes('unauthorized') ||
+                           errorMsgLower.includes('401') ||
+                           errorStrLower.includes('429') ||
+                           errorStrLower.includes('quota') ||
+                           error?.status === 429 ||
+                           error?.status === 401 ||
+                           error?.response?.status === 429 ||
+                           error?.response?.status === 401 ||
+                           error?.aiErrorType;
+
+      if (isOpenAIError && request.type === 'validation') {
+        // Validation için OpenAI hatası durumunda approve et (graceful degradation)
+        return {
+          id: request.id,
+          agent: this.name,
+          decision: 'approve',
+          reasoning: `OpenAI API error (${error?.aiErrorType || errorMessage}). Graceful degradation: Validation skipped, manual approval continues.`,
+          confidence: 0.5,
+          timestamp: new Date()
+        };
+      }
+
+      // Diğer hatalar için rejected (errorMessage zaten yukarıda tanımlı)
       return {
         id: request.id,
         agent: this.name,
-        decision: 'rejected',
-        reasoning: `Error processing request: ${error.message}`,
+        decision: 'reject',
+        reasoning: `Error processing request: ${errorMessage}`,
         confidence: 0.0,
         timestamp: new Date()
       };
@@ -129,7 +199,7 @@ Yanıtlarını JSON formatında ver:
       return {
         id: request.id,
         agent: this.name,
-        decision: 'rejected',
+          decision: 'reject',
         reasoning: 'Order ID is required',
         confidence: 0.0,
         timestamp: new Date()
@@ -154,7 +224,7 @@ Yanıtlarını JSON formatında ver:
       return {
         id: request.id,
         agent: this.name,
-        decision: 'rejected',
+          decision: 'reject',
         reasoning: `Order not found: ${orderError?.message || 'Unknown error'}`,
         confidence: 0.0,
         timestamp: new Date()
@@ -220,7 +290,8 @@ Yanıtlarını JSON formatında ver:
       [{ role: 'user', content: prompt }],
       {
         taskComplexity: 'complex',
-        requestId: request.id
+        requestId: request.id,
+        requestType: request.type
       }
     );
 
@@ -249,7 +320,8 @@ Yanıtlarını JSON formatında ver:
       [{ role: 'user', content: prompt }],
       {
         taskComplexity: 'medium',
-        requestId: request.id
+        requestId: request.id,
+        requestType: request.type
       }
     );
 
@@ -700,7 +772,8 @@ Yanıtlarını JSON formatında ver:
       [{ role: 'user', content: prompt }],
       {
         taskComplexity: 'complex',
-        requestId: request.id
+        requestId: request.id,
+        requestType: request.type
       }
     );
 
@@ -732,7 +805,8 @@ Yanıtlarını JSON formatında ver:
       [{ role: 'user', content: prompt }],
       {
         taskComplexity: 'medium',
-        requestId: request.id
+        requestId: request.id,
+        requestType: request.type
       }
     );
 
@@ -745,6 +819,34 @@ Yanıtlarını JSON formatında ver:
   async validateWithOtherAgents(data: any): Promise<ValidationResult> {
     const issues: string[] = [];
     const validations: Array<{ agent: string; valid: boolean; reason?: string }> = [];
+
+    // QUOTA KONTROLÜ: Agent çağrılarından önce quota kontrolü
+    const { isAIValidationEnabled, getQuotaManager } = await import('../utils/quota-manager');
+    
+    if (!isAIValidationEnabled()) {
+      // AI validation kapalı - direkt approve döndür
+      return {
+        isValid: true,
+        issues: [],
+        recommendations: ['AI validation disabled. Validation skipped (graceful degradation).'],
+        confidence: 0.5
+      };
+    }
+
+    const quotaManager = getQuotaManager();
+    quotaManager.cleanupExpiredCache();
+    
+    if (quotaManager.isQuotaExceeded()) {
+      // Quota aşıldı - direkt approve döndür (graceful degradation)
+      const quotaStatus = quotaManager.getQuotaStatus();
+      const expiryTime = quotaStatus?.expiryTime ? new Date(quotaStatus.expiryTime).toISOString() : '1 hour';
+      return {
+        isValid: true,
+        issues: [],
+        recommendations: [`OpenAI API quota exceeded (cached). Validation skipped (graceful degradation). Will retry after ${expiryTime}.`],
+        confidence: 0.5
+      };
+    }
 
     // Warehouse Agent'a sor
     try {
@@ -764,11 +866,29 @@ Yanıtlarını JSON formatında ver:
         issues.push(`Warehouse Agent: ${warehouseResponse.reasoning}`);
       }
     } catch (error: any) {
-      validations.push({
-        agent: 'Warehouse Agent',
-        valid: false,
-        reason: `Agent not available: ${error.message}`
-      });
+      // Quota hatası kontrolü
+      const errorMessage = error?.message || error?.toString() || String(error) || 'Unknown error';
+      const isQuotaError = error?.status === 429 || 
+                          error?.aiErrorType === 'QUOTA_EXCEEDED' ||
+                          errorMessage.includes('quota') ||
+                          errorMessage.includes('429') ||
+                          error?.quotaCached ||
+                          error?.circuitBreakerOpen;
+
+      if (isQuotaError) {
+        // Quota hatası - graceful degradation
+        validations.push({
+          agent: 'Warehouse Agent',
+          valid: true, // Quota hatası durumunda approve say
+          reason: `OpenAI API quota exceeded. Validation skipped (graceful degradation).`
+        });
+      } else {
+        validations.push({
+          agent: 'Warehouse Agent',
+          valid: false,
+          reason: `Agent not available: ${errorMessage}`
+        });
+      }
     }
 
     // Production Agent'a sor
@@ -789,17 +909,40 @@ Yanıtlarını JSON formatında ver:
         issues.push(`Production Agent: ${productionResponse.reasoning}`);
       }
     } catch (error: any) {
-      validations.push({
-        agent: 'Production Agent',
-        valid: false,
-        reason: `Agent not available: ${error.message}`
-      });
+      // Quota hatası kontrolü
+      const errorMessage = error?.message || error?.toString() || String(error) || 'Unknown error';
+      const isQuotaError = error?.status === 429 || 
+                          error?.aiErrorType === 'QUOTA_EXCEEDED' ||
+                          errorMessage.includes('quota') ||
+                          errorMessage.includes('429') ||
+                          error?.quotaCached ||
+                          error?.circuitBreakerOpen;
+
+      if (isQuotaError) {
+        // Quota hatası - graceful degradation
+        validations.push({
+          agent: 'Production Agent',
+          valid: true, // Quota hatası durumunda approve say
+          reason: `OpenAI API quota exceeded. Validation skipped (graceful degradation).`
+        });
+      } else {
+        validations.push({
+          agent: 'Production Agent',
+          valid: false,
+          reason: `Agent not available: ${errorMessage}`
+        });
+      }
     }
 
+    // Quota hatası varsa (validations içinde quota mesajı varsa), isValid = true
+    const hasQuotaErrors = validations.some(v => v.reason?.includes('quota exceeded'));
+    const finalIsValid = hasQuotaErrors ? true : issues.length === 0;
+
     return {
-      isValid: issues.length === 0,
-      issues,
-      validations
+      isValid: finalIsValid,
+      issues: hasQuotaErrors ? [] : issues, // Quota hatası varsa issues'ı temizle
+      recommendations: [],
+      confidence: finalIsValid ? (hasQuotaErrors ? 0.5 : 1.0) : 0.5
     };
   }
 

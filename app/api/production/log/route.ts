@@ -215,9 +215,10 @@ export async function POST(request: NextRequest) {
         
         // Production Agent ile konuşma başlat
         const orchestrator = AgentOrchestrator.getInstance();
+        const conversationId = `production_log_${plan_id}_${Date.now()}`;
         const agentResult = await orchestrator.startConversation('production', {
-          id: `production_log_${plan_id}_${Date.now()}`,
-          prompt: `Bu üretim kaydını doğrula: Plan #${plan_id}, Üretilen: ${quantity_produced} adet`,
+          id: conversationId,
+          prompt: `Üretim kaydı doğrulaması: Plan #${plan_id}, Ürün: ${product.name || product.code}, Üretilen: ${quantity_produced} adet, Toplam Üretilen: ${totalProduced}/${plan.planned_quantity} adet. Bu üretim kaydını doğrula.`,
           type: 'validation',
           context: {
             planId: plan_id,

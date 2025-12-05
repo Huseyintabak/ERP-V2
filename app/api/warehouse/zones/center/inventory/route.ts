@@ -44,7 +44,18 @@ export async function GET(request: NextRequest) {
 
     if (productsError) {
       logger.error('Error fetching finished products:', productsError);
-      return NextResponse.json({ error: productsError.message }, { status: 500 });
+      return NextResponse.json({ 
+        error: productsError.message || 'Finished products fetch failed'
+      }, { status: 500 });
+    }
+
+    // Null check
+    if (!finishedProducts || !Array.isArray(finishedProducts)) {
+      logger.warn('No finished products found or invalid data');
+      return NextResponse.json({
+        data: [],
+        zone: centerZone
+      });
     }
 
     // Zone inventory formatına dönüştür
@@ -53,13 +64,13 @@ export async function GET(request: NextRequest) {
       zone_id: centerZone.id,
       material_type: 'finished',
       material_id: product.id,
-      quantity: product.quantity,
+      quantity: product.quantity || 0,
       product: {
         id: product.id,
-        name: product.name,
-        code: product.code,
-        unit_price: product.sale_price,
-        unit: product.unit
+        name: product.name || 'Ürün Adı Yok',
+        code: product.code || 'N/A',
+        unit_price: product.sale_price || 0,
+        unit: product.unit || 'adet'
       }
     }));
 
@@ -68,10 +79,12 @@ export async function GET(request: NextRequest) {
       zone: centerZone
     });
 
-  } catch (error) {
+  } catch (error: any) {
     logger.error('Error fetching center zone inventory:', error);
+    const errorMessage = error?.message || error?.toString() || 'Internal server error';
     return NextResponse.json({ 
-      error: 'Internal server error' 
+      error: errorMessage,
+      details: process.env.NODE_ENV === 'development' ? error?.stack : undefined
     }, { status: 500 });
   }
 }

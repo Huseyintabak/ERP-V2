@@ -33,6 +33,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { ZoneList } from '@/components/warehouse/zone-list';
+import { ZoneTransferDialog } from '@/components/warehouse/zone-transfer-dialog';
 import { useAuthStore } from '@/stores/auth-store';
 
 interface WarehouseZone {
@@ -82,7 +83,9 @@ export default function DepoZoneYonetimiPage() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isInventoryDialogOpen, setIsInventoryDialogOpen] = useState(false);
   const [isCenterInventoryDialogOpen, setIsCenterInventoryDialogOpen] = useState(false);
+  const [isTransferDialogOpen, setIsTransferDialogOpen] = useState(false);
   const [selectedZoneId, setSelectedZoneId] = useState<string>('');
+  const [selectedProductIdForTransfer, setSelectedProductIdForTransfer] = useState<string>('');
   const [selectedZoneInventory, setSelectedZoneInventory] = useState<ZoneInventory[]>([]);
   const [selectedZone, setSelectedZone] = useState<WarehouseZone | null>(null);
   const [centerInventory, setCenterInventory] = useState<ZoneInventory[]>([]);
@@ -278,7 +281,25 @@ export default function DepoZoneYonetimiPage() {
       });
       
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorText = await response.text();
+        let errorMessage = `HTTP error! status: ${response.status}`;
+        
+        try {
+          const errorJson = JSON.parse(errorText);
+          errorMessage = errorJson.error || errorMessage;
+        } catch {
+          // If parsing fails, use the text as is
+          if (errorText && !errorText.includes('/login')) {
+            errorMessage = errorText;
+          }
+        }
+        
+        if (errorText.includes('/login')) {
+          console.warn('Redirect to login detected');
+          return;
+        }
+        
+        throw new Error(errorMessage);
       }
       
       const text = await response.text();
@@ -289,9 +310,10 @@ export default function DepoZoneYonetimiPage() {
       
       const result = JSON.parse(text);
       setCenterInventory(result.data || []);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching center inventory:', error);
-      toast.error('Merkez depo stok bilgileri yüklenirken hata oluştu');
+      const errorMessage = error?.message || 'Merkez depo stok bilgileri yüklenirken hata oluştu';
+      toast.error(errorMessage);
     }
   };
 
@@ -353,9 +375,21 @@ export default function DepoZoneYonetimiPage() {
     fetchZoneInventory(zoneId);
   };
 
-  const handleTransfer = (zoneId: string) => {
-    // This will be handled by the ZoneTransferDialog
-    setSelectedZoneId(zoneId);
+  const handleTransfer = (zoneIdOrProductId: string, isCenterZone: boolean = false) => {
+    if (isCenterZone) {
+      // Merkez zone için transfer - merkez zone ID'sini bul ve transfer dialog'u aç
+      const centerZone = zones.find(z => z.zone_type === 'center');
+      if (centerZone) {
+        setSelectedZoneId(centerZone.id);
+        setSelectedProductIdForTransfer(zoneIdOrProductId); // product_id
+        setIsTransferDialogOpen(true);
+      }
+    } else {
+      // Normal zone için transfer
+      setSelectedZoneId(zoneIdOrProductId);
+      setSelectedProductIdForTransfer('');
+      setIsTransferDialogOpen(true);
+    }
   };
 
   const filteredZones = zones.filter(zone =>
@@ -698,8 +732,8 @@ export default function DepoZoneYonetimiPage() {
 
       {/* Merkez Zone Inventory Dialog */}
       <Dialog open={isCenterInventoryDialogOpen} onOpenChange={setIsCenterInventoryDialogOpen}>
-        <DialogContent className="max-w-6xl">
-          <DialogHeader>
+        <DialogContent className="max-w-[95vw] sm:max-w-6xl w-full h-[90vh] max-h-[90vh] flex flex-col">
+          <DialogHeader className="flex-shrink-0">
             <DialogTitle className="flex items-center gap-2">
               <Building2 className="h-5 w-5" />
               Nihai Stoklar Merkez
@@ -709,10 +743,10 @@ export default function DepoZoneYonetimiPage() {
             </DialogDescription>
           </DialogHeader>
           
-          <div className="space-y-4">
-            <div className="flex items-center gap-4 p-4 bg-blue-50 rounded-lg">
-              <Building2 className="h-8 w-8 text-blue-600" />
-              <div>
+          <div className="space-y-4 flex-1 overflow-hidden flex flex-col">
+            <div className="flex items-center gap-4 p-4 bg-blue-50 rounded-lg flex-shrink-0">
+              <Building2 className="h-8 w-8 text-blue-600 flex-shrink-0" />
+              <div className="min-w-0">
                 <h3 className="font-semibold text-lg">Merkez Depo</h3>
                 <p className="text-sm text-gray-600">
                   Tüm üretilen ürünler burada toplanır ve ilgi zone'lara sevk edilir
@@ -721,52 +755,54 @@ export default function DepoZoneYonetimiPage() {
             </div>
             
             {centerInventory.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
+              <div className="text-center py-8 text-muted-foreground flex-1 flex items-center justify-center">
                 Merkez depoda henüz ürün bulunmuyor
               </div>
             ) : (
-              <div className="rounded-md border">
-                <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
+              <div className="rounded-md border flex-1 overflow-hidden flex flex-col">
+                <div className="overflow-x-auto overflow-y-auto flex-1">
                   <table className="w-full">
                     <thead className="bg-gray-50 sticky top-0 z-10">
                       <tr>
-                        <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">Ürün</th>
-                        <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">Kod</th>
-                        <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">Miktar</th>
-                        <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">Birim Fiyat</th>
-                        <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">Toplam Değer</th>
-                        <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">İşlemler</th>
+                        <th className="px-4 py-3 text-left text-sm font-medium text-gray-500 whitespace-nowrap">Ürün</th>
+                        <th className="px-4 py-3 text-left text-sm font-medium text-gray-500 whitespace-nowrap">Kod</th>
+                        <th className="px-4 py-3 text-left text-sm font-medium text-gray-500 whitespace-nowrap">Miktar</th>
+                        <th className="px-4 py-3 text-left text-sm font-medium text-gray-500 whitespace-nowrap">Birim Fiyat</th>
+                        <th className="px-4 py-3 text-left text-sm font-medium text-gray-500 whitespace-nowrap">Toplam Değer</th>
+                        <th className="px-4 py-3 text-left text-sm font-medium text-gray-500 whitespace-nowrap">İşlemler</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-200">
+                    <tbody className="divide-y divide-gray-200 bg-white">
                       {centerInventory.map((inventory) => (
                         <tr key={inventory.id} className="hover:bg-gray-50">
                           <td className="px-4 py-3">
-                            <div className="font-medium">{inventory.product?.name || 'Ürün Yok'}</div>
+                            <div className="font-medium truncate max-w-[200px]" title={inventory.product?.name || 'Ürün Yok'}>
+                              {inventory.product?.name || 'Ürün Yok'}
+                            </div>
                           </td>
-                          <td className="px-4 py-3 text-sm text-gray-500">
+                          <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">
                             {inventory.product?.code || 'N/A'}
                           </td>
-                          <td className="px-4 py-3">
+                          <td className="px-4 py-3 whitespace-nowrap">
                             <Badge variant="secondary">{inventory.quantity} adet</Badge>
                           </td>
-                          <td className="px-4 py-3">
+                          <td className="px-4 py-3 whitespace-nowrap">
                             {(inventory.product?.unit_price || 0).toLocaleString('tr-TR', {
                               style: 'currency',
                               currency: 'TRY'
                             })}
                           </td>
-                          <td className="px-4 py-3 font-medium">
+                          <td className="px-4 py-3 font-medium whitespace-nowrap">
                             {(inventory.quantity * (inventory.product?.unit_price || 0)).toLocaleString('tr-TR', {
                               style: 'currency',
                               currency: 'TRY'
                             })}
                           </td>
-                          <td className="px-4 py-3">
+                          <td className="px-4 py-3 whitespace-nowrap">
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => handleTransfer(inventory.product_id)}
+                              onClick={() => handleTransfer(inventory.product_id || inventory.material_id, true)}
                             >
                               <ArrowRightLeft className="h-4 w-4 mr-1" />
                               Transfer
@@ -782,6 +818,23 @@ export default function DepoZoneYonetimiPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Transfer Dialog - Controlled by isTransferDialogOpen */}
+      <ZoneTransferDialog
+        zones={zones}
+        selectedZoneId={selectedZoneId}
+        isOpen={isTransferDialogOpen}
+        onOpenChange={setIsTransferDialogOpen}
+        onTransferComplete={() => {
+          fetchZones();
+          fetchCenterInventory();
+          setIsTransferDialogOpen(false);
+          setSelectedZoneId('');
+          setSelectedProductIdForTransfer('');
+        }}
+      >
+        <div style={{ display: 'none' }} />
+      </ZoneTransferDialog>
 
     </div>
   );
