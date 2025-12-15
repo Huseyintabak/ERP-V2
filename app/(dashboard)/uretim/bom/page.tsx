@@ -95,6 +95,7 @@ export default function BOMPage() {
   const [editingBOM, setEditingBOM] = useState<BOMEntry | null>(null);
   const [showVisualTree, setShowVisualTree] = useState(true);
   const [usdRate, setUsdRate] = useState<number | null>(null);
+  const [isSaving, setIsSaving] = useState(false); // BOM kaydetme durumu
   const { user } = useAuthStore();
 
   // Yeni BOM entry form state - array olarak değiştir
@@ -444,34 +445,94 @@ export default function BOMPage() {
       return;
     }
 
+    // Zaten kayıt işlemi devam ediyorsa, tekrar başlatma
+    if (isSaving) {
+      toast.warning('Kayıt işlemi devam ediyor, lütfen bekleyin...');
+      return;
+    }
+
+    setIsSaving(true);
+    const abortController = new AbortController();
+
+    // Sayfa kapatılmasını engellemek için beforeunload event'i
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = 'BOM kayıt işlemi devam ediyor. Sayfadan ayrılmak istediğinize emin misiniz?';
+      return e.returnValue;
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
     try {
       if (!user?.id) {
         throw new Error('Kullanıcı kimlik doğrulaması gerekli');
       }
-      // Her malzeme için ayrı ayrı API çağrısı yap
-      const promises = newBOMEntries.map(entry => 
-        fetch('/api/bom', {
-          method: 'POST',
-          headers: { 
-            'Content-Type': 'application/json',
-            'x-user-id': user.id
-          },
-          body: JSON.stringify({
-            finished_product_id: selectedProduct.id,
-            product_type: selectedProduct.product_type, // Ürün tipini ekle
-            material_type: entry.material_type,
-            material_id: entry.material_id,
-            quantity_needed: entry.quantity_needed,
-          }),
-        })
-      );
 
-      const responses = await Promise.all(promises);
-      const errors = responses.filter(response => !response.ok);
+      // Önce mevcut BOM kayıtlarını al (ekleme yapmak için)
+      const currentBomResponse = await fetch(`/api/bom/${selectedProduct.id}`, {
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-id': user.id
+        },
+        cache: 'no-store',
+        signal: abortController.signal
+      });
 
-      if (errors.length > 0) {
-        throw new Error(`${errors.length} malzeme eklenirken hata oluştu`);
+      let existingEntries: any[] = [];
+      if (currentBomResponse.ok) {
+        const currentBomData = await currentBomResponse.json();
+        existingEntries = (currentBomData.materials || []).map((m: any) => ({
+          material_type: m.material_type,
+          material_id: m.material_id,
+          quantity_needed: m.quantity_needed
+        }));
       }
+
+      // Mevcut kayıtları ve yeni kayıtları birleştir (duplicate kontrolü ile)
+      const allEntries = [...existingEntries];
+      newBOMEntries.forEach(newEntry => {
+        // Aynı malzeme zaten varsa, yenisini ekleme (replace olacak)
+        const existingIndex = allEntries.findIndex(
+          e => e.material_type === newEntry.material_type && 
+               e.material_id === newEntry.material_id
+        );
+        if (existingIndex >= 0) {
+          allEntries[existingIndex] = newEntry;
+        } else {
+          allEntries.push(newEntry);
+        }
+      });
+
+      // Tüm kayıtları tek seferde kaydet (mevcut kayıtları silip yenilerini ekler)
+      const response = await fetch(`/api/bom/${selectedProduct.id}`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-user-id': user.id
+        },
+        body: JSON.stringify({
+          product_id: selectedProduct.id,
+          entries: allEntries
+        }),
+        signal: abortController.signal
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        let errorMessage = 'BOM kayıtları eklenirken hata oluştu';
+        try {
+          const errorJson = JSON.parse(errorText);
+          errorMessage = errorJson.error || errorMessage;
+        } catch {
+          errorMessage = errorText || errorMessage;
+        }
+        throw new Error(errorMessage);
+      }
+
+      const result = await response.json();
+      console.log('BOM saved successfully:', result);
+
+      // beforeunload event'ini kaldır
+      window.removeEventListener('beforeunload', handleBeforeUnload);
 
       toast.success(`${newBOMEntries.length} malzeme başarıyla eklendi`);
       setIsAddDialogOpen(false);
@@ -481,16 +542,26 @@ export default function BOMPage() {
         quantity_needed: 1,
       }]);
       
-      // BOM verilerini yenile
+      // BOM verilerini yenile (kısa bir delay ile cache'i bypass etmek için)
       if (selectedProduct) {
+        // Hemen yenile
         await fetchBOMData(selectedProduct.id);
         
         // Otomatik maliyet hesapla
         await autoCalculateCost(selectedProduct.id);
       }
     } catch (error: any) {
+      // AbortError ise (sayfa kapatıldı), sessizce iptal et
+      if (error.name === 'AbortError') {
+        console.warn('BOM save işlemi iptal edildi (sayfa kapatıldı)');
+        toast.warning('Kayıt işlemi iptal edildi. Lütfen tekrar deneyin.');
+        return;
+      }
       console.error('Error adding BOM entries:', error);
       toast.error(error.message || 'BOM kayıtları eklenirken hata oluştu');
+    } finally {
+      setIsSaving(false);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
     }
   };
 
@@ -807,9 +878,9 @@ export default function BOMPage() {
   );
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col h-[calc(100vh-4rem)] -mx-6 -my-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b bg-background flex-shrink-0">
         <div>
           <h1 className="text-3xl font-bold">BOM Yönetimi</h1>
           <p className="text-muted-foreground">Ürün Ağacı (Bill of Materials) yönetimi</p>
@@ -872,17 +943,17 @@ export default function BOMPage() {
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="flex-1 grid gap-6 lg:grid-cols-3 px-6 pb-6 overflow-hidden">
         {/* Ürün Seçimi */}
-        <Card className="lg:col-span-1">
-          <CardHeader>
+        <Card className="lg:col-span-1 flex flex-col overflow-hidden">
+          <CardHeader className="flex-shrink-0">
             <CardTitle className="flex items-center">
               <Package className="h-5 w-5 mr-2" />
               Ürünler (Nihai + Yarı Mamul)
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
+          <CardContent className="flex-1 flex flex-col overflow-hidden">
+            <div className="space-y-4 flex-shrink-0">
               <div className="relative">
                 <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -892,8 +963,9 @@ export default function BOMPage() {
                   className="pl-9"
                 />
               </div>
+            </div>
 
-              <div className="space-y-2 max-h-96 overflow-y-auto">
+            <div className="flex-1 space-y-2 overflow-y-auto mt-4">
                 {filteredProducts.map((product) => (
                   <div
                     key={product.id}
@@ -929,13 +1001,12 @@ export default function BOMPage() {
                   </div>
                 ))}
               </div>
-            </div>
           </CardContent>
         </Card>
 
         {/* BOM Detayları */}
-        <Card className="lg:col-span-2">
-          <CardHeader>
+        <Card className="lg:col-span-2 flex flex-col overflow-hidden">
+          <CardHeader className="flex-shrink-0">
             <div className="flex items-center justify-between">
               <CardTitle className="flex items-center">
                 <TreePine className="h-5 w-5 mr-2" />
@@ -971,18 +1042,21 @@ export default function BOMPage() {
                       </Button>
                     }
                   />
-                  <Button
-                    onClick={() => setIsAddDialogOpen(true)}
-                    size="sm"
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Malzeme Ekle
-                  </Button>
+                  {/* Görsel ağaç görünümünde "Malzeme Ekle" butonunu gizle - BomVisualTree kendi butonuna sahip */}
+                  {!showVisualTree && (
+                    <Button
+                      onClick={() => setIsAddDialogOpen(true)}
+                      size="sm"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Malzeme Ekle
+                    </Button>
+                  )}
                 </div>
               )}
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className={`flex-1 ${showVisualTree ? 'flex flex-col overflow-hidden p-0' : 'overflow-y-auto'}`}>
             {!selectedProduct ? (
               <div className="text-center py-12 text-muted-foreground">
                 <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
@@ -994,12 +1068,14 @@ export default function BOMPage() {
                 <p className="mt-2 text-muted-foreground">Yükleniyor...</p>
               </div>
             ) : showVisualTree ? (
-              <BomVisualTree
-                productId={selectedProduct.id}
-                productName={selectedProduct.name}
-                onSave={handleVisualTreeSave}
-                initialData={bomData}
-              />
+              <div className="flex-1 flex flex-col p-6">
+                <BomVisualTree
+                  productId={selectedProduct.id}
+                  productName={selectedProduct.name}
+                  onSave={handleVisualTreeSave}
+                  initialData={bomData}
+                />
+              </div>
             ) : !bomData || bomData.materials.length === 0 ? (
               <div className="text-center py-12 text-muted-foreground">
                 <TreePine className="h-12 w-12 mx-auto mb-4 opacity-50" />
@@ -1224,7 +1300,7 @@ export default function BOMPage() {
               ))}
             </div>
 
-            {/* Malzeme Ekleme Butonu */}
+            {/* Yeni Satır Ekleme Butonu */}
             <div className="flex justify-center">
               <Button
                 variant="outline"
@@ -1232,17 +1308,31 @@ export default function BOMPage() {
                 className="w-full"
               >
                 <Plus className="h-4 w-4 mr-2" />
-                Malzeme Ekle
+                Yeni Satır Ekle
               </Button>
             </div>
 
             {/* Dialog Butonları */}
             <div className="flex justify-end space-x-2">
-              <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
+              <Button 
+                variant="outline" 
+                onClick={() => setIsAddDialogOpen(false)}
+                disabled={isSaving}
+              >
                 İptal
               </Button>
-              <Button onClick={handleAddBOMEntries}>
-                Tüm Malzemeleri Ekle ({newBOMEntries.length})
+              <Button 
+                onClick={handleAddBOMEntries}
+                disabled={isSaving || newBOMEntries.length === 0}
+              >
+                {isSaving ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Kaydediliyor...
+                  </>
+                ) : (
+                  `Tüm Malzemeleri Ekle (${newBOMEntries.length})`
+                )}
               </Button>
             </div>
           </div>

@@ -53,25 +53,20 @@ export async function POST(
       }
     }
 
-    // Mevcut BOM kayıtlarını sil
+    // Önce eski kayıtları yedekle (rollback için)
+    let oldRecords: any[] = [];
     if (isSemiProduct) {
-      const { error: deleteError } = await supabase
+      const { data: oldData } = await supabase
         .from('semi_bom')
-        .delete()
+        .select('*')
         .eq('semi_product_id', product_id);
-      
-      if (deleteError) {
-        logger.error('Error deleting existing semi BOM:', deleteError);
-      }
+      oldRecords = oldData || [];
     } else {
-      const { error: deleteError } = await supabase
+      const { data: oldData } = await supabase
         .from('bom')
-        .delete()
+        .select('*')
         .eq('finished_product_id', product_id);
-      
-      if (deleteError) {
-        logger.error('Error deleting existing BOM:', deleteError);
-      }
+      oldRecords = oldData || [];
     }
 
     // Yeni BOM kayıtlarını ekle
@@ -117,6 +112,63 @@ export async function POST(
     });
 
     const tableName = isSemiProduct ? 'semi_bom' : 'bom';
+    
+    // Eğer yeni kayıt yoksa, sadece silme işlemi yap
+    if (bomEntries.length === 0) {
+      // Sadece silme işlemi yap
+      if (isSemiProduct) {
+        const { error: deleteError } = await supabase
+          .from('semi_bom')
+          .delete()
+          .eq('semi_product_id', product_id);
+        
+        if (deleteError) {
+          logger.error('Error deleting existing semi BOM:', deleteError);
+          return NextResponse.json({ error: `Failed to delete BOM: ${deleteError.message}` }, { status: 500 });
+        }
+      } else {
+        const { error: deleteError } = await supabase
+          .from('bom')
+          .delete()
+          .eq('finished_product_id', product_id);
+        
+        if (deleteError) {
+          logger.error('Error deleting existing BOM:', deleteError);
+          return NextResponse.json({ error: `Failed to delete BOM: ${deleteError.message}` }, { status: 500 });
+        }
+      }
+      
+      return NextResponse.json({ 
+        success: true, 
+        message: 'BOM cleared successfully',
+        data: [] 
+      });
+    }
+
+    // Önce eski kayıtları sil
+    if (isSemiProduct) {
+      const { error: deleteError } = await supabase
+        .from('semi_bom')
+        .delete()
+        .eq('semi_product_id', product_id);
+      
+      if (deleteError) {
+        logger.error('Error deleting existing semi BOM:', deleteError);
+        return NextResponse.json({ error: `Failed to delete existing BOM: ${deleteError.message}` }, { status: 500 });
+      }
+    } else {
+      const { error: deleteError } = await supabase
+        .from('bom')
+        .delete()
+        .eq('finished_product_id', product_id);
+      
+      if (deleteError) {
+        logger.error('Error deleting existing BOM:', deleteError);
+        return NextResponse.json({ error: `Failed to delete existing BOM: ${deleteError.message}` }, { status: 500 });
+      }
+    }
+
+    // Sonra yeni kayıtları ekle
     const { data, error } = await supabase
       .from(tableName)
       .insert(bomEntries)
@@ -124,7 +176,24 @@ export async function POST(
 
     if (error) {
       logger.error(`Error inserting ${tableName}:`, error);
-      return NextResponse.json({ error: `Failed to save BOM: ${error.message}` }, { status: 500 });
+      
+      // Rollback: Eski kayıtları geri yükle
+      if (oldRecords.length > 0) {
+        logger.log('Rolling back: Restoring old BOM records...');
+        const { error: rollbackError } = await supabase
+          .from(tableName)
+          .insert(oldRecords);
+        
+        if (rollbackError) {
+          logger.error('Rollback failed! Old records could not be restored:', rollbackError);
+        } else {
+          logger.log('Rollback successful: Old records restored');
+        }
+      }
+      
+      return NextResponse.json({ 
+        error: `Failed to save BOM: ${error.message}. Old records have been restored.` 
+      }, { status: 500 });
     }
 
     logger.log(`BOM saved successfully for product ${product_id}:`, {

@@ -606,9 +606,9 @@ export function BomVisualTree({
   }), []);
 
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col h-full space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-2">
           <TreePine className="h-5 w-5" />
           <h3 className="text-lg font-semibold">BOM Görsel Ağaç</h3>
@@ -639,16 +639,16 @@ export function BomVisualTree({
           loadMaterials();
           setIsAddDialogOpen(true);
         }}
-        className="w-full"
+        className="w-full flex-shrink-0"
       >
         <Plus className="h-4 w-4 mr-2" />
         Malzeme Ekle
       </Button>
 
       {/* BOM Tree */}
-      <Card>
-        <CardContent className="p-0">
-          <div style={{ height: '600px', width: '100%' }}>
+      <Card className="flex-1 flex flex-col overflow-hidden">
+        <CardContent className="p-0 flex-1">
+          <div style={{ height: '100%', width: '100%' }}>
             <ReactFlow
               nodes={nodes}
               edges={edges}

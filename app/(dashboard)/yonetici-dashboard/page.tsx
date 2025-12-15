@@ -146,7 +146,7 @@ export default function YoneticiDashboard() {
             <DollarSign className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">₺{currentStats.monthlyRevenue.toLocaleString()}</div>
+            <div className="text-2xl font-bold">₺{(currentStats.monthlyRevenue || 0).toLocaleString()}</div>
             <div className="flex items-center text-xs">
               <TrendingUp className="h-3 w-3 text-green-500 mr-1" />
               <span className="text-green-600">+12.5%</span>
@@ -172,7 +172,7 @@ export default function YoneticiDashboard() {
             <TrendingUp className="h-4 w-4 text-indigo-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">₺{currentStats.averageOrderValue.toLocaleString()}</div>
+            <div className="text-2xl font-bold">₺{(currentStats.averageOrderValue || 0).toLocaleString()}</div>
             <p className="text-xs text-muted-foreground">Tüm siparişler için ortalama</p>
           </CardContent>
         </Card>
@@ -183,7 +183,7 @@ export default function YoneticiDashboard() {
             <BarChart3 className="h-4 w-4 text-purple-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">₺{currentStats.totalStockValue.toLocaleString()}</div>
+            <div className="text-2xl font-bold">₺{(currentStats.totalStockValue || 0).toLocaleString()}</div>
             <p className="text-xs text-muted-foreground mb-3">Toplam stok değeri (işçilik hariç)</p>
             
             {/* Detailed Breakdown - Table Format */}
@@ -231,7 +231,7 @@ export default function YoneticiDashboard() {
             <Target className="h-4 w-4 text-orange-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{currentStats.productionEfficiency.toFixed(1)}%</div>
+            <div className="text-2xl font-bold">{((currentStats.productionEfficiency || 0)).toFixed(1)}%</div>
             <p className="text-xs text-muted-foreground">Üretim verimliliği</p>
           </CardContent>
         </Card>
@@ -245,7 +245,7 @@ export default function YoneticiDashboard() {
             <CheckCircle className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{currentStats.completedOrders}</div>
+            <div className="text-2xl font-bold">{currentStats.completedOrders || 0}</div>
             <p className="text-xs text-muted-foreground">Tamamlanan sipariş</p>
           </CardContent>
         </Card>
@@ -256,7 +256,7 @@ export default function YoneticiDashboard() {
             <Clock className="h-4 w-4 text-orange-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{currentStats.pendingOrders}</div>
+            <div className="text-2xl font-bold">{currentStats.pendingOrders || 0}</div>
             <p className="text-xs text-muted-foreground">Bugün onay bekliyor</p>
           </CardContent>
         </Card>
@@ -267,7 +267,7 @@ export default function YoneticiDashboard() {
             <Factory className="h-4 w-4 text-purple-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{currentStats.activeProductionPlans}</div>
+            <div className="text-2xl font-bold">{currentStats.activeProductionPlans || 0}</div>
             <p className="text-xs text-muted-foreground">Üretim planı</p>
           </CardContent>
         </Card>
@@ -278,7 +278,7 @@ export default function YoneticiDashboard() {
             <AlertTriangle className="h-4 w-4 text-red-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{currentStats.criticalStockItems}</div>
+            <div className="text-2xl font-bold">{currentStats.criticalStockItems || 0}</div>
             <p className="text-xs text-muted-foreground">Minimum altında</p>
           </CardContent>
         </Card>
@@ -296,7 +296,7 @@ export default function YoneticiDashboard() {
           <CardContent>
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-3xl font-bold">{currentStats.activeProductionPlans}</div>
+                <div className="text-3xl font-bold">{currentStats.activeProductionPlans || 0}</div>
                 <p className="text-sm text-muted-foreground mt-1">Devam eden plan sayısı</p>
               </div>
               <div className="text-right">
