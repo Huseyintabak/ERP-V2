@@ -186,13 +186,33 @@ export async function DELETE(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    
-    // Admin cannot delete themselves
-    if (payload.userId === id) {
-      return NextResponse.json({ error: 'Cannot delete your own account' }, { status: 400 });
+    // Get password from request body for verification
+    const body = await request.json().catch(() => ({}));
+    const { password } = body;
+
+    if (!password) {
+      return NextResponse.json({ error: 'Password required for deletion' }, { status: 400 });
     }
 
     const supabase = await createClient();
+
+    // Get current user's password hash for verification
+    const { data: currentUser, error: userError } = await supabase
+      .from('users')
+      .select('password_hash')
+      .eq('id', payload.userId)
+      .single();
+
+    if (userError || !currentUser) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    // Verify password
+    const isPasswordValid = await bcrypt.compare(password, currentUser.password_hash);
+    if (!isPasswordValid) {
+      return NextResponse.json({ error: 'Invalid password' }, { status: 401 });
+    }
+
 
     // Check if user has any active productions
     const { data: activeProductions } = await supabase

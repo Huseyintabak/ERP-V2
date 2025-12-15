@@ -5,7 +5,7 @@ import { verifyJWT } from '@/lib/auth/jwt';
 import { logger } from '@/lib/utils/logger';
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const token = request.cookies.get('thunder_token')?.value;
@@ -30,6 +30,7 @@ export async function PUT(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
+    const { id } = await params;
     const body = await request.json();
     const { product_id, planned_quantity, priority, assigned_operator_id, notes } = body;
 
@@ -50,7 +51,7 @@ export async function PUT(
         notes: notes || null,
         updated_at: new Date().toISOString()
       })
-      .eq('id', params.id)
+      .eq('id', id)
       .select(`
         *,
         product:semi_finished_products(
@@ -81,7 +82,7 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const token = request.cookies.get('thunder_token')?.value;
@@ -106,13 +107,14 @@ export async function DELETE(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
+    const { id } = await params;
     const supabase = await createClient();
 
     // Delete semi production order
     const { error } = await supabase
       .from('semi_production_orders')
       .delete()
-      .eq('id', params.id);
+      .eq('id', id);
 
     if (error) {
       logger.error('Error deleting semi production order:', error);

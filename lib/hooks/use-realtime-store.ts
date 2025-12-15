@@ -22,7 +22,7 @@ export const useRealtimeStore = (handlers: RealtimeHandlers = {}) => {
   const stockActions = useStockStore((state) => state.actions);
   const orderActions = useOrderStore((state) => state.actions);
   const dashboardActions = useDashboardStatsStore((state) => state.actions);
-  const notificationActions = useNotificationStore((state) => state.actions);
+  const addNotification = useNotificationStore((state) => state.addNotification);
   
   const subscriptionsRef = useRef<Array<{ channel: any; table: string }>>([]);
   const supabaseRef = useRef(createClient());
@@ -425,7 +425,9 @@ export const useRealtimeStore = (handlers: RealtimeHandlers = {}) => {
         (payload) => {
           logger.log('Notification added:', payload.new);
           const notification = payload.new;
-          notificationActions.addNotification(notification);
+          if (addNotification) {
+            addNotification(notification);
+          }
           
           handlers.onNotificationAdd?.(notification);
         }
@@ -458,7 +460,7 @@ export const useRealtimeStore = (handlers: RealtimeHandlers = {}) => {
       });
       subscriptionsRef.current = [];
     };
-  }, [stockActions, orderActions, dashboardActions, notificationActions, handlers]);
+  }, [stockActions, orderActions, dashboardActions, addNotification, handlers]);
 
   // Return subscription info for debugging
   return {

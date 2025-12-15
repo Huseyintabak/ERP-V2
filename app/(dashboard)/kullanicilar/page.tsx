@@ -49,6 +49,8 @@ export default function KullanicilarPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<any>(null);
   const [deleteUserId, setDeleteUserId] = useState<string | null>(null);
+  const [deletePassword, setDeletePassword] = useState('');
+  const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
@@ -136,10 +138,15 @@ export default function KullanicilarPage() {
 
   const handleDeleteUser = (userId: string) => {
     setDeleteUserId(userId);
+    setIsPasswordDialogOpen(true);
+    setDeletePassword('');
   };
 
   const confirmDelete = async () => {
-    if (!deleteUserId) return;
+    if (!deleteUserId || !deletePassword) {
+      toast.error('Lütfen şifrenizi girin');
+      return;
+    }
 
     try {
       if (!user?.id) {
@@ -149,8 +156,10 @@ export default function KullanicilarPage() {
       const response = await fetch(`/api/users/${deleteUserId}`, {
         method: 'DELETE',
         headers: {
+          'Content-Type': 'application/json',
           'x-user-id': user.id
-        }
+        },
+        body: JSON.stringify({ password: deletePassword })
       });
 
       if (!response.ok) {
@@ -160,12 +169,19 @@ export default function KullanicilarPage() {
 
       removeUser(deleteUserId);
       toast.success('Kullanıcı başarıyla silindi');
+      setIsPasswordDialogOpen(false);
+      setDeletePassword('');
+      setDeleteUserId(null);
     } catch (error: any) {
       toast.error(error.message || 'Kullanıcı silinirken hata oluştu');
       console.error('Error deleting user:', error);
-    } finally {
-      setDeleteUserId(null);
     }
+  };
+
+  const cancelDelete = () => {
+    setIsPasswordDialogOpen(false);
+    setDeletePassword('');
+    setDeleteUserId(null);
   };
 
   const handleFormSubmit = () => {
@@ -410,21 +426,39 @@ export default function KullanicilarPage() {
         </CardContent>
       </Card>
 
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={!!deleteUserId} onOpenChange={() => setDeleteUserId(null)}>
+      {/* Delete Confirmation Dialog with Password */}
+      <AlertDialog open={isPasswordDialogOpen} onOpenChange={cancelDelete}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Kullanıcıyı Sil</AlertDialogTitle>
             <AlertDialogDescription>
               Bu kullanıcıyı silmek istediğinizden emin misiniz? Bu işlem geri alınamaz ve 
               kullanıcının tüm verileri kalıcı olarak silinecektir.
+              <br /><br />
+              <strong>Güvenlik için şifrenizi girin:</strong>
             </AlertDialogDescription>
           </AlertDialogHeader>
+          <div className="py-4">
+            <Input
+              type="password"
+              placeholder="Şifrenizi girin"
+              value={deletePassword}
+              onChange={(e) => setDeletePassword(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && deletePassword) {
+                  confirmDelete();
+                }
+              }}
+              autoFocus
+              className="w-full"
+            />
+          </div>
           <AlertDialogFooter>
-            <AlertDialogCancel>İptal</AlertDialogCancel>
+            <AlertDialogCancel onClick={cancelDelete}>İptal</AlertDialogCancel>
             <AlertDialogAction 
               onClick={confirmDelete}
-              className="bg-red-600 hover:bg-red-700"
+              disabled={!deletePassword}
+              className="bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Sil
             </AlertDialogAction>
