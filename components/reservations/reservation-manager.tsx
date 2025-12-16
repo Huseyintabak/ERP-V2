@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, Package, AlertTriangle, CheckCircle, Clock } from 'lucide-react';
+import { Loader2, Package, AlertTriangle, CheckCircle, Clock, ArrowUp, ArrowDown } from 'lucide-react';
 import { logger } from '@/lib/utils/logger';
 import { useAuthStore } from '@/stores/auth-store';
 
@@ -44,13 +44,15 @@ export default function ReservationManager({ orderId, onReservationCreated }: Re
   const [error, setError] = useState<string | null>(null);
   const [filterOrderId, setFilterOrderId] = useState(orderId || '');
   const [filterStatus, setFilterStatus] = useState<string>('all');
-  const [autoRefresh, setAutoRefresh] = useState(true);
+  const [autoRefresh, setAutoRefresh] = useState(false); // Otomatik yenileme kapalı, manuel yenileme kullanılacak
   const [pagination, setPagination] = useState({
     page: 1,
-    limit: 50,
+    limit: 10000, // Show all reservations by default
     total: 0,
     totalPages: 0,
   });
+  const [sortField, setSortField] = useState<string | null>(null);
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const { user } = useAuthStore();
 
   // Rezervasyonları getir
@@ -64,8 +66,9 @@ export default function ReservationManager({ orderId, onReservationCreated }: Re
       const params = new URLSearchParams();
       if (filterOrderId) params.append('order_id', filterOrderId);
       if (filterStatus !== 'all') params.append('status', filterStatus);
-      params.append('page', pagination.page.toString());
-      params.append('limit', pagination.limit.toString());
+      // Get all data for client-side sorting (use high limit)
+      params.append('page', '1');
+      params.append('limit', '10000');
       
       logger.log('🔍 Fetching reservations with params:', params.toString());
       
@@ -96,7 +99,11 @@ export default function ReservationManager({ orderId, onReservationCreated }: Re
       
       setReservations(data.data || []);
       if (data.pagination) {
-        setPagination(data.pagination);
+        setPagination(prev => ({
+          ...prev,
+          total: data.pagination.total,
+          totalPages: data.pagination.totalPages
+        }));
       }
     } catch (err: any) {
       logger.error('❌ Fetch error:', err);
@@ -154,8 +161,102 @@ export default function ReservationManager({ orderId, onReservationCreated }: Re
     }
   };
 
-  // Reservations are already filtered by API
-  const filteredReservations = reservations;
+  // Handle column sorting
+  const handleSort = (field: string) => {
+    // Reset to page 1 when sorting changes
+    setPagination(prev => ({ ...prev, page: 1 }));
+    
+    if (sortField === field) {
+      // Toggle direction: desc -> asc -> null (no sort)
+      if (sortDirection === 'desc') {
+        setSortDirection('asc');
+      } else {
+        setSortField(null);
+        setSortDirection('desc');
+      }
+    } else {
+      setSortField(field);
+      setSortDirection('desc');
+    }
+  };
+
+  // Filter and sort reservations
+  let filteredReservations = [...reservations];
+  
+  // Apply status filter (client-side since we get all data)
+  if (filterStatus !== 'all') {
+    filteredReservations = filteredReservations.filter(r => r.status === filterStatus);
+  }
+  
+  // Apply manual sorting
+  if (sortField) {
+    filteredReservations.sort((a: any, b: any) => {
+      let aVal: any;
+      let bVal: any;
+      
+      switch (sortField) {
+        case 'order_number':
+          const orderNumA = a.order_info?.order_number || '';
+          const orderNumB = b.order_info?.order_number || '';
+          // Extract numeric part (e.g., "ORD-2025-386" -> 386)
+          const matchA = orderNumA.match(/-(\d+)$/);
+          const matchB = orderNumB.match(/-(\d+)$/);
+          aVal = matchA ? parseInt(matchA[1], 10) : 0;
+          bVal = matchB ? parseInt(matchB[1], 10) : 0;
+          break;
+        case 'material_name':
+          aVal = (a.material_name || '').toLowerCase();
+          bVal = (b.material_name || '').toLowerCase();
+          break;
+        case 'material_code':
+          aVal = (a.material_code || '').toLowerCase();
+          bVal = (b.material_code || '').toLowerCase();
+          break;
+        case 'material_type':
+          aVal = a.material_type || '';
+          bVal = b.material_type || '';
+          break;
+        case 'reserved_quantity':
+          aVal = a.reserved_quantity || 0;
+          bVal = b.reserved_quantity || 0;
+          break;
+        case 'consumed_quantity':
+          aVal = a.consumed_quantity || 0;
+          bVal = b.consumed_quantity || 0;
+          break;
+        case 'remaining':
+          aVal = (a.reserved_quantity || 0) - (a.consumed_quantity || 0);
+          bVal = (b.reserved_quantity || 0) - (b.consumed_quantity || 0);
+          break;
+        case 'status':
+          aVal = a.status || '';
+          bVal = b.status || '';
+          break;
+        case 'created_at':
+          aVal = new Date(a.created_at || 0).getTime();
+          bVal = new Date(b.created_at || 0).getTime();
+          break;
+        default:
+          return 0;
+      }
+      
+      if (typeof aVal === 'string' && typeof bVal === 'string') {
+        return sortDirection === 'asc' 
+          ? aVal.localeCompare(bVal)
+          : bVal.localeCompare(aVal);
+      } else {
+        return sortDirection === 'asc'
+          ? (aVal > bVal ? 1 : aVal < bVal ? -1 : 0)
+          : (aVal < bVal ? 1 : aVal > bVal ? -1 : 0);
+      }
+    });
+  }
+  
+  // Don't paginate - show all reservations
+  const paginatedReservations = filteredReservations;
+  
+  // Update pagination total
+  const totalFiltered = filteredReservations.length;
 
   // Tüketim yüzdesi hesapla
   const getConsumptionPercentage = (reserved: number, consumed: number) => {
@@ -247,11 +348,11 @@ export default function ReservationManager({ orderId, onReservationCreated }: Re
       <Card>
         <CardHeader>
           <CardTitle>
-            Rezervasyonlar ({filterStatus === 'all' ? pagination.total : filteredReservations.length})
+            Rezervasyonlar ({totalFiltered})
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {filteredReservations.length === 0 ? (
+          {totalFiltered === 0 ? (
             <div className="text-center py-8 text-gray-500">
               <Package className="w-12 h-12 mx-auto mb-4 opacity-50" />
               <p>Rezervasyon bulunamadı</p>
@@ -260,18 +361,98 @@ export default function ReservationManager({ orderId, onReservationCreated }: Re
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Sipariş ID</TableHead>
-                  <TableHead>Malzeme</TableHead>
-                  <TableHead>Tip</TableHead>
-                  <TableHead>Rezerve</TableHead>
-                  <TableHead>Tüketilen</TableHead>
-                  <TableHead>Kalan</TableHead>
-                  <TableHead>Durum</TableHead>
-                  <TableHead>Tarih</TableHead>
+                  <TableHead>
+                    <button
+                      onClick={() => handleSort('order_number')}
+                      className="flex items-center gap-1 hover:text-primary transition-colors"
+                    >
+                      Sipariş ID
+                      {sortField === 'order_number' && (
+                        sortDirection === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
+                      )}
+                    </button>
+                  </TableHead>
+                  <TableHead>
+                    <button
+                      onClick={() => handleSort('material_name')}
+                      className="flex items-center gap-1 hover:text-primary transition-colors"
+                    >
+                      Malzeme
+                      {sortField === 'material_name' && (
+                        sortDirection === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
+                      )}
+                    </button>
+                  </TableHead>
+                  <TableHead>
+                    <button
+                      onClick={() => handleSort('material_type')}
+                      className="flex items-center gap-1 hover:text-primary transition-colors"
+                    >
+                      Tip
+                      {sortField === 'material_type' && (
+                        sortDirection === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
+                      )}
+                    </button>
+                  </TableHead>
+                  <TableHead>
+                    <button
+                      onClick={() => handleSort('reserved_quantity')}
+                      className="flex items-center gap-1 hover:text-primary transition-colors ml-auto"
+                    >
+                      Rezerve
+                      {sortField === 'reserved_quantity' && (
+                        sortDirection === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
+                      )}
+                    </button>
+                  </TableHead>
+                  <TableHead>
+                    <button
+                      onClick={() => handleSort('consumed_quantity')}
+                      className="flex items-center gap-1 hover:text-primary transition-colors ml-auto"
+                    >
+                      Tüketilen
+                      {sortField === 'consumed_quantity' && (
+                        sortDirection === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
+                      )}
+                    </button>
+                  </TableHead>
+                  <TableHead>
+                    <button
+                      onClick={() => handleSort('remaining')}
+                      className="flex items-center gap-1 hover:text-primary transition-colors ml-auto"
+                    >
+                      Kalan
+                      {sortField === 'remaining' && (
+                        sortDirection === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
+                      )}
+                    </button>
+                  </TableHead>
+                  <TableHead>
+                    <button
+                      onClick={() => handleSort('status')}
+                      className="flex items-center gap-1 hover:text-primary transition-colors"
+                    >
+                      Durum
+                      {sortField === 'status' && (
+                        sortDirection === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
+                      )}
+                    </button>
+                  </TableHead>
+                  <TableHead>
+                    <button
+                      onClick={() => handleSort('created_at')}
+                      className="flex items-center gap-1 hover:text-primary transition-colors"
+                    >
+                      Tarih
+                      {sortField === 'created_at' && (
+                        sortDirection === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
+                      )}
+                    </button>
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredReservations.map((reservation) => {
+                {paginatedReservations.map((reservation) => {
                   const remaining = reservation.reserved_quantity - reservation.consumed_quantity;
                   const consumptionPercentage = getConsumptionPercentage(
                     reservation.reserved_quantity, 
@@ -349,32 +530,12 @@ export default function ReservationManager({ orderId, onReservationCreated }: Re
             </Table>
           )}
 
-          {/* Pagination */}
-          {pagination.totalPages > 1 && (
-            <div className="flex items-center justify-between mt-4 pt-4 border-t">
-              <p className="text-sm text-muted-foreground">
-                Toplam {pagination.total} rezervasyon • Sayfa {pagination.page} / {pagination.totalPages}
-              </p>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setPagination(prev => ({ ...prev, page: Math.max(1, prev.page - 1) }))}
-                  disabled={pagination.page === 1}
-                >
-                  Önceki
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setPagination(prev => ({ ...prev, page: Math.min(prev.totalPages, prev.page + 1) }))}
-                  disabled={pagination.page === pagination.totalPages}
-                >
-                  Sonraki
-                </Button>
-              </div>
-            </div>
-          )}
+          {/* Show total count - no pagination needed */}
+          <div className="flex items-center justify-center mt-4 pt-4 border-t">
+            <p className="text-sm text-muted-foreground">
+              Toplam {totalFiltered} rezervasyon gösteriliyor
+            </p>
+          </div>
         </CardContent>
       </Card>
     </div>

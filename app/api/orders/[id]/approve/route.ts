@@ -525,6 +525,26 @@ async function handleApprove(
                 continue;
               }
 
+              // Create material_reservations record for tracking (order_id is TEXT, not UUID)
+              const { error: reservationError } = await supabase
+                .from('material_reservations')
+                .insert({
+                  order_id: id, // Stored as TEXT in material_reservations table
+                  order_type: 'production_order',
+                  material_type: bomItem.material_type,
+                  material_id: bomItem.material_id,
+                  reserved_quantity: needed,
+                  consumed_quantity: 0,
+                  status: 'active'
+                });
+
+              if (reservationError) {
+                logger.error('❌ Error creating material reservation record:', reservationError);
+                // Continue anyway - reserved quantity already updated
+              } else {
+                logger.log('✅ Created material_reservations record for', material.code);
+              }
+
               logger.log('✅ Reserved', needed, 'units of', material.code);
             }
           }

@@ -412,6 +412,7 @@ export async function GET(request: NextRequest) {
 
     // Get unique plan IDs
     const planIds = [...new Set(bomSnapshots.map(s => s.plan_id))];
+    logger.log(`🔍 Found ${planIds.length} unique plan IDs from BOM snapshots`);
     
     // Get production plans with orders - show all plans, ordered by created_at DESC
     const { data: plans } = await supabase
@@ -420,18 +421,39 @@ export async function GET(request: NextRequest) {
       .in('id', planIds)
       .order('created_at', { ascending: false });
 
+    logger.log(`📋 Found ${plans?.length || 0} production plans`);
+    
     if (!plans || plans.length === 0) {
+      logger.warn('⚠️ No production plans found for BOM snapshots');
       return NextResponse.json({ data: [] });
     }
+    
+    // Debug: Check if ORD-2025-386's plan is in the results
+    const ord386Plan = plans.find(p => {
+      // We'll check this after we get orders
+      return true;
+    });
 
     // Get order details with created_at for proper sorting
     // Orders should be sorted by created_at DESC to get the latest orders first
     const orderIds = [...new Set(plans.map(p => p.order_id))].filter(Boolean);
+    logger.log(`📦 Found ${orderIds.length} unique order IDs`);
+    
     const { data: orders } = await supabase
       .from('orders')
       .select('id, order_number, customer_name, created_at')
       .in('id', orderIds)
       .order('created_at', { ascending: false });
+    
+    logger.log(`📋 Found ${orders?.length || 0} orders`);
+    
+    // Debug: Check if ORD-2025-386 is in the results
+    const ord386 = orders?.find(o => o.order_number === 'ORD-2025-386');
+    if (ord386) {
+      logger.log(`✅ Found ORD-2025-386 in orders: ${ord386.id}, created_at: ${ord386.created_at}`);
+    } else {
+      logger.warn(`⚠️ ORD-2025-386 NOT found in orders! Order IDs: ${orderIds.slice(0, 5).join(', ')}...`);
+    }
 
     // Create a map of plan_id -> plan data
     // Use order.created_at (sipariş tarihi) instead of plan.created_at for proper sorting
@@ -481,11 +503,26 @@ export async function GET(request: NextRequest) {
 
     const reservationsMap = new Map();
 
+    // Debug: Count snapshots for ORD-2025-386
+    const ord386PlanIds = plans
+      .filter(p => {
+        const order = orders?.find(o => o.id === p.order_id);
+        return order?.order_number === 'ORD-2025-386';
+      })
+      .map(p => p.id);
+    const ord386Snapshots = bomSnapshots.filter(s => ord386PlanIds.includes(s.plan_id));
+    logger.log(`🔍 ORD-2025-386: ${ord386PlanIds.length} plan(s), ${ord386Snapshots.length} BOM snapshot(s)`);
+    
     for (const snapshot of bomSnapshots) {
       const planData = planMap.get(snapshot.plan_id);
       if (!planData || !planData.order_id) continue;
       
       const key = `${planData.order_id}-${snapshot.material_id}`;
+      
+      // Debug: Log first few ORD-2025-386 reservations
+      if (planData.order?.order_number === 'ORD-2025-386' && reservationsMap.size < 3) {
+        logger.log(`🔍 Processing ORD-2025-386 snapshot: material=${snapshot.material_code}, qty=${snapshot.quantity_needed}, key=${key}`);
+      }
       
       // Get consumed quantity for this specific plan and material
       const consumptionKey = `${snapshot.plan_id}-${snapshot.material_type}-${snapshot.material_id}`;
@@ -578,6 +615,19 @@ export async function GET(request: NextRequest) {
       const dateB = new Date(b.created_at || 0).getTime();
       return dateB - dateA;
     });
+    
+    // Debug: Check if ORD-2025-386 is in filtered results
+    const ord386InResults = filteredReservations.filter((r: any) => r.order_info?.order_number === 'ORD-2025-386');
+    logger.log(`🔍 ORD-2025-386 reservations in filtered results: ${ord386InResults.length}`);
+    if (ord386InResults.length > 0) {
+      logger.log(`✅ First ORD-2025-386 reservation:`, {
+        order_number: ord386InResults[0].order_info?.order_number,
+        material: ord386InResults[0].material_name,
+        reserved: ord386InResults[0].reserved_quantity
+      });
+    } else {
+      logger.warn(`⚠️ ORD-2025-386 NOT in filtered results! Total filtered: ${filteredReservations.length}`);
+    }
     
     // Debug: Log first few order numbers to verify sorting
     if (filteredReservations.length > 0) {
