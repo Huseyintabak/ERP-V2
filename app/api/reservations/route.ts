@@ -447,12 +447,6 @@ export async function GET(request: NextRequest) {
       logger.warn('⚠️ No production plans found for BOM snapshots');
       return NextResponse.json({ data: [] });
     }
-    
-    // Debug: Check if ORD-2025-386's plan is in the results
-    const ord386Plan = plans.find(p => {
-      // We'll check this after we get orders
-      return true;
-    });
 
     // Get order details with created_at for proper sorting
     // Orders should be sorted by created_at DESC to get the latest orders first
