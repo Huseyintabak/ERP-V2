@@ -26,15 +26,16 @@ export default function NihaiUrunlerPage() {
   useRoleBasedRealtime('depo');
   
   useEffect(() => {
-    actions.fetchFinishedProducts();
+    // İlk yüklemede tüm nihai ürünleri getir (limit yok, tümü)
+    actions.fetchFinishedProducts({ page: 1, limit: 10000 });
   }, [actions]);
 
   const handlePageChange = (page: number) => {
-    actions.fetchFinishedProducts({ page, limit: 50 });
+    actions.fetchFinishedProducts({ page, limit: 10000 });
   };
 
   const handleSearch = (search: string) => {
-    actions.fetchFinishedProducts({ search, page: 1, limit: 50 });
+    actions.fetchFinishedProducts({ search, page: 1, limit: 10000 });
   };
 
   const handleAdd = () => {

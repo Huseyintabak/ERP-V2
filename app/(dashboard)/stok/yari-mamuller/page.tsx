@@ -26,15 +26,16 @@ export default function YariMamullerPage() {
   useRoleBasedRealtime('depo');
   
   useEffect(() => {
-    actions.fetchSemiFinishedProducts();
+    // İlk yüklemede tüm yarı mamulleri getir (limit yok, tümü)
+    actions.fetchSemiFinishedProducts({ page: 1, limit: 10000 });
   }, [actions]);
 
   const handlePageChange = (page: number) => {
-    actions.fetchSemiFinishedProducts({ page, limit: 50 });
+    actions.fetchSemiFinishedProducts({ page, limit: 10000 });
   };
 
   const handleSearch = (search: string) => {
-    actions.fetchSemiFinishedProducts({ search, page: 1, limit: 50 });
+    actions.fetchSemiFinishedProducts({ search, page: 1, limit: 10000 });
   };
 
   const handleAdd = () => {

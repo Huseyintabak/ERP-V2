@@ -186,15 +186,15 @@ const initialState = {
     stats: null,
   },
   pagination: {
-    rawMaterials: { page: 1, total: 0, limit: 50 },
-    semiFinishedProducts: { page: 1, total: 0, limit: 50 },
-    finishedProducts: { page: 1, total: 0, limit: 50 },
+    rawMaterials: { page: 1, total: 0, limit: 10000 },
+    semiFinishedProducts: { page: 1, total: 0, limit: 10000 },
+    finishedProducts: { page: 1, total: 0, limit: 10000 },
     stockMovements: { page: 1, total: 0, limit: 50 },
   },
   filters: {
-    rawMaterials: { page: 1, limit: 50, sortBy: 'code', sortOrder: 'asc' as const },
-    semiFinishedProducts: { page: 1, limit: 50, sortBy: 'code', sortOrder: 'asc' as const },
-    finishedProducts: { page: 1, limit: 50, sortBy: 'code', sortOrder: 'asc' as const },
+    rawMaterials: { page: 1, limit: 10000, sortBy: 'code', sortOrder: 'asc' as const },
+    semiFinishedProducts: { page: 1, limit: 10000, sortBy: 'code', sortOrder: 'asc' as const },
+    finishedProducts: { page: 1, limit: 10000, sortBy: 'code', sortOrder: 'asc' as const },
     stockMovements: { page: 1, limit: 50, sortBy: 'created_at', sortOrder: 'desc' as const },
   },
 };

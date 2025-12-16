@@ -401,25 +401,45 @@ export async function GET(request: NextRequest) {
     }
 
     // Get reservations from BOM snapshots to see which materials are reserved for which orders
-    // First get all BOM snapshots
-    const { data: bomSnapshots, error: snapshotsError } = await supabase
-      .from('production_plan_bom_snapshot')
-      .select('plan_id, material_id, material_type, material_code, material_name, quantity_needed');
+    // FIX: Get production plans FIRST to avoid Supabase 1000 limit issue
+    // Then fetch BOM snapshots for those specific plans
+    const { data: plans, error: plansError } = await supabase
+      .from('production_plans')
+      .select('id, order_id, product_id, status, created_at')
+      .order('created_at', { ascending: false })
+      .limit(10000); // Get all plans (much fewer than snapshots)
 
-    if (snapshotsError || !bomSnapshots || bomSnapshots.length === 0) {
+    if (plansError || !plans || plans.length === 0) {
+      logger.warn('⚠️ No production plans found');
       return NextResponse.json({ data: [] });
     }
 
-    // Get unique plan IDs
-    const planIds = [...new Set(bomSnapshots.map(s => s.plan_id))];
-    logger.log(`🔍 Found ${planIds.length} unique plan IDs from BOM snapshots`);
+    logger.log(`📋 Found ${plans.length} production plans`);
     
-    // Get production plans with orders - show all plans, ordered by created_at DESC
-    const { data: plans } = await supabase
-      .from('production_plans')
-      .select('id, order_id, product_id, status, created_at')
-      .in('id', planIds)
-      .order('created_at', { ascending: false });
+    // Get plan IDs from production plans
+    const planIds = plans.map(p => p.id);
+    
+    // Now get BOM snapshots ONLY for these plans (this avoids the 1000 limit issue)
+    const { data: bomSnapshots, error: snapshotsError } = await supabase
+      .from('production_plan_bom_snapshot')
+      .select('plan_id, material_id, material_type, material_code, material_name, quantity_needed')
+      .in('plan_id', planIds);
+
+    if (snapshotsError) {
+      logger.error('❌ Error fetching BOM snapshots:', snapshotsError);
+      return NextResponse.json({ data: [] });
+    }
+
+    logger.log(`🔍 Found ${bomSnapshots?.length || 0} BOM snapshots for ${planIds.length} plans`);
+    
+    // Debug: Check if ORD-2025-386's plan_id is in plans
+    const ord386PlanId = 'cc85af6b-1717-4cf3-afda-7c64b68dbc72';
+    const ord386Plan = plans.find(p => p.id === ord386PlanId);
+    logger.log(`🔍 ORD-2025-386 plan found in plans: ${ord386Plan ? 'YES ✅' : 'NO ❌'}`);
+    if (ord386Plan) {
+      const ord386Snapshots = bomSnapshots?.filter(s => s.plan_id === ord386PlanId) || [];
+      logger.log(`🔍 ORD-2025-386 snapshots: ${ord386Snapshots.length}`);
+    }
 
     logger.log(`📋 Found ${plans?.length || 0} production plans`);
     
@@ -568,14 +588,33 @@ export async function GET(request: NextRequest) {
       }
       return r;
     });
+    
+    // Debug: Check if ORD-2025-386 is in reservations array (before filtering)
+    const ord386BeforeFilter = reservations.filter((r: any) => r.order_info?.order_number === 'ORD-2025-386');
+    logger.log(`🔍 ORD-2025-386 reservations BEFORE filter: ${ord386BeforeFilter.length} (total reservations: ${reservations.length})`);
+    if (ord386BeforeFilter.length > 0) {
+      logger.log(`✅ First ORD-2025-386 reservation before filter:`, {
+        order_number: ord386BeforeFilter[0].order_info?.order_number,
+        material: ord386BeforeFilter[0].material_name,
+        status: ord386BeforeFilter[0].status,
+        reserved: ord386BeforeFilter[0].reserved_quantity
+      });
+    }
 
     // Filter by order_id and status if provided
     let filteredReservations = reservations;
     if (order_id) {
+      logger.log(`🔍 Filtering by order_id: ${order_id}`);
       filteredReservations = filteredReservations.filter(r => r.order_id === order_id);
     }
     if (statusFilter) {
+      logger.log(`🔍 Filtering by status: ${statusFilter}`);
       filteredReservations = filteredReservations.filter(r => r.status === statusFilter);
+      // Debug: Check ORD-2025-386 after status filter
+      const ord386AfterStatusFilter = filteredReservations.filter((r: any) => r.order_info?.order_number === 'ORD-2025-386');
+      logger.log(`🔍 ORD-2025-386 reservations AFTER status filter (${statusFilter}): ${ord386AfterStatusFilter.length}`);
+    } else {
+      logger.log(`🔍 No status filter applied (statusFilter: ${statusFilter})`);
     }
     
     // IMPORTANT: Sort BEFORE pagination to ensure correct order

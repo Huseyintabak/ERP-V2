@@ -26,15 +26,16 @@ export default function HammaddelerPage() {
   useRoleBasedRealtime('depo');
   
   useEffect(() => {
-    actions.fetchRawMaterials();
+    // İlk yüklemede tüm hammaddeleri getir (limit yok, tümü)
+    actions.fetchRawMaterials({ page: 1, limit: 10000 });
   }, [actions]);
 
   const handlePageChange = (page: number) => {
-    actions.fetchRawMaterials({ page, limit: 50 });
+    actions.fetchRawMaterials({ page, limit: 10000 });
   };
 
   const handleSearch = (search: string) => {
-    actions.fetchRawMaterials({ search, page: 1, limit: 50 });
+    actions.fetchRawMaterials({ search, page: 1, limit: 10000 });
   };
 
   const handleAdd = () => {
