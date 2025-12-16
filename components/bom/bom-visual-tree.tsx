@@ -271,8 +271,8 @@ export function BomVisualTree({
     try {
       setLoading(true);
       const [rawResponse, semiResponse] = await Promise.all([
-        fetch('/api/stock/raw'),
-        fetch('/api/stock/semi')
+        fetch('/api/stock/raw?limit=10000'),
+        fetch('/api/stock/semi?limit=10000')
       ]);
 
       const [rawData, semiData] = await Promise.all([
