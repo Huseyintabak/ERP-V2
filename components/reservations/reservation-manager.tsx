@@ -45,6 +45,12 @@ export default function ReservationManager({ orderId, onReservationCreated }: Re
   const [filterOrderId, setFilterOrderId] = useState(orderId || '');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [autoRefresh, setAutoRefresh] = useState(true);
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 50,
+    total: 0,
+    totalPages: 0,
+  });
   const { user } = useAuthStore();
 
   // Rezervasyonları getir
@@ -57,6 +63,9 @@ export default function ReservationManager({ orderId, onReservationCreated }: Re
 
       const params = new URLSearchParams();
       if (filterOrderId) params.append('order_id', filterOrderId);
+      if (filterStatus !== 'all') params.append('status', filterStatus);
+      params.append('page', pagination.page.toString());
+      params.append('limit', pagination.limit.toString());
       
       logger.log('🔍 Fetching reservations with params:', params.toString());
       
@@ -75,7 +84,20 @@ export default function ReservationManager({ orderId, onReservationCreated }: Re
       
       const data = await response.json();
       logger.log('📦 API response data:', data);
+      
+      // Debug: Log first 5 order numbers from API response
+      if (data.data && data.data.length > 0) {
+        const firstFive = data.data.slice(0, 5).map((r: any) => ({
+          order_number: r.order_info?.order_number || 'N/A',
+          order_id: r.order_id?.slice(0, 8) || 'N/A'
+        }));
+        logger.log('🔍 Frontend: First 5 reservations from API:', firstFive);
+      }
+      
       setReservations(data.data || []);
+      if (data.pagination) {
+        setPagination(data.pagination);
+      }
     } catch (err: any) {
       logger.error('❌ Fetch error:', err);
       setError(err.message);
@@ -102,7 +124,7 @@ export default function ReservationManager({ orderId, onReservationCreated }: Re
         clearInterval(intervalId);
       }
     };
-  }, [filterOrderId, autoRefresh]);
+  }, [filterOrderId, filterStatus, autoRefresh, pagination.page]);
 
   // Rezervasyon durumu badge'i
   const getStatusBadge = (status: string) => {
@@ -132,13 +154,8 @@ export default function ReservationManager({ orderId, onReservationCreated }: Re
     }
   };
 
-  // Filtrelenmiş rezervasyonlar
-  const filteredReservations = reservations.filter(reservation => {
-    if (filterStatus !== 'all' && reservation.status !== filterStatus) {
-      return false;
-    }
-    return true;
-  });
+  // Reservations are already filtered by API
+  const filteredReservations = reservations;
 
   // Tüketim yüzdesi hesapla
   const getConsumptionPercentage = (reserved: number, consumed: number) => {
@@ -176,13 +193,22 @@ export default function ReservationManager({ orderId, onReservationCreated }: Re
               <Input
                 id="orderId"
                 value={filterOrderId}
-                onChange={(e) => setFilterOrderId(e.target.value)}
+                onChange={(e) => {
+                  setFilterOrderId(e.target.value);
+                  setPagination(prev => ({ ...prev, page: 1 })); // Reset to first page when filter changes
+                }}
                 placeholder="Sipariş ID ile filtrele"
               />
             </div>
             <div>
               <Label htmlFor="status">Durum</Label>
-              <Select value={filterStatus} onValueChange={setFilterStatus}>
+              <Select 
+                value={filterStatus} 
+                onValueChange={(value) => {
+                  setFilterStatus(value);
+                  setPagination(prev => ({ ...prev, page: 1 })); // Reset to first page when filter changes
+                }}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Durum seçin" />
                 </SelectTrigger>
@@ -220,7 +246,9 @@ export default function ReservationManager({ orderId, onReservationCreated }: Re
       {/* Rezervasyon listesi */}
       <Card>
         <CardHeader>
-          <CardTitle>Rezervasyonlar ({filteredReservations.length})</CardTitle>
+          <CardTitle>
+            Rezervasyonlar ({filterStatus === 'all' ? pagination.total : filteredReservations.length})
+          </CardTitle>
         </CardHeader>
         <CardContent>
           {filteredReservations.length === 0 ? (
@@ -319,6 +347,33 @@ export default function ReservationManager({ orderId, onReservationCreated }: Re
                 })}
               </TableBody>
             </Table>
+          )}
+
+          {/* Pagination */}
+          {pagination.totalPages > 1 && (
+            <div className="flex items-center justify-between mt-4 pt-4 border-t">
+              <p className="text-sm text-muted-foreground">
+                Toplam {pagination.total} rezervasyon • Sayfa {pagination.page} / {pagination.totalPages}
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPagination(prev => ({ ...prev, page: Math.max(1, prev.page - 1) }))}
+                  disabled={pagination.page === 1}
+                >
+                  Önceki
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPagination(prev => ({ ...prev, page: Math.min(prev.totalPages, prev.page + 1) }))}
+                  disabled={pagination.page === pagination.totalPages}
+                >
+                  Sonraki
+                </Button>
+              </div>
+            </div>
           )}
         </CardContent>
       </Card>

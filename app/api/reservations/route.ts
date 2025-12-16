@@ -192,6 +192,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const order_id = searchParams.get('order_id');
     const orderTypeParam = searchParams.get('order_type');
+    const statusFilter = searchParams.get('status');
 
     let isSemiOrder = orderTypeParam === 'semi_production_order';
     let semiOrders: any[] | null = null;
@@ -217,27 +218,37 @@ export async function GET(request: NextRequest) {
     }
 
     if (isSemiOrder) {
+      const page = parseInt(searchParams.get('page') || '1');
+      const limit = parseInt(searchParams.get('limit') || '50');
+      
+      // First get all reservations to sort properly by order_number
+      // We'll sort and paginate after formatting with order information
       const reservationQuery = supabase
         .from('material_reservations')
-        .select('*')
+        .select('*', { count: 'exact' })
         .eq('order_type', 'semi_production_order');
 
       if (order_id) {
         reservationQuery.eq('order_id', order_id);
       }
 
-      const { data: reservations, error: reservationError } = await reservationQuery;
+      if (statusFilter) {
+        reservationQuery.eq('status', statusFilter);
+      }
+
+      // Get all reservations first (we'll sort and paginate after formatting)
+      const { data: allReservations, error: reservationError, count } = await reservationQuery;
 
       if (reservationError) {
         logger.error('Error fetching semi production reservations:', reservationError);
-        return NextResponse.json({ data: [] });
+        return NextResponse.json({ data: [], pagination: { page: 1, limit, total: 0, totalPages: 0 } });
       }
 
-      if (!reservations || reservations.length === 0) {
-        return NextResponse.json({ data: [] });
+      if (!allReservations || allReservations.length === 0) {
+        return NextResponse.json({ data: [], pagination: { page: 1, limit, total: 0, totalPages: 0 } });
       }
 
-      const orderIds = [...new Set(reservations.map((r: any) => r.order_id))];
+      const orderIds = [...new Set(allReservations.map((r: any) => r.order_id))];
 
       if (!semiOrders) {
         if (orderIds.length > 0) {
@@ -270,12 +281,12 @@ export async function GET(request: NextRequest) {
       });
 
       const rawIds = Array.from(new Set(
-        reservations
+        allReservations
           .filter((r: any) => r.material_type === 'raw')
           .map((r: any) => r.material_id)
       ));
       const semiIds = Array.from(new Set(
-        reservations
+        allReservations
           .filter((r: any) => r.material_type === 'semi')
           .map((r: any) => r.material_id)
       ));
@@ -304,7 +315,7 @@ export async function GET(request: NextRequest) {
         semiMap.set(material.id, material);
       });
 
-      const formattedReservations = reservations.map((reservation: any) => {
+      const formattedReservations = (allReservations || []).map((reservation: any) => {
         const reservedQuantity = Number(reservation.reserved_quantity || 0);
         const consumedQuantity = Number(reservation.consumed_quantity || 0);
         const clampedConsumed = Math.min(consumedQuantity, reservedQuantity);
@@ -337,7 +348,56 @@ export async function GET(request: NextRequest) {
         };
       });
 
-      return NextResponse.json({ data: formattedReservations });
+      // Sort by order_number DESC first (en büyük sipariş numarası en başta)
+      formattedReservations.sort((a: any, b: any) => {
+        const orderNumA = a.order_info?.order_number || '';
+        const orderNumB = b.order_info?.order_number || '';
+        
+        // Both have order numbers - extract numeric part and compare
+        if (orderNumA && orderNumB) {
+          // Extract last part after last dash (e.g., "ORD-2025-386" -> "386")
+          const matchA = orderNumA.match(/-(\d+)$/);
+          const matchB = orderNumB.match(/-(\d+)$/);
+          
+          if (matchA && matchB) {
+            const numA = parseInt(matchA[1], 10);
+            const numB = parseInt(matchB[1], 10);
+            
+            if (!isNaN(numA) && !isNaN(numB)) {
+              // DESC: larger number first (386 before 280)
+              return numB - numA;
+            }
+          }
+          
+          // Fallback to string comparison if regex doesn't match
+          return orderNumB.localeCompare(orderNumA);
+        }
+        
+        // One missing order_number - prioritize the one that has it
+        if (!orderNumA && orderNumB) return 1;  // B comes first
+        if (orderNumA && !orderNumB) return -1; // A comes first
+        
+        // Both missing - fallback to created_at DESC
+        const dateA = new Date(a.created_at || 0).getTime();
+        const dateB = new Date(b.created_at || 0).getTime();
+        return dateB - dateA;
+      });
+
+      // Pagination after sorting
+      const total = formattedReservations.length;
+      const startIndex = (page - 1) * limit;
+      const endIndex = startIndex + limit;
+      const paginatedReservations = formattedReservations.slice(startIndex, endIndex);
+
+      return NextResponse.json({ 
+        data: paginatedReservations,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit)
+        }
+      });
     }
 
     // Get reservations from BOM snapshots to see which materials are reserved for which orders
@@ -353,33 +413,43 @@ export async function GET(request: NextRequest) {
     // Get unique plan IDs
     const planIds = [...new Set(bomSnapshots.map(s => s.plan_id))];
     
-    // Get production plans with orders - show all plans
+    // Get production plans with orders - show all plans, ordered by created_at DESC
     const { data: plans } = await supabase
       .from('production_plans')
       .select('id, order_id, product_id, status, created_at')
-      .in('id', planIds);
+      .in('id', planIds)
+      .order('created_at', { ascending: false });
 
     if (!plans || plans.length === 0) {
       return NextResponse.json({ data: [] });
     }
 
-    // Get order details
+    // Get order details with created_at for proper sorting
+    // Orders should be sorted by created_at DESC to get the latest orders first
     const orderIds = [...new Set(plans.map(p => p.order_id))].filter(Boolean);
     const { data: orders } = await supabase
       .from('orders')
-      .select('id, order_number, customer_name')
-      .in('id', orderIds);
+      .select('id, order_number, customer_name, created_at')
+      .in('id', orderIds)
+      .order('created_at', { ascending: false });
 
     // Create a map of plan_id -> plan data
+    // Use order.created_at (sipariş tarihi) instead of plan.created_at for proper sorting
     const planMap = new Map();
     plans.forEach(plan => {
       const order = orders?.find(o => o.id === plan.order_id);
+      // Use order created_at if available, otherwise fall back to plan created_at
+      const reservationDate = order?.created_at || plan.created_at;
       planMap.set(plan.id, {
         order_id: plan.order_id,
         product_id: plan.product_id,
         status: plan.status,
-        created_at: plan.created_at,
-        order
+        created_at: reservationDate,
+        order: order ? {
+          order_number: order.order_number,
+          customer_name: order.customer_name,
+          created_at: order.created_at
+        } : undefined
       });
     });
 
@@ -425,6 +495,12 @@ export async function GET(request: NextRequest) {
         const existing = reservationsMap.get(key);
         existing.reserved_quantity += parseFloat(snapshot.quantity_needed);
         existing.consumed_quantity += consumedQuantity;
+        // En güncel tarihi tut (daha yeni ise güncelle)
+        const existingDate = new Date(existing.created_at || 0).getTime();
+        const newDate = new Date(planData.created_at || 0).getTime();
+        if (newDate > existingDate) {
+          existing.created_at = planData.created_at || new Date().toISOString();
+        }
       } else {
         reservationsMap.set(key, {
           id: `${snapshot.plan_id}-${snapshot.material_id}`,
@@ -438,7 +514,11 @@ export async function GET(request: NextRequest) {
           consumed_quantity: consumedQuantity,
           status: planData.status === 'tamamlandi' ? 'completed' : 'active',
           created_at: planData.created_at || new Date().toISOString(),
-          order_info: planData.order,
+          order_info: planData.order ? {
+            order_number: planData.order.order_number,
+            customer_name: planData.order.customer_name,
+            created_at: planData.order.created_at
+          } : undefined,
           unit: 'adet'
         });
       }
@@ -452,13 +532,100 @@ export async function GET(request: NextRequest) {
       return r;
     });
 
-    // Filter by order_id if provided
+    // Filter by order_id and status if provided
     let filteredReservations = reservations;
     if (order_id) {
-      filteredReservations = reservations.filter(r => r.order_id === order_id);
+      filteredReservations = filteredReservations.filter(r => r.order_id === order_id);
+    }
+    if (statusFilter) {
+      filteredReservations = filteredReservations.filter(r => r.status === statusFilter);
+    }
+    
+    // IMPORTANT: Sort BEFORE pagination to ensure correct order
+
+    // Sort by order_number DESC first (en büyük sipariş numarası en başta)
+    // Order number format: "ORD-2025-386" -> extract 386, sort DESC (386 > 280)
+    filteredReservations.sort((a: any, b: any) => {
+      const orderNumA = a.order_info?.order_number || '';
+      const orderNumB = b.order_info?.order_number || '';
+      
+      // Both have order numbers - extract numeric part and compare
+      if (orderNumA && orderNumB) {
+        // Extract last part after last dash (e.g., "ORD-2025-386" -> "386")
+        const matchA = orderNumA.match(/-(\d+)$/);
+        const matchB = orderNumB.match(/-(\d+)$/);
+        
+        if (matchA && matchB) {
+          const numA = parseInt(matchA[1], 10);
+          const numB = parseInt(matchB[1], 10);
+          
+          if (!isNaN(numA) && !isNaN(numB)) {
+            // DESC: larger number first (386 before 280)
+            return numB - numA;
+          }
+        }
+        
+        // Fallback to string comparison if regex doesn't match
+        return orderNumB.localeCompare(orderNumA);
+      }
+      
+      // One missing order_number - prioritize the one that has it
+      if (!orderNumA && orderNumB) return 1;  // B comes first
+      if (orderNumA && !orderNumB) return -1; // A comes first
+      
+      // Both missing - fallback to created_at DESC
+      const dateA = new Date(a.created_at || 0).getTime();
+      const dateB = new Date(b.created_at || 0).getTime();
+      return dateB - dateA;
+    });
+    
+    // Debug: Log first few order numbers to verify sorting
+    if (filteredReservations.length > 0) {
+      const firstTen = filteredReservations.slice(0, 10).map((r: any) => {
+        const orderNum = r.order_info?.order_number || 'N/A';
+        const match = orderNum.match(/-(\d+)$/);
+        const num = match ? parseInt(match[1], 10) : 0;
+        return {
+          order_number: orderNum,
+          extracted_number: num,
+          created_at: r.created_at
+        };
+      });
+      logger.log('🔍 First 10 reservations AFTER sort (should be DESC by order number):', JSON.stringify(firstTen, null, 2));
+      
+      // Also log BEFORE sort for comparison
+      const beforeSort = Array.from(reservationsMap.values())
+        .slice(0, 10)
+        .map((r: any) => {
+          const orderNum = r.order_info?.order_number || 'N/A';
+          const match = orderNum.match(/-(\d+)$/);
+          const num = match ? parseInt(match[1], 10) : 0;
+          return {
+            order_number: orderNum,
+            extracted_number: num,
+            created_at: r.created_at
+          };
+        });
+      logger.log('📋 First 10 reservations BEFORE sort:', JSON.stringify(beforeSort, null, 2));
     }
 
-    return NextResponse.json({ data: filteredReservations });
+    // Pagination
+    const page = parseInt(searchParams.get('page') || '1');
+    const limit = parseInt(searchParams.get('limit') || '50');
+    const total = filteredReservations.length;
+    const startIndex = (page - 1) * limit;
+    const endIndex = startIndex + limit;
+    const paginatedReservations = filteredReservations.slice(startIndex, endIndex);
+
+    return NextResponse.json({ 
+      data: paginatedReservations,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit)
+      }
+    });
 
   } catch (error: any) {
     logger.error('Error fetching reservations:', error);
