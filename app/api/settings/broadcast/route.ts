@@ -1,18 +1,38 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/server';
 import { verifyJWT } from '@/lib/auth/jwt';
 
 import { logger } from '@/lib/utils/logger';
 export async function POST(request: NextRequest) {
   try {
-    const token = request.cookies.get('thunder_token')?.value;
-    if (!token) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    // Service token kontrolü (Git hook için)
+    const serviceToken = request.headers.get('x-service-token');
+    const expectedServiceToken = process.env.BROADCAST_SERVICE_TOKEN;
+    
+    logger.log(`🔍 Broadcast API: serviceToken=${serviceToken ? 'var' : 'yok'}, expectedToken=${expectedServiceToken ? 'var' : 'yok'}`);
+    
+    let payload: any = null;
+    
+    if (serviceToken && expectedServiceToken && serviceToken === expectedServiceToken) {
+      // Service token ile authentication (Git hook için)
+      logger.log('✅ Service token ile authentication başarılı');
+      payload = {
+        userId: 'system',
+        role: 'yonetici' // Service token ile gelen istekler için yönetici yetkisi
+      };
+    } else {
+      // Normal JWT authentication
+      const token = request.cookies.get('thunder_token')?.value;
+      if (!token) {
+        logger.warn('⚠️  Authentication token bulunamadı (ne service token ne de JWT)');
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
 
-    const payload = await verifyJWT(token);
-    if (!payload || payload.role !== 'admin') {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
+      payload = await verifyJWT(token);
+      if (!payload || !['yonetici', 'planlama'].includes(payload.role)) {
+        logger.warn('⚠️  JWT token geçersiz veya yetki yetersiz');
+        return NextResponse.json({ error: 'Yönetici veya planlama rolü gerekli' }, { status: 403 });
+      }
     }
 
     const body = await request.json();
@@ -31,14 +51,37 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Setting key and value are required' }, { status: 400 });
     }
 
-    const supabase = await createClient();
+    // Use admin client to bypass RLS (we already checked auth above)
+    const supabase = createAdminClient();
 
     // Broadcast oluştur
+    // Service token ile gelen istekler için ilk admin kullanıcısını bul
+    let changedBy = payload.userId;
+    if (payload.userId === 'system') {
+      const { data: adminUser } = await supabase
+        .from('users')
+        .select('id')
+        .eq('role', 'yonetici')
+        .eq('is_active', true)
+        .order('created_at', { ascending: true })
+        .limit(1)
+        .single();
+      
+      if (adminUser) {
+        changedBy = adminUser.id;
+      } else {
+        // Fallback: Eğer admin kullanıcı yoksa hata döndür
+        return NextResponse.json({ 
+          error: 'Sistem kullanıcısı bulunamadı' 
+        }, { status: 500 });
+      }
+    }
+    
     const { data: broadcastId, error } = await supabase
       .rpc('broadcast_setting_change', {
         p_setting_key: setting_key,
         p_setting_value: setting_value,
-        p_changed_by: payload.userId,
+        p_changed_by: changedBy,
         p_change_type: change_type,
         p_broadcast_to: broadcast_to,
         p_target_roles: target_roles,
