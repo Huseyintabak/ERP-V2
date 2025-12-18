@@ -189,25 +189,8 @@ export function HumanApprovalPanel() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold">AI Karar Onayları</h2>
-          <p className="text-sm text-muted-foreground mt-1">
-            Bekleyen onaylar: {pendingApprovals.length}
-          </p>
-        </div>
-        <Badge variant="outline" className="text-lg px-4 py-2">
-          {pendingApprovals.length} Bekleyen
-        </Badge>
-      </div>
-      
-      {pendingApprovals.length === 0 ? (
-        <Alert>
-          <CheckCircle className="h-4 w-4" />
-          <AlertDescription>Bekleyen onay bulunmuyor. Tüm kararlar işlendi.</AlertDescription>
-        </Alert>
-      ) : (
+    <>
+      {pendingApprovals.length === 0 ? null : (
         <div className="grid gap-4">
           {pendingApprovals.map(approval => {
             const isExpired = approval.status === 'expired' || new Date(approval.expiry_at) < new Date();
@@ -355,7 +338,7 @@ export function HumanApprovalPanel() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   );
 }
 

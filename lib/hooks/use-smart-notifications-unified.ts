@@ -7,6 +7,7 @@ export const useSmartNotificationsUnified = (disablePolling = true) => {
   const {
     notifications,
     unreadCount,
+    totalCount,
     isLoading,
     fetchNotifications,
     markNotificationAsRead,
@@ -89,6 +90,7 @@ export const useSmartNotificationsUnified = (disablePolling = true) => {
   return {
     notifications,
     unreadCount,
+    totalCount,
     isLoading,
     markNotificationAsRead,
     deleteNotification,

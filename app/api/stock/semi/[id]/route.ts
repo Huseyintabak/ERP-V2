@@ -55,6 +55,15 @@ export async function PUT(
 
     const updateData = await request.json();
 
+    // ============================================
+    // AI AGENT VALIDATION (Devre Dışı - Manuel güncellemeler için AI'a sorulmuyor)
+    // Quantity güncellemesi için özellikle önemli
+    // ============================================
+    // AI Agent validation devre dışı - kullanıcı manuel güncelleme yapıyorsa AI'a sorulmuyor
+    // if (false && process.env.AGENT_ENABLED === 'true' && updateData.quantity !== undefined) {
+    //   // AI Agent validation kodu buraya eklenebilir (şu an devre dışı)
+    // }
+
     const { data: product, error } = await supabase
       .from('semi_finished_products')
       .update({

@@ -65,10 +65,11 @@ export async function PUT(
       .single();
 
     // ============================================
-    // AI AGENT VALIDATION (Opsiyonel - AGENT_ENABLED kontrolü ile)
+    // AI AGENT VALIDATION (Devre Dışı - Manuel güncellemeler için AI'a sorulmuyor)
     // Quantity güncellemesi için özellikle önemli
     // ============================================
-    if (process.env.AGENT_ENABLED === 'true' && updateData.quantity !== undefined) {
+    // AI Agent validation devre dışı - kullanıcı manuel güncelleme yapıyorsa AI'a sorulmuyor
+    if (false && process.env.AGENT_ENABLED === 'true' && updateData.quantity !== undefined) {
       try {
         logger.log('🤖 AI Agent validation başlatılıyor (Warehouse - Raw Material Update)...');
         

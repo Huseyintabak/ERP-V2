@@ -26,8 +26,35 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
+    // Check environment variables
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
+      logger.error('NEXT_PUBLIC_SUPABASE_URL is not set');
+      return NextResponse.json(
+        { error: 'Server configuration error: Supabase URL not configured' },
+        { status: 500 }
+      );
+    }
+
+    if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      logger.error('SUPABASE_SERVICE_ROLE_KEY is not set');
+      return NextResponse.json(
+        { error: 'Server configuration error: Service role key not configured' },
+        { status: 500 }
+      );
+    }
+
     // Use admin client to bypass RLS (we already checked role above)
-    const supabase = createAdminClient();
+    let supabase;
+    try {
+      supabase = createAdminClient();
+    } catch (clientError: any) {
+      logger.error('Error creating Supabase admin client:', clientError);
+      return NextResponse.json(
+        { error: 'Failed to initialize database connection', details: clientError.message },
+        { status: 500 }
+      );
+    }
+
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status') || 'pending';
     const page = parseInt(searchParams.get('page') || '1');
@@ -48,9 +75,18 @@ export async function GET(request: NextRequest) {
       .range(offset, offset + limit - 1);
 
     if (error) {
-      logger.error('Error fetching approvals:', error);
+      logger.error('Error fetching approvals from database:', {
+        error: error.message,
+        code: error.code,
+        details: error.details,
+        hint: error.hint
+      });
       return NextResponse.json(
-        { error: 'Failed to fetch approvals' },
+        { 
+          error: 'Failed to fetch approvals',
+          details: error.message,
+          code: error.code
+        },
         { status: 500 }
       );
     }
@@ -79,9 +115,16 @@ export async function GET(request: NextRequest) {
       }
     });
   } catch (error: any) {
-    logger.error('Human approvals API error:', error);
+    logger.error('Human approvals API error:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name
+    });
     return NextResponse.json(
-      { error: error.message || 'Internal server error' },
+      { 
+        error: 'Internal server error',
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      },
       { status: 500 }
     );
   }

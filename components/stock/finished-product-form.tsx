@@ -186,6 +186,20 @@ export function FinishedProductForm({ open, onClose, onSubmit, initialData, isLo
           </div>
 
           <div>
+            <Label htmlFor="sale_price">Satış Fiyatı (TL) *</Label>
+            <Input
+              id="sale_price"
+              type="number"
+              step="0.01"
+              min="0"
+              {...register('sale_price', { valueAsNumber: true })}
+              placeholder="0.00"
+              disabled={isLoading}
+            />
+            {errors.sale_price && <p className="text-sm text-red-600">{errors.sale_price.message}</p>}
+          </div>
+
+          <div>
             <Label htmlFor="description">Açıklama</Label>
             <Textarea
               id="description"

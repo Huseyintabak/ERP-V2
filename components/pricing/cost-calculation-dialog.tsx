@@ -72,19 +72,24 @@ export function CostCalculationDialog({
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<CostCalculationResult | null>(null);
   const [usdRate, setUsdRate] = useState<number | null>(null);
+  const [usdRateLoading, setUsdRateLoading] = useState(false);
   const { user } = useAuthStore();
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const r = await fetch('/api/exchange/usd', { cache: 'no-store' });
-        if (r.ok) {
-          const d = await r.json();
-          if (d?.rate) setUsdRate(Number(d.rate));
-        }
-      } catch {}
-    })();
-  }, []);
+  // USD rate'i sadece dialog açıldığında fetch et (her component mount'ta değil)
+  const fetchUsdRate = async () => {
+    if (usdRate || usdRateLoading) return; // Zaten fetch ediliyorsa veya var ise tekrar fetch etme
+    
+    setUsdRateLoading(true);
+    try {
+      const r = await fetch('/api/exchange/usd', { cache: 'no-store' });
+      if (r.ok) {
+        const d = await r.json();
+        if (d?.rate) setUsdRate(Number(d.rate));
+      }
+    } catch {} finally {
+      setUsdRateLoading(false);
+    }
+  };
 
   const handleCalculate = async () => {
     setLoading(true);
@@ -117,19 +122,13 @@ export function CostCalculationDialog({
 
   const handleOpen = (isOpen: boolean) => {
     setOpen(isOpen);
-    if (isOpen && !result) {
-      handleCalculate();
-    }
-    if (isOpen && !usdRate) {
-      (async () => {
-        try {
-          const r = await fetch('/api/exchange/usd', { cache: 'no-store' });
-          if (r.ok) {
-            const d = await r.json();
-            if (d?.rate) setUsdRate(Number(d.rate));
-          }
-        } catch {}
-      })();
+    if (isOpen) {
+      // Dialog açıldığında USD rate'i fetch et (sadece bir kez)
+      fetchUsdRate();
+      // Eğer result yoksa hesaplamayı başlat
+      if (!result) {
+        handleCalculate();
+      }
     }
   };
 

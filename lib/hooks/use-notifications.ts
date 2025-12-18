@@ -7,6 +7,7 @@ export function useNotifications() {
   const {
     notifications,
     unreadCount,
+    totalCount,
     isLoading,
     error,
     setNotifications,
@@ -59,7 +60,9 @@ export function useNotifications() {
 
       const data = await response.json();
       logger.log('🔔 Notifications data received:', data);
-      setNotifications(data.data || []);
+      const notifications = data.data || [];
+      const totalCount = data.pagination?.total || notifications.length;
+      setNotifications(notifications, totalCount);
     } catch (error: any) {
       logger.error('🔔 Error fetching notifications:', error);
       setError(error.message);
@@ -198,14 +201,15 @@ export function useNotifications() {
     }
   }, [addNotification]);
 
-  // Auto-fetch notifications on mount
+  // Auto-fetch notifications on mount (with higher limit to show all notifications)
   useEffect(() => {
-    fetchNotifications();
+    fetchNotifications({ limit: 100 }); // Show up to 100 notifications
   }, [fetchNotifications]);
 
   return {
     notifications,
     unreadCount,
+    totalCount,
     isLoading,
     error,
     fetchNotifications,

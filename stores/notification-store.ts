@@ -16,11 +16,12 @@ export interface Notification {
 interface NotificationState {
   notifications: Notification[];
   unreadCount: number;
+  totalCount: number; // Toplam bildirim sayısı (veritabanından)
   isLoading: boolean;
   error: string | null;
   
   // Actions
-  setNotifications: (notifications: Notification[]) => void;
+  setNotifications: (notifications: Notification[], totalCount?: number) => void;
   addNotification: (notification: Notification) => void;
   markAsRead: (id: string) => void;
   markAllAsRead: () => void;
@@ -34,12 +35,13 @@ export const useNotificationStore = create<NotificationState>()(
   subscribeWithSelector((set, get) => ({
     notifications: [],
     unreadCount: 0,
+    totalCount: 0,
     isLoading: false,
     error: null,
 
-    setNotifications: (notifications) => {
+    setNotifications: (notifications, totalCount) => {
       const unreadCount = notifications.filter(n => !n.is_read).length;
-      set({ notifications, unreadCount });
+      set({ notifications, unreadCount, totalCount: totalCount ?? notifications.length });
     },
 
     addNotification: (notification) => {

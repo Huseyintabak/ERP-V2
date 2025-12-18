@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useMemo } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useStockStore, type RawMaterial, type SemiFinishedProduct, type FinishedProduct, type StockMovement } from '@/stores/stock-store';
 import { useOrderStore, type Order, type ProductionPlan } from '@/stores/order-store';
@@ -471,52 +471,57 @@ export const useRealtimeStore = (handlers: RealtimeHandlers = {}) => {
 
 // Hook for role-specific real-time updates
 export const useRoleBasedRealtime = (userRole: string) => {
-  const handlers: RealtimeHandlers = {};
+  // Memoize handlers to prevent infinite loops
+  const handlers = useMemo<RealtimeHandlers>(() => {
+    const h: RealtimeHandlers = {};
 
-  // Add role-specific handlers
-  if (userRole === 'yonetici') {
-    handlers.onRawMaterialUpdate = (material) => {
-      logger.log('Yönetici: Raw material updated', material);
-    };
-    handlers.onOrderUpdate = (order) => {
-      logger.log('Yönetici: Order updated', order);
-    };
-  }
+    // Add role-specific handlers
+    if (userRole === 'yonetici') {
+      h.onRawMaterialUpdate = (material) => {
+        logger.log('Yönetici: Raw material updated', material);
+      };
+      h.onOrderUpdate = (order) => {
+        logger.log('Yönetici: Order updated', order);
+      };
+    }
 
-  if (userRole === 'planlama') {
-    handlers.onProductionPlanUpdate = (plan) => {
-      logger.log('Planlama: Production plan updated', plan);
-    };
-    handlers.onOrderUpdate = (order) => {
-      logger.log('Planlama: Order updated', order);
-    };
-  }
+    if (userRole === 'planlama') {
+      h.onProductionPlanUpdate = (plan) => {
+        logger.log('Planlama: Production plan updated', plan);
+      };
+      h.onOrderUpdate = (order) => {
+        logger.log('Planlama: Order updated', order);
+      };
+    }
 
-  if (userRole === 'depo') {
-    handlers.onRawMaterialUpdate = (material) => {
-      logger.log('Depo: Raw material updated', material);
-    };
-    handlers.onSemiFinishedUpdate = (product) => {
-      logger.log('Depo: Semi finished product updated', product);
-    };
-    handlers.onFinishedProductUpdate = (product) => {
-      logger.log('Depo: Finished product updated', product);
-    };
-    handlers.onStockMovementAdd = (movement) => {
-      logger.log('Depo: Stock movement added', movement);
-    };
-  }
+    if (userRole === 'depo') {
+      h.onRawMaterialUpdate = (material) => {
+        logger.log('Depo: Raw material updated', material);
+      };
+      h.onSemiFinishedUpdate = (product) => {
+        logger.log('Depo: Semi finished product updated', product);
+      };
+      h.onFinishedProductUpdate = (product) => {
+        logger.log('Depo: Finished product updated', product);
+      };
+      h.onStockMovementAdd = (movement) => {
+        logger.log('Depo: Stock movement added', movement);
+      };
+    }
 
-  if (userRole === 'operator') {
-    handlers.onProductionPlanUpdate = (plan) => {
-      logger.log('Operator: Production plan updated', plan);
-    };
-  }
+    if (userRole === 'operator') {
+      h.onProductionPlanUpdate = (plan) => {
+        logger.log('Operator: Production plan updated', plan);
+      };
+    }
 
-  // All roles get notifications
-  handlers.onNotificationAdd = (notification) => {
-    logger.log(`${userRole}: Notification received`, notification);
-  };
+    // All roles get notifications
+    h.onNotificationAdd = (notification) => {
+      logger.log(`${userRole}: Notification received`, notification);
+    };
+
+    return h;
+  }, [userRole]);
 
   return useRealtimeStore(handlers);
 };

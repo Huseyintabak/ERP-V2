@@ -99,6 +99,7 @@ export default function BildirimlerPage() {
   const {
     notifications,
     unreadCount,
+    totalCount,
     isLoading,
     markNotificationAsRead,
     deleteNotification,
@@ -211,7 +212,7 @@ export default function BildirimlerPage() {
             <Bell className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{notifications.length}</div>
+            <div className="text-2xl font-bold">{totalCount || notifications.length}</div>
           </CardContent>
         </Card>
         <Card>

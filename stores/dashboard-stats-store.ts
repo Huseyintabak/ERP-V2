@@ -6,6 +6,7 @@ export interface DashboardStats {
   // Financial KPIs (Yönetici only)
   totalRevenue: number;
   monthlyRevenue: number;
+  monthlyGrowth: number; // Geçen aya göre büyüme yüzdesi
   dailyRevenue: number;
   totalOrders: number;
   averageOrderValue: number;
@@ -34,6 +35,8 @@ export interface DashboardStats {
   productionEfficiency: number;
   onTimeDelivery: number;
   operatorUtilization: number;
+  monthlyOrdersCount: number; // Bu ayın sipariş sayısı
+  monthlyProducedQuantity: number; // Bu ayın üretilen ürün adedi
   
   // Recent activity
   recentOrders: Array<{
@@ -120,7 +123,7 @@ interface DashboardStatsStore {
   // Actions
   actions: {
     // Fetch stats for specific role
-    fetchStats: (role: keyof RoleBasedStats) => Promise<void>;
+    fetchStats: (role: keyof RoleBasedStats, filters?: { startDate?: string; endDate?: string }) => Promise<void>;
     fetchAllStats: () => Promise<void>;
     
     // Real-time updates
@@ -142,6 +145,7 @@ const initialDashboardStats: DashboardStats = {
   // Financial KPIs
   totalRevenue: 0,
   monthlyRevenue: 0,
+  monthlyGrowth: 0,
   dailyRevenue: 0,
   totalOrders: 0,
   averageOrderValue: 0,
@@ -170,6 +174,8 @@ const initialDashboardStats: DashboardStats = {
   productionEfficiency: 0,
   onTimeDelivery: 0,
   operatorUtilization: 0,
+  monthlyOrdersCount: 0,
+  monthlyProducedQuantity: 0,
   
   // Recent activity
   recentOrders: [],
@@ -205,8 +211,9 @@ const initialState = {
 };
 
 // Helper function to calculate role-specific stats
-const calculateRoleStats = async (role: keyof RoleBasedStats): Promise<DashboardStats> => {
+const calculateRoleStats = async (role: keyof RoleBasedStats, filters?: { startDate?: string; endDate?: string }): Promise<DashboardStats> => {
   const stats = { ...initialDashboardStats };
+  const now = new Date(); // Single definition for all date calculations
   
   try {
     // Fetch all necessary data in parallel
@@ -259,26 +266,99 @@ const calculateRoleStats = async (role: keyof RoleBasedStats): Promise<Dashboard
       
       stats.totalRevenue = orders.reduce((sum: number, order: any) => sum + calculateOrderRevenue(order), 0);
       
-      // Monthly revenue (current month)
-      const now = new Date();
-      stats.monthlyRevenue = orders
-        .filter((order: any) => {
-          const orderDate = new Date(order.created_at);
-          return orderDate.getMonth() === now.getMonth() && orderDate.getFullYear() === now.getFullYear();
-        })
-        .reduce((sum: number, order: any) => sum + calculateOrderRevenue(order), 0);
+      // Monthly revenue (filtered by date range or current month)
+      let monthlyRevenue = 0;
+      let lastMonthRevenue = 0;
       
-      // Daily revenue (today's completed orders)
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      stats.dailyRevenue = orders
-        .filter((order: any) => {
-          if (order.status !== 'tamamlandi') return false;
-          const completedDate = new Date(order.updated_at);
-          completedDate.setHours(0, 0, 0, 0);
-          return completedDate.getTime() === today.getTime();
-        })
-        .reduce((sum: number, order: any) => sum + calculateOrderRevenue(order), 0);
+      if (filters?.startDate && filters?.endDate) {
+        const startDate = new Date(filters.startDate);
+        const endDate = new Date(filters.endDate);
+        endDate.setHours(23, 59, 59, 999);
+        monthlyRevenue = orders
+          .filter((order: any) => {
+            const orderDate = new Date(order.created_at);
+            return orderDate >= startDate && orderDate <= endDate;
+          })
+          .reduce((sum: number, order: any) => sum + calculateOrderRevenue(order), 0);
+        
+        // Calculate previous period revenue for comparison
+        const periodDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+        const previousStartDate = new Date(startDate);
+        previousStartDate.setDate(previousStartDate.getDate() - periodDays);
+        const previousEndDate = new Date(startDate);
+        previousEndDate.setDate(previousEndDate.getDate() - 1);
+        previousEndDate.setHours(23, 59, 59, 999);
+        
+        lastMonthRevenue = orders
+          .filter((order: any) => {
+            const orderDate = new Date(order.created_at);
+            return orderDate >= previousStartDate && orderDate <= previousEndDate;
+          })
+          .reduce((sum: number, order: any) => sum + calculateOrderRevenue(order), 0);
+      } else {
+        // Current month (1st day 00:00:00 to last day 23:59:59)
+        const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+        const currentMonthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+        
+        monthlyRevenue = orders
+          .filter((order: any) => {
+            const orderDate = new Date(order.created_at);
+            return orderDate >= currentMonthStart && orderDate <= currentMonthEnd;
+          })
+          .reduce((sum: number, order: any) => sum + calculateOrderRevenue(order), 0);
+        
+        // Last month (1st day 00:00:00 to last day 23:59:59)
+        const lastMonth = now.getMonth() === 0 ? 11 : now.getMonth() - 1;
+        const lastMonthYear = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
+        const lastMonthStart = new Date(lastMonthYear, lastMonth, 1, 0, 0, 0, 0);
+        const lastMonthEnd = new Date(lastMonthYear, lastMonth + 1, 0, 23, 59, 59, 999);
+        
+        lastMonthRevenue = orders
+          .filter((order: any) => {
+            const orderDate = new Date(order.created_at);
+            return orderDate >= lastMonthStart && orderDate <= lastMonthEnd;
+          })
+          .reduce((sum: number, order: any) => sum + calculateOrderRevenue(order), 0);
+      }
+      
+      stats.monthlyRevenue = monthlyRevenue;
+      
+      // Calculate growth percentage
+      if (lastMonthRevenue > 0) {
+        stats.monthlyGrowth = ((monthlyRevenue - lastMonthRevenue) / lastMonthRevenue) * 100;
+      } else if (monthlyRevenue > 0) {
+        stats.monthlyGrowth = 100; // 100% growth if last month was 0
+      } else {
+        stats.monthlyGrowth = 0;
+      }
+      
+      // Daily revenue (filtered by date range or today's completed orders)
+      if (filters?.startDate && filters?.endDate) {
+        const startDate = new Date(filters.startDate);
+        const endDate = new Date(filters.endDate);
+        endDate.setHours(23, 59, 59, 999);
+        stats.dailyRevenue = orders
+          .filter((order: any) => {
+            if (order.status !== 'tamamlandi') return false;
+            const completedDate = new Date(order.updated_at);
+            return completedDate >= startDate && completedDate <= endDate;
+          })
+          .reduce((sum: number, order: any) => sum + calculateOrderRevenue(order), 0);
+      } else {
+        // Today's completed orders (00:00:00 to 23:59:59)
+        const todayStart = new Date(now);
+        todayStart.setHours(0, 0, 0, 0);
+        const todayEnd = new Date(now);
+        todayEnd.setHours(23, 59, 59, 999);
+        
+        stats.dailyRevenue = orders
+          .filter((order: any) => {
+            if (order.status !== 'tamamlandi') return false;
+            const completedDate = new Date(order.updated_at);
+            return completedDate >= todayStart && completedDate <= todayEnd;
+          })
+          .reduce((sum: number, order: any) => sum + calculateOrderRevenue(order), 0);
+      }
       
       stats.averageOrderValue = orders.length > 0 ? stats.totalRevenue / orders.length : 0;
       
@@ -363,27 +443,75 @@ const calculateRoleStats = async (role: keyof RoleBasedStats): Promise<Dashboard
     // Calculate operational KPIs
     stats.totalOrders = orders.length;
     
-    // Pending orders - daily (today's pending orders)
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    // Monthly orders count
+    if (filters?.startDate && filters?.endDate) {
+      const startDate = new Date(filters.startDate);
+      const endDate = new Date(filters.endDate);
+      endDate.setHours(23, 59, 59, 999);
+      stats.monthlyOrdersCount = orders.filter((order: any) => {
+        const orderDate = new Date(order.created_at);
+        return orderDate >= startDate && orderDate <= endDate;
+      }).length;
+    } else {
+      // Current month (1st day 00:00:00 to last day 23:59:59)
+      const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+      const currentMonthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+      
+      stats.monthlyOrdersCount = orders.filter((order: any) => {
+        const orderDate = new Date(order.created_at);
+        return orderDate >= currentMonthStart && orderDate <= currentMonthEnd;
+      }).length;
+    }
+    
+    // Monthly produced quantity (from production_plans produced_quantity)
+    if (filters?.startDate && filters?.endDate) {
+      const startDate = new Date(filters.startDate);
+      const endDate = new Date(filters.endDate);
+      endDate.setHours(23, 59, 59, 999);
+      stats.monthlyProducedQuantity = productionPlans
+        .filter((plan: any) => {
+          // Plan'ın tamamlandığı tarih veya oluşturulma tarihi
+          const planDate = new Date(plan.completed_at || plan.created_at);
+          return planDate >= startDate && planDate <= endDate;
+        })
+        .reduce((sum: number, plan: any) => sum + parseFloat(plan.produced_quantity || 0), 0);
+    } else {
+      // Current month (1st day 00:00:00 to last day 23:59:59)
+      const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+      const currentMonthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+      
+      stats.monthlyProducedQuantity = productionPlans
+        .filter((plan: any) => {
+          const planDate = new Date(plan.completed_at || plan.created_at);
+          return planDate >= currentMonthStart && planDate <= currentMonthEnd;
+        })
+        .reduce((sum: number, plan: any) => sum + parseFloat(plan.produced_quantity || 0), 0);
+    }
+    
+    // Pending orders - daily (today's pending orders, 00:00:00 to 23:59:59)
+    const todayStart = new Date(now);
+    todayStart.setHours(0, 0, 0, 0);
+    const todayEnd = new Date(now);
+    todayEnd.setHours(23, 59, 59, 999);
+    
     stats.pendingOrders = orders.filter((order: any) => {
       if (order.status !== 'beklemede') return false;
       const orderDate = new Date(order.created_at);
-      orderDate.setHours(0, 0, 0, 0);
-      return orderDate.getTime() === today.getTime();
+      return orderDate >= todayStart && orderDate <= todayEnd;
     }).length;
     
     stats.inProductionOrders = orders.filter((order: any) => order.status === 'uretimde').length;
     
-    // Completed orders - daily (today's completed orders)
+    // Completed orders - daily (today's completed orders, 00:00:00 to 23:59:59)
     stats.completedOrders = orders.filter((order: any) => {
       if (order.status !== 'tamamlandi') return false;
       const completedDate = new Date(order.updated_at);
-      completedDate.setHours(0, 0, 0, 0);
-      return completedDate.getTime() === today.getTime();
+      return completedDate >= todayStart && completedDate <= todayEnd;
     }).length;
+    // Aktif üretim = Sadece devam_ediyor durumundaki planlar
+    // planlandi durumundaki planlar henüz başlamamış, aktif sayılmaz
     stats.activeProductionPlans = productionPlans.filter((plan: any) => 
-      plan.status === 'devam_ediyor' || plan.status === 'planlandi'
+      plan.status === 'devam_ediyor'
     ).length;
     
     // Total customers count
@@ -395,13 +523,19 @@ const calculateRoleStats = async (role: keyof RoleBasedStats): Promise<Dashboard
     stats.totalFinished = finishedProducts.length;
     
     // Calculate critical and low stock items
+    // CRITICAL: Only count items where critical_level > 0 (finished products have critical_level = 0, so they shouldn't be counted)
     const allStockItems = [...rawMaterials, ...semiFinished, ...finishedProducts];
-    stats.criticalStockItems = allStockItems.filter((item: any) => 
-      item.quantity <= (item.critical_level || 0)
-    ).length;
-    stats.lowStockItems = allStockItems.filter((item: any) => 
-      item.quantity <= (item.min_level || 0) && item.quantity > (item.critical_level || 0)
-    ).length;
+    stats.criticalStockItems = allStockItems.filter((item: any) => {
+      const criticalLevel = item.critical_level || 0;
+      // Only count as critical if critical_level > 0 AND quantity <= critical_level
+      return criticalLevel > 0 && item.quantity <= criticalLevel;
+    }).length;
+    stats.lowStockItems = allStockItems.filter((item: any) => {
+      const criticalLevel = item.critical_level || 0;
+      const minLevel = item.min_level || 0;
+      // Only count as low if min_level > 0 AND quantity is between min_level and critical_level
+      return minLevel > 0 && item.quantity <= minLevel && item.quantity > criticalLevel;
+    }).length;
     
     // Calculate production KPIs (for planlama and yonetici)
     if (role === 'planlama' || role === 'yonetici') {
@@ -466,7 +600,6 @@ const calculateRoleStats = async (role: keyof RoleBasedStats): Promise<Dashboard
     
     // Chart data
     // Revenue chart (last 6 months)
-    const now = new Date();
     stats.revenueChart = Array.from({ length: 6 }, (_, i) => {
       const month = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const monthStr = month.toLocaleDateString('tr-TR', { month: 'short', year: '2-digit' });
@@ -539,14 +672,14 @@ export const useDashboardStatsStore = create<DashboardStatsStore>()(
       
       actions: {
         // Fetch stats for specific role
-        fetchStats: async (role: keyof RoleBasedStats) => {
+        fetchStats: async (role: keyof RoleBasedStats, filters?: { startDate?: string; endDate?: string }) => {
           set((state) => ({
             loading: { ...state.loading, [role]: true },
             errors: { ...state.errors, [role]: null },
           }));
           
           try {
-            const stats = await calculateRoleStats(role);
+            const stats = await calculateRoleStats(role, filters);
             
             set((state) => ({
               stats: { ...state.stats, [role]: stats },

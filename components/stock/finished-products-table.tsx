@@ -17,6 +17,7 @@ import type { FinishedProduct } from '@/types';
 import { ExcelImportDialog } from './excel-import-dialog';
 import { ExcelExportDialog } from './excel-export-dialog';
 import { CostCalculationDialog } from '@/components/pricing/cost-calculation-dialog';
+import { formatNumber } from '@/lib/utils';
 
 interface Props {
   products: FinishedProduct[];
@@ -88,6 +89,7 @@ export function FinishedProductsTable({
               <TableHead className="text-right">Kritik Seviye</TableHead>
               <TableHead>Birim</TableHead>
               <TableHead className="text-right">Birim Maliyet</TableHead>
+              <TableHead className="text-right">Satış Fiyatı</TableHead>
               <TableHead>Durum</TableHead>
               <TableHead className="text-right">İşlemler</TableHead>
             </TableRow>
@@ -95,7 +97,7 @@ export function FinishedProductsTable({
           <TableBody>
             {products.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={10} className="text-center text-gray-500">
+                <TableCell colSpan={11} className="text-center text-gray-500">
                   Kayıt bulunamadı
                 </TableCell>
               </TableRow>
@@ -122,7 +124,10 @@ export function FinishedProductsTable({
                     </TableCell>
                     <TableCell>{product.unit}</TableCell>
                     <TableCell className="text-right font-mono">
-                      ₺{product.sale_price.toFixed(2)}
+                      ₺{formatNumber((product as any).cost_price || 0, 2)}
+                    </TableCell>
+                    <TableCell className="text-right font-mono font-semibold text-green-600">
+                      ₺{formatNumber(product.sale_price, 2)}
                     </TableCell>
                     <TableCell>
                       {isCritical ? (

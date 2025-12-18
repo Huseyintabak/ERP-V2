@@ -35,6 +35,7 @@ export async function GET(request: NextRequest) {
 
     // Bildirimler şu an sistem geneli için tutuluyor (user_id çoğu kayıtta NULL).
     // Bu yüzden sadece current user'a göre filtrelemek yerine tüm bildirimleri döndürüyoruz.
+    // Ancak user_id belirtilmiş bildirimler için kullanıcıya özel filtreleme yapıyoruz.
     let query = supabase
       .from('notifications')
       .select(`
@@ -46,9 +47,14 @@ export async function GET(request: NextRequest) {
         material_id,
         severity,
         is_read,
+        user_id,
         created_at
-      `)
+      `, { count: 'exact' })
       .order('created_at', { ascending: false });
+
+    // User-specific notifications OR system-wide notifications (user_id IS NULL)
+    // Supabase syntax: or('user_id.eq.value1,user_id.is.null')
+    query = query.or(`user_id.eq.${payload.userId},user_id.is.null`);
 
     if (unread_only) {
       query = query.eq('is_read', false);

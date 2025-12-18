@@ -28,7 +28,8 @@ export default function NihaiUrunlerPage() {
   useEffect(() => {
     // İlk yüklemede tüm nihai ürünleri getir (limit yok, tümü)
     actions.fetchFinishedProducts({ page: 1, limit: 10000 });
-  }, [actions]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Sadece mount'ta çalışsın, actions dependency'den çıkarıldı
 
   const handlePageChange = (page: number) => {
     actions.fetchFinishedProducts({ page, limit: 10000 });

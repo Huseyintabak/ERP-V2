@@ -22,13 +22,16 @@ import {
   MessageSquare,
   Brain,
   Sparkles,
-  Calendar
+  Calendar,
+  Package
 } from 'lucide-react';
 import { useDashboardStats, useDashboardActions, useDashboardLoading } from '@/stores/dashboard-stats-store';
 import { useRoleBasedRealtime } from '@/lib/hooks/use-realtime-store';
 import { useAuthStore } from '@/stores/auth-store';
 import { InventoryApprovalList } from '@/components/stock/inventory-approval-list';
 import { HumanApprovalPanel } from '@/components/ai/human-approval-panel';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 // import { useMemoryLeakDetector } from '@/lib/hooks/use-memory-leak-detector';
 // import { usePerformanceMonitor } from '@/lib/hooks/use-performance-monitor';
 // import { useStoreSync } from '@/lib/hooks/use-store-sync';
@@ -43,6 +46,43 @@ export default function YoneticiDashboard() {
   const [aiStats, setAiStats] = useState<any>(null);
   const [aiCosts, setAiCosts] = useState<any>(null);
   const [aiLoading, setAiLoading] = useState(true);
+  
+  // GMT+3 timezone helper function
+  const getGMT3Date = (date: Date = new Date()): { year: number; month: number; day: number } => {
+    // UTC zamanını al
+    const utcTime = date.getTime() + (date.getTimezoneOffset() * 60 * 1000);
+    // GMT+3 offset: 3 saat = 3 * 60 * 60 * 1000 ms
+    const gmt3Offset = 3 * 60 * 60 * 1000;
+    const gmt3Time = new Date(utcTime + gmt3Offset);
+    // GMT+3'teki tarih bilgilerini al
+    return {
+      year: gmt3Time.getUTCFullYear(),
+      month: gmt3Time.getUTCMonth(),
+      day: gmt3Time.getUTCDate(),
+    };
+  };
+
+  // Tarih filtreleri - Ayın 1'i ve bugün (GMT+3)
+  const [startDate, setStartDate] = useState<string>(() => {
+    const now = new Date();
+    // GMT+3'te bugünün tarihi
+    const gmt3Now = getGMT3Date(now);
+    // Ayın 1'i (GMT+3)
+    const firstDayOfMonth = new Date(gmt3Now.year, gmt3Now.month, 1);
+    const yearStr = String(firstDayOfMonth.getFullYear());
+    const monthStr = String(firstDayOfMonth.getMonth() + 1).padStart(2, '0');
+    const dayStr = String(firstDayOfMonth.getDate()).padStart(2, '0');
+    return `${yearStr}-${monthStr}-${dayStr}`;
+  });
+  const [endDate, setEndDate] = useState<string>(() => {
+    // Bugün (GMT+3)
+    const now = new Date();
+    const gmt3Now = getGMT3Date(now);
+    const yearStr = String(gmt3Now.year);
+    const monthStr = String(gmt3Now.month + 1).padStart(2, '0');
+    const dayStr = String(gmt3Now.day).padStart(2, '0');
+    return `${yearStr}-${monthStr}-${dayStr}`;
+  });
 
   // Performance and memory monitoring - DISABLED FOR NOW
   // const memoryDetector = useMemoryLeakDetector('YoneticiDashboard');
@@ -58,10 +98,10 @@ export default function YoneticiDashboard() {
   useRoleBasedRealtime('yonetici');
 
   useEffect(() => {
-    actions.fetchStats('yonetici');
+    actions.fetchStats('yonetici', { startDate, endDate });
     fetchAIStats();
     fetchAICosts();
-  }, [actions]);
+  }, [actions, startDate, endDate]);
 
   const fetchAIStats = async () => {
     try {
@@ -127,6 +167,8 @@ export default function YoneticiDashboard() {
     productionEfficiency: 0,
     onTimeDelivery: 0,
     operatorUtilization: 0,
+    monthlyOrdersCount: 0,
+    monthlyProducedQuantity: 0,
   };
 
   const currentStats = stats || defaultStats;
@@ -135,8 +177,72 @@ export default function YoneticiDashboard() {
     <div className="space-y-6">
       {/* Header */}
       <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg p-6 text-white">
-        <h1 className="text-3xl font-bold">Yönetici Dashboard</h1>
-        <p className="text-blue-100">Thunder ERP - Executive Overview & Analytics</p>
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h1 className="text-3xl font-bold">Yönetici Dashboard</h1>
+            <p className="text-blue-100">Thunder ERP - Executive Overview & Analytics</p>
+          </div>
+        </div>
+        
+        {/* Tarih Filtreleri */}
+        <div className="mt-4 pt-4 border-t border-white/20">
+          <div className="flex items-end gap-4">
+            <div className="flex-1">
+              <Label htmlFor="startDate" className="text-white/90 text-sm mb-2 block">
+                Başlangıç Tarihi
+              </Label>
+              <Input
+                id="startDate"
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="bg-white/10 border-white/30 text-white placeholder:text-white/50 focus:bg-white/20"
+                style={{
+                  colorScheme: 'dark'
+                }}
+              />
+            </div>
+            <div className="flex-1">
+              <Label htmlFor="endDate" className="text-white/90 text-sm mb-2 block">
+                Bitiş Tarihi
+              </Label>
+              <Input
+                id="endDate"
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="bg-white/10 border-white/30 text-white placeholder:text-white/50 focus:bg-white/20"
+                style={{
+                  colorScheme: 'dark'
+                }}
+              />
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                const now = new Date();
+                // GMT+3'te bugünün tarihi
+                const gmt3Now = getGMT3Date(now);
+                // Ayın 1'i (GMT+3)
+                const firstDayOfMonth = new Date(gmt3Now.year, gmt3Now.month, 1);
+                const yearStr = String(firstDayOfMonth.getFullYear());
+                const monthStr = String(firstDayOfMonth.getMonth() + 1).padStart(2, '0');
+                const dayStr = String(firstDayOfMonth.getDate()).padStart(2, '0');
+                setStartDate(`${yearStr}-${monthStr}-${dayStr}`);
+                // Bugün (GMT+3)
+                const todayYearStr = String(gmt3Now.year);
+                const todayMonthStr = String(gmt3Now.month + 1).padStart(2, '0');
+                const todayDayStr = String(gmt3Now.day).padStart(2, '0');
+                setEndDate(`${todayYearStr}-${todayMonthStr}-${todayDayStr}`);
+              }}
+              className="bg-white/10 border-white/30 text-white hover:bg-white/20"
+            >
+              <Calendar className="h-4 w-4 mr-2" />
+              Sıfırla
+            </Button>
+          </div>
+        </div>
       </div>
 
       {/* Financial KPIs */}
@@ -149,8 +255,14 @@ export default function YoneticiDashboard() {
           <CardContent>
             <div className="text-2xl font-bold">₺{(currentStats.monthlyRevenue || 0).toLocaleString()}</div>
             <div className="flex items-center text-xs">
-              <TrendingUp className="h-3 w-3 text-green-500 mr-1" />
-              <span className="text-green-600">+12.5%</span>
+              {currentStats.monthlyGrowth >= 0 ? (
+                <TrendingUp className="h-3 w-3 text-green-500 mr-1" />
+              ) : (
+                <TrendingDown className="h-3 w-3 text-red-500 mr-1" />
+              )}
+              <span className={currentStats.monthlyGrowth >= 0 ? "text-green-600" : "text-red-600"}>
+                {currentStats.monthlyGrowth >= 0 ? '+' : ''}{currentStats.monthlyGrowth?.toFixed(1) || '0.0'}%
+              </span>
               <span className="text-muted-foreground ml-2">geçen aya göre</span>
             </div>
           </CardContent>
@@ -228,12 +340,20 @@ export default function YoneticiDashboard() {
 
         <Card className="border-l-4 border-l-orange-500">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Verimlilik Oranı</CardTitle>
-            <Target className="h-4 w-4 text-orange-600" />
+            <CardTitle className="text-sm font-medium">Aylık Üretim</CardTitle>
+            <Factory className="h-4 w-4 text-orange-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{((currentStats.productionEfficiency || 0)).toFixed(1)}%</div>
-            <p className="text-xs text-muted-foreground">Üretim verimliliği</p>
+            <div className="space-y-3">
+              <div>
+                <div className="text-2xl font-bold">{currentStats.monthlyOrdersCount || 0}</div>
+                <p className="text-xs text-muted-foreground">Aylık Sipariş Adedi</p>
+              </div>
+              <div className="pt-2 border-t">
+                <div className="text-2xl font-bold">{(currentStats.monthlyProducedQuantity || 0).toLocaleString('tr-TR', { maximumFractionDigits: 0 })}</div>
+                <p className="text-xs text-muted-foreground">Aylık Üretilen Ürün Adedi</p>
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -290,21 +410,30 @@ export default function YoneticiDashboard() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Calendar className="h-5 w-5 text-teal-600" />
-              Aktif Üretim Planları
+              <Package className="h-5 w-5 text-indigo-600" />
+              Toplam Ürün Çeşidi
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-3xl font-bold">{currentStats.activeProductionPlans || 0}</div>
-                <p className="text-sm text-muted-foreground mt-1">Devam eden plan sayısı</p>
+                <div className="text-3xl font-bold">
+                  {(currentStats.totalRawMaterials || 0) + 
+                   (currentStats.totalSemiFinished || 0) + 
+                   (currentStats.totalFinished || 0)}
+                </div>
+                <p className="text-sm text-muted-foreground mt-1">Toplam ürün çeşidi</p>
               </div>
-              <div className="text-right">
-                <Badge variant="outline" className="text-xs">
-                  {currentStats.inProductionOrders > 0 ? `${currentStats.inProductionOrders} sipariş` : 'Aktif yok'}
+              <div className="text-right space-y-1">
+                <Badge variant="outline" className="text-xs block">
+                  {currentStats.totalRawMaterials || 0} Hammadde
                 </Badge>
-                <p className="text-xs text-muted-foreground mt-2">Üretimdeki siparişler</p>
+                <Badge variant="outline" className="text-xs block">
+                  {currentStats.totalSemiFinished || 0} Yarı Mamul
+                </Badge>
+                <Badge variant="outline" className="text-xs block">
+                  {currentStats.totalFinished || 0} Nihai Ürün
+                </Badge>
               </div>
             </div>
           </CardContent>
