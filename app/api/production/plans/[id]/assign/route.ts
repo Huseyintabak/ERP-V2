@@ -5,7 +5,7 @@ import { verifyJWT } from '@/lib/auth/jwt';
 import { logger } from '@/lib/utils/logger';
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
     const token = request.cookies.get('thunder_token')?.value;
@@ -14,7 +14,7 @@ export async function PATCH(
     }
 
     const payload = await verifyJWT(token);
-    const { id } = await params;
+    const { id } = params;
     const supabase = await createClient();
 
     // Only managers and planlama can assign operators

@@ -3,12 +3,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/utils/logger';
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ orderId: string }> }
+  { params }: { params: { orderId: string } }
 ) {
   try {
     logger.log('🔍 Simple Semi BOM API called');
     
-    const { orderId } = await params;
+    const { orderId } = params;
     logger.log('🔍 Order ID:', orderId);
 
     // Basit örnek veri döndür

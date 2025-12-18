@@ -5,7 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyJWT } from '@/lib/auth/jwt';
-import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/server';
 import { logger } from '@/lib/utils/logger';
 
 export async function GET(request: NextRequest) {
@@ -26,7 +26,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const supabase = await createClient();
+    // Use admin client to bypass RLS (we already checked role above)
+    const supabase = createAdminClient();
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status') || 'pending';
     const page = parseInt(searchParams.get('page') || '1');
@@ -54,8 +55,18 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Expire old approvals
-    await supabase.rpc('expire_old_approvals');
+    logger.log(`📊 Approvals API: status=${status}, found=${approvals?.length || 0}, total=${count || 0}`);
+    if (approvals && approvals.length > 0) {
+      logger.log(`📊 First approval:`, {
+        id: approvals[0].id,
+        agent: approvals[0].agent,
+        status: approvals[0].status,
+        expiry_at: approvals[0].expiry_at
+      });
+    }
+
+    // Don't expire old approvals here - it interferes with fetching
+    // Expiration should be handled by a separate background job or on-demand
 
     return NextResponse.json({
       success: true,

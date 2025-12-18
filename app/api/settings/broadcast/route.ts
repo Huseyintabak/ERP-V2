@@ -9,13 +9,10 @@ export async function POST(request: NextRequest) {
     const serviceToken = request.headers.get('x-service-token');
     const expectedServiceToken = process.env.BROADCAST_SERVICE_TOKEN;
     
-    logger.log(`🔍 Broadcast API: serviceToken=${serviceToken ? 'var' : 'yok'}, expectedToken=${expectedServiceToken ? 'var' : 'yok'}`);
-    
     let payload: any = null;
     
     if (serviceToken && expectedServiceToken && serviceToken === expectedServiceToken) {
       // Service token ile authentication (Git hook için)
-      logger.log('✅ Service token ile authentication başarılı');
       payload = {
         userId: 'system',
         role: 'yonetici' // Service token ile gelen istekler için yönetici yetkisi
@@ -24,13 +21,11 @@ export async function POST(request: NextRequest) {
       // Normal JWT authentication
       const token = request.cookies.get('thunder_token')?.value;
       if (!token) {
-        logger.warn('⚠️  Authentication token bulunamadı (ne service token ne de JWT)');
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
       }
 
       payload = await verifyJWT(token);
       if (!payload || !['yonetici', 'planlama'].includes(payload.role)) {
-        logger.warn('⚠️  JWT token geçersiz veya yetki yetersiz');
         return NextResponse.json({ error: 'Yönetici veya planlama rolü gerekli' }, { status: 403 });
       }
     }

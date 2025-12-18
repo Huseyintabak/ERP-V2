@@ -8,10 +8,10 @@ import { logger } from '@/lib/utils/logger';
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ productId: string }> }
+  { params }: { params: { productId: string } }
 ) {
   try {
-    const { productId } = await params;
+    const { productId } = params;
 
     if (!productId) {
       return NextResponse.json(

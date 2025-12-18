@@ -1,4 +1,4 @@
-const nextJest = require('next/jest')
+import nextJest from 'next/jest.js'
 
 const createJestConfig = nextJest({
   // Next.js app dizini
@@ -7,7 +7,7 @@ const createJestConfig = nextJest({
 
 // Jest'e özel konfigürasyon
 const customJestConfig = {
-  setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
+  setupFilesAfterEnv: ['<rootDir>/jest.setup.mjs'],
   testEnvironment: 'jest-environment-node',
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1',
@@ -31,5 +31,4 @@ const customJestConfig = {
   },
 }
 
-module.exports = createJestConfig(customJestConfig)
-
+export default createJestConfig(customJestConfig)

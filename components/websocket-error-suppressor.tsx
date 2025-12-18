@@ -31,7 +31,10 @@ export function WebSocketErrorSuppressor() {
         fullMessage.includes('supabase.co/realtime') ||
         fullMessage.includes('/realtime/') ||
         (fullMessage.includes('Failed to load resource') && fullMessage.includes('realtime')) ||
-        (fullMessage.includes('400') && fullMessage.includes('complete') && fullMessage.includes('realtime'))
+        (fullMessage.includes('400') && fullMessage.includes('complete') && fullMessage.includes('realtime')) ||
+        // Suppress Next.js React 19 sync dynamic API dev warnings for params/searchParams spam
+        fullMessage.includes('params are being enumerated. `params` should be unwrapped with `React.use()`') ||
+        fullMessage.includes('The keys of `searchParams` were accessed directly. `searchParams` should be unwrapped with `React.use()`')
       ) {
         // Completely suppress - these are handled by our hooks
         return;

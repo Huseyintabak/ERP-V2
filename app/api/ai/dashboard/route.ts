@@ -64,6 +64,9 @@ export async function GET(request: NextRequest) {
           logger.warn('⚠️ Agent\'ları manuel başlatma başarısız:', retryError.message);
         }
       }
+
+      // Per-agent rate limit kapasitesi (env'den veya varsayılan 100/dk)
+      const perAgentLimit = parseInt(process.env.GPT_RATE_LIMIT_PER_AGENT || '100');
       
       agents = orchestrator.getAllAgents().map(agent => {
         const info = agent.getInfo();
@@ -74,7 +77,9 @@ export async function GET(request: NextRequest) {
           responsibilities: info.responsibilities,
           defaultModel: info.defaultModel,
           rateLimit: {
-            total: rateLimitStats.total,
+            // total: konfigüre edilen limit (dakika başına)
+            total: perAgentLimit,
+            // byAgent: son 60 sn'de bu agent için kullanılan istek sayısı
             byAgent: rateLimitStats.byAgent[info.name.toLowerCase().replace(' agent', '')] || 
                      rateLimitStats.byAgent[info.name.toLowerCase()] || 0
           }
@@ -88,14 +93,100 @@ export async function GET(request: NextRequest) {
       agents = [];
     }
 
-    // Get conversation stats
+    // Get conversation stats - hem in-memory hem database'den
     let conversations: any[] = [];
+    
+    // 1. In-memory conversations'dan al (mevcut session)
     try {
-      conversations = orchestrator.getAllConversations();
-      logger.log(`📊 Dashboard: ${conversations.length} konuşma bulundu`);
+      const inMemoryConversations = orchestrator.getAllConversations();
+      logger.log(`📊 Dashboard: ${inMemoryConversations.length} in-memory konuşma bulundu`);
+      conversations = inMemoryConversations;
     } catch (error: any) {
-      logger.error('❌ Failed to get conversations:', error);
-      conversations = [];
+      logger.error('❌ Failed to get in-memory conversations:', error);
+    }
+
+    // 2. Database'den conversation'ları al (agent_logs'tan conversation_started action'larından)
+    try {
+      // conversation_started action'larından conversation'ları bul
+      const { data: conversationLogs, error: logError } = await adminSupabase
+        .from('agent_logs')
+        .select('*')
+        .eq('action', 'conversation_started')
+        .order('created_at', { ascending: false })
+        .limit(100);
+
+      if (logError) {
+        logger.warn('⚠️ Failed to get conversations from database:', logError.message);
+      } else if (conversationLogs && conversationLogs.length > 0) {
+        logger.log(`📊 Dashboard: ${conversationLogs.length} database conversation bulundu`);
+        
+        // Her conversation için status'ü belirle
+        const dbConversations = await Promise.all(
+          conversationLogs.map(async (log: any) => {
+            const conversationId = log.conversation_id || 
+                                 log.data?.conversationId || 
+                                 log.data?.conversation_id || 
+                                 log.data?.id || 
+                                 `conv_${log.id}`;
+            
+            // Bu conversation'ın tamamlanma durumunu kontrol et
+            const { data: completedLogs } = await adminSupabase
+              .from('agent_logs')
+              .select('*')
+              .eq('conversation_id', conversationId)
+              .in('action', ['conversation_completed', 'conversation_failed'])
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .single();
+
+            // Agent response'ları var mı kontrol et
+            const { data: responseLogs } = await adminSupabase
+              .from('agent_logs')
+              .select('id')
+              .eq('conversation_id', conversationId)
+              .in('action', ['agent_response', 'production_log_validation', 'order_validation', 'gpt_call'])
+              .limit(1);
+
+            let status: string;
+            if (completedLogs) {
+              status = completedLogs.action === 'conversation_completed' ? 'completed' : 'failed';
+            } else if (!responseLogs || responseLogs.length === 0) {
+              // Henüz hiç agent response'u yoksa pending
+              status = 'pending';
+            } else {
+              // Agent response'ları var ama tamamlanmamışsa in_progress
+              status = 'in_progress';
+            }
+
+            return {
+              id: conversationId,
+              status: status,
+              startedAt: log.created_at,
+              completedAt: completedLogs?.created_at || undefined
+            };
+          })
+        );
+
+        // In-memory ve database conversations'ları birleştir (duplicate'leri kaldır)
+        const conversationMap = new Map<string, any>();
+        
+        // Önce in-memory conversations'ları ekle (daha güncel)
+        conversations.forEach(conv => {
+          conversationMap.set(conv.id, conv);
+        });
+        
+        // Sonra database conversations'ları ekle (sadece yeni olanlar)
+        dbConversations.forEach(conv => {
+          if (!conversationMap.has(conv.id)) {
+            conversationMap.set(conv.id, conv);
+          }
+        });
+        
+        conversations = Array.from(conversationMap.values());
+        logger.log(`📊 Dashboard: Toplam ${conversations.length} conversation (merged)`);
+      }
+    } catch (error: any) {
+      logger.error('❌ Failed to get conversations from database:', error);
     }
     
     const conversationStats = {
@@ -246,11 +337,67 @@ export async function GET(request: NextRequest) {
       recentLogs = [];
     }
 
-    // Cache stats
-    let cacheStats: { size: number; keys: string[] } = { size: 0, keys: [] };
+    // Cache stats - hem in-memory hem database'den
+    let cacheStats: { size: number; keys: string[]; hitRate: number; totalHits: number; totalMisses: number } = { 
+      size: 0, 
+      keys: [],
+      hitRate: 0,
+      totalHits: 0,
+      totalMisses: 0
+    };
+    
     try {
-      cacheStats = agentCache.getStats();
-      logger.log(`📊 Dashboard: Cache stats: ${cacheStats.size} items, ${cacheStats.keys.length} keys`);
+      // In-memory cache stats
+      const fullStats = agentCache.getStats();
+      cacheStats = {
+        size: fullStats.size,
+        keys: fullStats.keys,
+        hitRate: fullStats.hitRate,
+        totalHits: fullStats.totalHits,
+        totalMisses: fullStats.totalMisses
+      };
+      
+      // Database'den cache istatistiklerini de al (gpt_call_cached action'larından)
+      // Son 24 saatteki cache performansını göster
+      try {
+        const last24Hours = new Date();
+        last24Hours.setHours(last24Hours.getHours() - 24);
+        
+        const { data: cachedCalls, error: cacheError } = await adminSupabase
+          .from('agent_logs')
+          .select('id')
+          .eq('action', 'gpt_call_cached')
+          .gte('created_at', last24Hours.toISOString());
+        
+        const { data: totalCalls, error: totalError } = await adminSupabase
+          .from('agent_logs')
+          .select('id')
+          .in('action', ['gpt_call', 'gpt_call_cached'])
+          .gte('created_at', last24Hours.toISOString());
+        
+        if (!cacheError && !totalError && cachedCalls && totalCalls) {
+          const dbCacheHits = cachedCalls.length;
+          const dbTotalCalls = totalCalls.length;
+          const dbCacheMisses = dbTotalCalls - dbCacheHits;
+          const dbHitRate = dbTotalCalls > 0 ? (dbCacheHits / dbTotalCalls) * 100 : 0;
+          
+          // Eğer in-memory cache boşsa (server restart sonrası), database stats'ı kullan
+          if (cacheStats.size === 0 && cacheStats.totalHits === 0 && cacheStats.totalMisses === 0) {
+            cacheStats.hitRate = Math.round(dbHitRate * 100) / 100;
+            cacheStats.totalHits = dbCacheHits;
+            cacheStats.totalMisses = dbCacheMisses;
+            logger.log(`📊 Dashboard: Cache stats (from DB - last 24h, in-memory empty): ${dbCacheHits} hits, ${dbCacheMisses} misses, ${dbHitRate.toFixed(2)}% hit rate`);
+          } else {
+            // In-memory cache varsa, onu kullan ama database stats'ı da logla
+            logger.log(`📊 Dashboard: Cache stats (in-memory): ${cacheStats.size} items, ${cacheStats.hitRate.toFixed(2)}% hit rate (${cacheStats.totalHits} hits, ${cacheStats.totalMisses} misses)`);
+            logger.log(`📊 Dashboard: Cache stats (from DB - last 24h): ${dbCacheHits} hits, ${dbCacheMisses} misses, ${dbHitRate.toFixed(2)}% hit rate`);
+          }
+        }
+      } catch (dbError: any) {
+        logger.warn('⚠️ Failed to get cache stats from database:', dbError.message);
+      }
+      
+      logger.log(`📊 Dashboard: Final cache stats: ${cacheStats.size} items, ${cacheStats.hitRate.toFixed(2)}% hit rate (${cacheStats.totalHits} hits, ${cacheStats.totalMisses} misses)`);
     } catch (error: any) {
       logger.error('❌ Failed to get cache stats:', error);
     }
@@ -273,7 +420,10 @@ export async function GET(request: NextRequest) {
         costs: costStats,
         cache: {
           size: cacheStats.size,
-          keys: cacheStats.keys.length
+          keys: cacheStats.keys.length,
+          hitRate: cacheStats.hitRate,
+          totalHits: cacheStats.totalHits,
+          totalMisses: cacheStats.totalMisses
         },
         rateLimiting: rateLimitStats
       },

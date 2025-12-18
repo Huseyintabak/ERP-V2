@@ -4,10 +4,10 @@ import { createClient } from '@/lib/supabase/server';
 // DELETE - Delete Operator
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
-    const { id } = await params;
+    const { id } = params;
     const userId = request.headers.get('x-user-id');
     
     if (!userId) {

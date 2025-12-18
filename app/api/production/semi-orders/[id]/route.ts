@@ -5,7 +5,7 @@ import { verifyJWT } from '@/lib/auth/jwt';
 import { logger } from '@/lib/utils/logger';
 export async function PUT(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
     const token = request.cookies.get('thunder_token')?.value;
@@ -30,7 +30,7 @@ export async function PUT(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const { id } = await params;
+    const { id } = params;
     const body = await request.json();
     const { product_id, planned_quantity, priority, assigned_operator_id, notes } = body;
 
@@ -82,7 +82,7 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
     const token = request.cookies.get('thunder_token')?.value;
@@ -107,7 +107,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const { id } = await params;
+    const { id } = params;
     const supabase = await createClient();
 
     // Delete semi production order

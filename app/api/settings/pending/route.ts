@@ -15,7 +15,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
 
-    const supabase = await createClient();
+    // Use admin client to bypass RLS (we already checked auth above)
+    const { createAdminClient } = await import('@/lib/supabase/server');
+    const supabase = createAdminClient();
 
     // Bekleyen ayar güncellemelerini al
     const { data: pendingUpdates, error } = await supabase
@@ -25,9 +27,32 @@ export async function GET(request: NextRequest) {
 
     if (error) {
       logger.error('Error fetching pending updates:', error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ 
+        data: { 
+          success: false, 
+          error: error.message,
+          pending_updates: [],
+          count: 0,
+          message: 'Bekleyen güncellemeler alınamadı'
+        } 
+      }, { status: 500 });
     }
 
+    // RPC fonksiyonu zaten { success, pending_updates, count } formatında döndürüyor
+    // Eğer NULL dönerse veya success false ise, boş array döndür
+    if (!pendingUpdates) {
+      logger.warn('RPC returned null, returning empty result');
+      return NextResponse.json({ 
+        data: { 
+          success: true, 
+          pending_updates: [], 
+          count: 0 
+        } 
+      });
+    }
+
+    // RPC fonksiyonu JSONB döndürüyor, direkt kullanabiliriz
+    logger.log(`✅ Pending updates fetched: ${pendingUpdates.count || 0} items`);
     return NextResponse.json({ data: pendingUpdates });
 
   } catch (error: any) {

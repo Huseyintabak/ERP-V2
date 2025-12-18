@@ -11,7 +11,7 @@ const resetPasswordSchema = z.object({
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
     const token = request.cookies.get('thunder_token')?.value;
@@ -20,6 +20,7 @@ export async function POST(
     }
 
     const payload = await verifyJWT(token);
+    const { id } = params;
     
     // Only admin can reset passwords
     if (payload.role !== 'yonetici') {

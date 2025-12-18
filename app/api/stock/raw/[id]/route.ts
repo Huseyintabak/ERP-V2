@@ -7,7 +7,7 @@ import { agentLogger } from '@/lib/ai/utils/logger';
 import { logger } from '@/lib/utils/logger';
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
     const token = request.cookies.get('thunder_token')?.value;
@@ -16,7 +16,7 @@ export async function GET(
     }
 
     const payload = await verifyJWT(token);
-    const { id } = await params;
+    const { id } = params;
     const supabase = await createClient();
 
     const { data: material, error } = await supabase
@@ -38,7 +38,7 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
     const token = request.cookies.get('thunder_token')?.value;
@@ -47,7 +47,7 @@ export async function PUT(
     }
 
     const payload = await verifyJWT(token);
-    const { id } = await params;
+    const { id } = params;
     const supabase = await createClient();
 
     // Only managers and planlama can update materials
@@ -317,7 +317,7 @@ Yönetici/Planlama tarafından yapılan güncelleme - otomatik onay gerektirebil
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
     const token = request.cookies.get('thunder_token')?.value;
@@ -326,7 +326,7 @@ export async function DELETE(
     }
 
     const payload = await verifyJWT(token);
-    const { id } = await params;
+    const { id } = params;
     const supabase = await createClient();
 
     // Only managers and planlama can delete materials

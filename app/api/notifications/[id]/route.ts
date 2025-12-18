@@ -5,7 +5,7 @@ import { verifyJWT } from '@/lib/auth/jwt';
 import { logger } from '@/lib/utils/logger';
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
     const token = request.cookies.get('thunder_token')?.value;
@@ -14,7 +14,7 @@ export async function GET(
     }
 
     const payload = await verifyJWT(token);
-    const { id } = await params;
+    const { id } = params;
     const supabase = await createClient();
 
     const { data: notification, error } = await supabase
@@ -54,7 +54,7 @@ export async function GET(
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
     const token = request.cookies.get('thunder_token')?.value;
@@ -63,7 +63,7 @@ export async function PATCH(
     }
 
     const payload = await verifyJWT(token);
-    const { id } = await params;
+    const { id } = params;
     const supabase = await createClient();
 
     // Safe JSON parsing
@@ -115,7 +115,7 @@ export async function PATCH(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
     const token = request.cookies.get('thunder_token')?.value;
@@ -124,7 +124,7 @@ export async function PUT(
     }
 
     const payload = await verifyJWT(token);
-    const { id } = await params;
+    const { id } = params;
     const supabase = await createClient();
 
     const { title, message, type, is_read } = await request.json();
@@ -166,7 +166,7 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
     const token = request.cookies.get('thunder_token')?.value;
@@ -175,7 +175,7 @@ export async function DELETE(
     }
 
     const payload = await verifyJWT(token);
-    const { id } = await params;
+    const { id } = params;
     const supabase = await createClient();
 
     // Users can only delete their own notifications, or admin can delete all

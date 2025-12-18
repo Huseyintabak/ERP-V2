@@ -5,7 +5,7 @@ import { verifyJWT } from '@/lib/auth/jwt';
 import { logger } from '@/lib/utils/logger';
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
     const token = request.cookies.get('thunder_token')?.value;
@@ -25,7 +25,7 @@ export async function PATCH(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { id } = await params;
+    const { id } = params;
     const body = await request.json();
     const { status, produced_quantity } = body;
 
@@ -92,34 +92,6 @@ export async function PATCH(
     if (updateError) {
       logger.error('Error updating semi production order:', updateError);
       return NextResponse.json({ error: 'Failed to update order' }, { status: 500 });
-    }
-
-    // If order is completed, update stock
-    if (status === 'tamamlandi') {
-      const finalQuantity = updateData.produced_quantity;
-      
-      // First get current stock
-      const { data: currentProduct, error: productError } = await supabase
-        .from('semi_finished_products')
-        .select('quantity')
-        .eq('id', currentOrder.product_id)
-        .single();
-
-      if (!productError && currentProduct) {
-        // Update semi finished products stock
-        const { error: stockError } = await supabase
-          .from('semi_finished_products')
-          .update({
-            quantity: currentProduct.quantity + finalQuantity,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', currentOrder.product_id);
-
-        if (stockError) {
-          logger.error('Error updating stock:', stockError);
-          // Don't fail the request, just log the error
-        }
-      }
     }
 
     return NextResponse.json({ data: updatedOrder });

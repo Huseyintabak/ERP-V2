@@ -39,7 +39,9 @@ import {
   Package,
   ShoppingCart,
   Truck,
-  Trash2
+  Trash2,
+  Eye,
+  Edit
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -128,8 +130,11 @@ export function PurchaseRequestsTable({
   const handleUpdateRequest = () => {
     if (!selectedRequest || !updateData.status) return;
 
+    // Normalize status: 'pending' -> 'beklemede' for API
+    const apiStatus = updateData.status === 'pending' ? 'beklemede' : updateData.status;
+
     const updates: Partial<PurchaseRequest> = {
-      status: updateData.status as any
+      status: apiStatus as any
     };
 
     if (updateData.notes) {
@@ -156,8 +161,10 @@ export function PurchaseRequestsTable({
 
   const openUpdateDialog = (request: PurchaseRequest) => {
     setSelectedRequest(request);
+    // Normalize status: 'beklemede' -> 'pending' for UI
+    const normalizedStatus = request.status === 'beklemede' ? 'pending' : request.status;
     setUpdateData({
-      status: request.status,
+      status: normalizedStatus,
       notes: request.notes || '',
       approved_quantity: request.approved_quantity?.toString() || ''
     });
@@ -170,11 +177,11 @@ export function PurchaseRequestsTable({
   };
 
   const canUpdate = (request: PurchaseRequest) => {
-    return ['pending', 'approved'].includes(request.status);
+    return ['pending', 'beklemede', 'approved'].includes(request.status);
   };
 
   const canDelete = (request: PurchaseRequest) => {
-    return request.status === 'pending';
+    return ['pending', 'beklemede'].includes(request.status);
   };
 
   return (
@@ -264,13 +271,22 @@ export function PurchaseRequestsTable({
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => openUpdateDialog(request)}
+                            title="Detay / Güncelle"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
                           {canUpdate(request) && (
                             <Button
                               variant="outline"
                               size="sm"
                               onClick={() => openUpdateDialog(request)}
+                              title="Güncelle"
                             >
-                              <CheckCircle className="h-4 w-4" />
+                              <Edit className="h-4 w-4" />
                             </Button>
                           )}
                           {canDelete(request) && (
@@ -279,6 +295,7 @@ export function PurchaseRequestsTable({
                               size="sm"
                               onClick={() => openDeleteDialog(request)}
                               className="text-red-600 hover:text-red-700"
+                              title="Sil"
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
@@ -307,7 +324,13 @@ export function PurchaseRequestsTable({
           <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="status">Durum</Label>
-              <Select value={updateData.status} onValueChange={(value) => setUpdateData({ ...updateData, status: value })}>
+              <Select 
+                value={updateData.status || ''} 
+                onValueChange={(value) => {
+                  // Store the selected value (UI uses 'pending', API uses 'beklemede')
+                  setUpdateData({ ...updateData, status: value });
+                }}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Durum seçin" />
                 </SelectTrigger>

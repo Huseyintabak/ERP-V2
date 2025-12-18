@@ -133,7 +133,10 @@ export default function KritikStoklarPage() {
         body: JSON.stringify(updates),
       });
 
-      if (!response.ok) throw new Error('Failed to update request');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to update request');
+      }
 
       const result = await response.json();
       
@@ -187,6 +190,10 @@ export default function KritikStoklarPage() {
         <div>
           <h1 className="text-3xl font-bold">Kritik Stok Yönetimi</h1>
           <p className="text-muted-foreground">Sipariş talepleri ve kritik stok durumu</p>
+          <p className="text-sm text-muted-foreground mt-1">
+            ⚡ Stok kritik seviyenin altına düştüğünde otomatik olarak talep oluşturulur. 
+            Durum: <strong>Bekliyor</strong> → <strong>Onaylandı</strong> → <strong>Sipariş Verildi</strong> → <strong>Teslim Alındı</strong>
+          </p>
         </div>
       </div>
 

@@ -6,10 +6,10 @@ import { logger } from '@/lib/utils/logger';
 // POST - Save BOM for a product
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ productId: string }> }
+  { params }: { params: { productId: string } }
 ) {
   try {
-    const { productId } = await params;
+    const { productId } = params;
     const userId = request.headers.get('x-user-id');
     
     if (!userId) {
@@ -217,10 +217,10 @@ export async function POST(
 // GET - Get BOM for a finished product
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ productId: string }> }
+  { params }: { params: { productId: string } }
 ) {
   try {
-    const { productId } = await params; // Await params
+    const { productId } = params;
     const supabase = await createClient();
 
     // Ürün bilgilerini al (önce finished, yoksa semi)

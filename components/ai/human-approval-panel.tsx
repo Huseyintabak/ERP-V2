@@ -5,6 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Clock, CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
 
 interface HumanApproval {
@@ -25,6 +28,9 @@ export function HumanApprovalPanel() {
   const [approvals, setApprovals] = useState<HumanApproval[]>([]);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState<string | null>(null);
+  const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
+  const [rejectingId, setRejectingId] = useState<string | null>(null);
+  const [rejectionReason, setRejectionReason] = useState('');
 
   useEffect(() => {
     fetchApprovals();
@@ -35,13 +41,47 @@ export function HumanApprovalPanel() {
 
   const fetchApprovals = async () => {
     try {
-      const res = await fetch('/api/ai/approvals?status=pending');
+      // Fetch all approvals (pending and expired) - use 'all' to get everything
+      console.log('🔍 Fetching approvals with status=all...');
+      const res = await fetch('/api/ai/approvals?status=all');
+      
+      console.log('📡 API response status:', res.status);
+      
       if (res.ok) {
         const data = await res.json();
-        setApprovals(data.approvals || []);
+        console.log('📦 API response data:', data);
+        
+        const allApprovals = data.approvals || [];
+        console.log('📋 Total approvals from API:', allApprovals.length);
+        console.log('📋 All approvals:', allApprovals);
+        
+        // Filter to show pending and expired (even if expired, show them)
+        const pendingAndExpired = allApprovals.filter((a: HumanApproval) => {
+          const isPending = a.status === 'pending';
+          const isExpired = a.status === 'expired';
+          const isExpiredByDate = new Date(a.expiry_at) < new Date();
+          const shouldShow = isPending || isExpired || isExpiredByDate;
+          
+          console.log(`🔍 Approval ${a.id}: status=${a.status}, expiry=${a.expiry_at}, isExpiredByDate=${isExpiredByDate}, shouldShow=${shouldShow}`);
+          
+          return shouldShow;
+        });
+        
+        console.log('✅ Filtered pending/expired approvals:', pendingAndExpired.length);
+        
+        // Sort by created_at (newest first)
+        const sorted = pendingAndExpired.sort((a: HumanApproval, b: HumanApproval) => 
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        );
+        
+        console.log('✅ Final sorted approvals:', sorted.length, sorted);
+        setApprovals(sorted);
+      } else {
+        const errorText = await res.text();
+        console.error('❌ Failed to fetch approvals:', res.status, errorText);
       }
     } catch (error) {
-      console.error('Error fetching approvals:', error);
+      console.error('❌ Error fetching approvals:', error);
     } finally {
       setLoading(false);
     }
@@ -71,22 +111,30 @@ export function HumanApprovalPanel() {
     }
   };
 
-  const handleReject = async (id: string) => {
+  const handleRejectClick = (id: string) => {
     if (processing) return;
+    setRejectingId(id);
+    setRejectionReason('');
+    setRejectDialogOpen(true);
+  };
+
+  const handleReject = async () => {
+    if (!rejectingId || !rejectionReason.trim()) return;
     
-    const reason = prompt('Red nedeni:');
-    if (!reason) return;
+    setProcessing(rejectingId);
+    setRejectDialogOpen(false);
     
-    setProcessing(id);
     try {
-      const res = await fetch(`/api/ai/approvals/${id}/reject`, {
+      const res = await fetch(`/api/ai/approvals/${rejectingId}/reject`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reason })
+        body: JSON.stringify({ reason: rejectionReason.trim() })
       });
       
       if (res.ok) {
         await fetchApprovals();
+        setRejectingId(null);
+        setRejectionReason('');
       } else {
         const error = await res.json();
         alert(`Reddetme hatası: ${error.error}`);
@@ -96,6 +144,8 @@ export function HumanApprovalPanel() {
       alert(`Hata: ${error.message}`);
     } finally {
       setProcessing(null);
+      setRejectingId(null);
+      setRejectionReason('');
     }
   };
 
@@ -107,7 +157,8 @@ export function HumanApprovalPanel() {
     );
   }
 
-  const pendingApprovals = approvals.filter(a => a.status === 'pending');
+  // Include pending approvals, even if expired (show them with warning)
+  const pendingApprovals = approvals.filter(a => a.status === 'pending' || a.status === 'expired');
 
   const getSeverityColor = (severity: string) => {
     switch (severity) {
@@ -122,7 +173,9 @@ export function HumanApprovalPanel() {
     }
   };
 
-  const getTimeRemaining = (expiryAt: string) => {
+  const getTimeRemaining = (expiryAt: string, status: string) => {
+    if (status === 'expired') return 'Süresi doldu';
+    
     const expiry = new Date(expiryAt);
     const now = new Date();
     const diff = expiry.getTime() - now.getTime();
@@ -156,8 +209,10 @@ export function HumanApprovalPanel() {
         </Alert>
       ) : (
         <div className="grid gap-4">
-          {pendingApprovals.map(approval => (
-            <Card key={approval.id} className="border-l-4 border-l-blue-500">
+          {pendingApprovals.map(approval => {
+            const isExpired = approval.status === 'expired' || new Date(approval.expiry_at) < new Date();
+            return (
+            <Card key={approval.id} className={`border-l-4 ${isExpired ? 'border-l-red-500' : 'border-l-blue-500'}`}>
               <CardHeader>
                 <div className="flex justify-between items-start">
                   <div className="space-y-2">
@@ -173,7 +228,10 @@ export function HumanApprovalPanel() {
                   </div>
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Clock className="h-4 w-4" />
-                    <span>{getTimeRemaining(approval.expiry_at)} kaldı</span>
+                    <span>{getTimeRemaining(approval.expiry_at, approval.status)} {isExpired ? '' : 'kaldı'}</span>
+                    {isExpired && (
+                      <Badge variant="destructive" className="ml-2">Süresi Doldu</Badge>
+                    )}
                   </div>
                 </div>
               </CardHeader>
@@ -217,7 +275,7 @@ export function HumanApprovalPanel() {
                       )}
                     </Button>
                     <Button 
-                      onClick={() => handleReject(approval.id)}
+                      onClick={() => handleRejectClick(approval.id)}
                       disabled={processing === approval.id}
                       variant="destructive"
                       className="flex-1"
@@ -238,9 +296,65 @@ export function HumanApprovalPanel() {
                 </div>
               </CardContent>
             </Card>
-          ))}
+            );
+          })}
         </div>
       )}
+
+      {/* Rejection Dialog */}
+      <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Onayı Reddet</DialogTitle>
+            <DialogDescription>
+              Lütfen red nedeni belirtin. Bu bilgi kayıt altına alınacaktır.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="rejection-reason">Red Nedeni *</Label>
+              <Input
+                id="rejection-reason"
+                placeholder="Örn: Yetersiz bilgi, Riskli işlem, vb."
+                value={rejectionReason}
+                onChange={(e) => setRejectionReason(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && rejectionReason.trim()) {
+                    handleReject();
+                  }
+                }}
+                autoFocus
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setRejectDialogOpen(false);
+                setRejectingId(null);
+                setRejectionReason('');
+              }}
+            >
+              İptal
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleReject}
+              disabled={!rejectionReason.trim() || processing === rejectingId}
+            >
+              {processing === rejectingId ? (
+                <>
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent mr-2" />
+                  Reddediliyor...
+                </>
+              ) : (
+                'Reddet'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -62,6 +62,8 @@ export default function StokHareketleriPage() {
   const [materialTypeFilter, setMaterialTypeFilter] = useState('');
   const [movementTypeFilter, setMovementTypeFilter] = useState('');
   const [search, setSearch] = useState('');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
 
   // KPI data
   const [kpiData, setKpiData] = useState({
@@ -73,7 +75,7 @@ export default function StokHareketleriPage() {
 
   useEffect(() => {
     fetchMovements();
-  }, [page, materialTypeFilter, movementTypeFilter, search]);
+  }, [page, materialTypeFilter, movementTypeFilter, search, fromDate, toDate]);
 
   const fetchMovements = async () => {
     try {
@@ -86,6 +88,8 @@ export default function StokHareketleriPage() {
         limit: '50',
         ...(materialTypeFilter && materialTypeFilter !== 'all' && { type: materialTypeFilter }),
         ...(movementTypeFilter && movementTypeFilter !== 'all' && { movementType: movementTypeFilter }),
+        ...(fromDate && { fromDate }),
+        ...(toDate && { toDate }),
       });
 
       const response = await fetch(`/api/stock/movements?${params}`, {
@@ -97,7 +101,13 @@ export default function StokHareketleriPage() {
       if (!response.ok) throw new Error('Failed to fetch stock movements');
 
       const result = await response.json();
-      let filteredData = result.data || [];
+      let filteredData = (result.data || []) as StockMovement[];
+
+      // Eski/silinmiş kayıtlardan gelen "Unknown" malzeme isimlerini UI'da gösterme
+      filteredData = filteredData.filter((movement) => {
+        const name = (movement.material_name || '').trim().toLowerCase();
+        return name !== 'unknown' && name !== 'unknown material';
+      });
 
       // Apply search filter
       if (search) {
@@ -174,6 +184,8 @@ export default function StokHareketleriPage() {
     setMaterialTypeFilter('');
     setMovementTypeFilter('');
     setSearch('');
+    setFromDate('');
+    setToDate('');
     setPage(1);
   };
 
@@ -236,7 +248,7 @@ export default function StokHareketleriPage() {
           <CardTitle>Filtreler</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 md:grid-cols-4">
+          <div className="grid gap-4 md:grid-cols-6">
             <div className="relative">
               <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
               <Input
@@ -271,6 +283,30 @@ export default function StokHareketleriPage() {
                 <SelectItem value="transfer">Transfer</SelectItem>
               </SelectContent>
             </Select>
+
+            <div className="space-y-1">
+              <span className="text-xs text-muted-foreground">Başlangıç Tarihi</span>
+              <Input
+                type="date"
+                value={fromDate}
+                onChange={(e) => {
+                  setFromDate(e.target.value);
+                  setPage(1);
+                }}
+              />
+            </div>
+
+            <div className="space-y-1">
+              <span className="text-xs text-muted-foreground">Bitiş Tarihi</span>
+              <Input
+                type="date"
+                value={toDate}
+                onChange={(e) => {
+                  setToDate(e.target.value);
+                  setPage(1);
+                }}
+              />
+            </div>
 
             <Button variant="outline" onClick={clearFilters}>
               <Filter className="h-4 w-4 mr-2" />

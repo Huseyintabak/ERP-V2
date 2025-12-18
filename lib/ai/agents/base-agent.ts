@@ -159,18 +159,29 @@ export abstract class BaseAgent {
       optimizedMessages = messages;
     }
     
-    // Cache kontrolü (basit prompt hash ile)
-    const cacheKey = `gpt:${this.name}:${JSON.stringify(optimizedMessages)}:${model}`;
+    // Cache kontrolü (normalize edilmiş prompt hash ile)
+    // Messages'ı normalize et (sıralama ve whitespace tutarlılığı için)
+    const normalizedMessages = optimizedMessages.map(m => ({
+      role: m.role,
+      content: typeof m.content === 'string' ? m.content.trim() : JSON.stringify(m.content)
+    }));
+    const messagesHash = JSON.stringify(normalizedMessages);
+    const cacheKey = `gpt:${this.name}:${messagesHash}:${model}`;
+    
     const cached = agentCache.get(cacheKey);
     if (cached) {
       await agentLogger.log({
         agent: this.name,
         action: 'gpt_call_cached',
         model,
-        cacheHit: true
+        cacheHit: true,
+        cacheKey: cacheKey.substring(0, 100) // İlk 100 karakteri logla
       });
+      console.log(`✅ [${this.name}] Cache HIT: ${cacheKey.substring(0, 80)}...`);
       return cached;
     }
+    
+    console.log(`❌ [${this.name}] Cache MISS: ${cacheKey.substring(0, 80)}...`);
     
     const startTime = Date.now();
     const maxRetries = 3;
@@ -215,6 +226,11 @@ export abstract class BaseAgent {
         
         // Cache'e kaydet (sadece başarılı response'lar)
         agentCache.set(cacheKey, response, 3600 * 1000); // 1 saat
+        console.log(`💾 [${this.name}] Cache SET: ${cacheKey.substring(0, 80)}... (TTL: 1h)`);
+        
+        // Cache stats logla (debug için)
+        const cacheStats = agentCache.getStats();
+        console.log(`📊 [${this.name}] Cache Stats: ${cacheStats.size} items, ${cacheStats.hitRate.toFixed(2)}% hit rate`);
         
         // Başarılı istek sonrası quota durumunu güncelle
         try {

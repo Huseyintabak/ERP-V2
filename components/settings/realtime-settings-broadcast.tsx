@@ -72,14 +72,31 @@ export default function RealtimeSettingsBroadcast() {
   const fetchPendingUpdates = async () => {
     try {
       setLoading(true);
+      setMessage(null); // Önceki mesajları temizle
       const response = await fetch('/api/settings/pending');
       const data = await response.json();
       
-      if (data.data?.success) {
-        setPendingUpdates(data.data.pending_updates || []);
+      console.log('📡 Pending updates API response:', { status: response.status, data });
+      
+      if (response.ok && data.data) {
+        // API response format: { data: { success: true, pending_updates: [...] } }
+        if (data.data.success !== false) {
+          const updates = data.data.pending_updates || data.data || [];
+          console.log('✅ Pending updates loaded:', updates.length, 'items');
+          setPendingUpdates(Array.isArray(updates) ? updates : []);
+          if (updates.length === 0) {
+            setMessage({ type: 'info', text: 'Bekleyen güncelleme bulunmuyor' });
+          }
+        } else {
+          console.error('❌ API returned success=false:', data.data);
+          setMessage({ type: 'error', text: data.data.message || 'Bekleyen güncellemeler yüklenemedi' });
+        }
+      } else {
+        console.error('❌ API error:', data);
+        setMessage({ type: 'error', text: data.error || 'Bekleyen güncellemeler yüklenemedi' });
       }
     } catch (error) {
-      logger.error('Error fetching pending updates:', error);
+      console.error('❌ Error fetching pending updates:', error);
       setMessage({ type: 'error', text: 'Bekleyen güncellemeler yüklenemedi' });
     } finally {
       setLoading(false);
@@ -89,6 +106,7 @@ export default function RealtimeSettingsBroadcast() {
   const acknowledgeUpdate = async (settingKey: string) => {
     try {
       setLoading(true);
+      setMessage(null);
       const response = await fetch('/api/settings/acknowledge', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -97,13 +115,18 @@ export default function RealtimeSettingsBroadcast() {
       
       const data = await response.json();
       
-      if (data.data?.success) {
-        setMessage({ type: 'success', text: 'Ayar güncellemesi onaylandı' });
-        await fetchPendingUpdates();
+      if (response.ok && data.data) {
+        if (data.data.success !== false) {
+          setMessage({ type: 'success', text: 'Ayar güncellemesi onaylandı ve bildirim oluşturuldu' });
+          await fetchPendingUpdates();
+        } else {
+          setMessage({ type: 'error', text: data.data.message || 'Onaylama işlemi başarısız' });
+        }
       } else {
-        setMessage({ type: 'error', text: data.data?.message || 'Onaylama işlemi başarısız' });
+        setMessage({ type: 'error', text: data.error || 'Onaylama işlemi başarısız' });
       }
     } catch (error) {
+      console.error('Error acknowledging update:', error);
       setMessage({ type: 'error', text: 'Onaylama işlemi başarısız' });
     } finally {
       setLoading(false);
@@ -113,12 +136,23 @@ export default function RealtimeSettingsBroadcast() {
   const sendBroadcast = async () => {
     try {
       setLoading(true);
+      
+      // JSON parse kontrolü
+      let parsedValue;
+      try {
+        parsedValue = broadcastForm.setting_value ? JSON.parse(broadcastForm.setting_value) : {};
+      } catch (parseError) {
+        setMessage({ type: 'error', text: 'Ayar değeri geçerli bir JSON formatında olmalı' });
+        setLoading(false);
+        return;
+      }
+      
       const response = await fetch('/api/settings/broadcast', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...broadcastForm,
-          setting_value: JSON.parse(broadcastForm.setting_value || '{}'),
+          setting_value: parsedValue,
           target_roles: broadcastForm.target_roles.length > 0 ? broadcastForm.target_roles : null,
           target_users: broadcastForm.target_users.length > 0 ? broadcastForm.target_users : null,
           expires_at: broadcastForm.expires_at || null
@@ -127,8 +161,8 @@ export default function RealtimeSettingsBroadcast() {
       
       const data = await response.json();
       
-      if (data.success) {
-        setMessage({ type: 'success', text: 'Broadcast başarıyla gönderildi' });
+      if (response.ok && data.success) {
+        setMessage({ type: 'success', text: data.message || 'Broadcast başarıyla gönderildi' });
         setBroadcastDialogOpen(false);
         setBroadcastForm({
           setting_key: '',
@@ -140,11 +174,14 @@ export default function RealtimeSettingsBroadcast() {
           message: '',
           expires_at: ''
         });
+        // Bekleyen güncellemeleri yenile
+        await fetchPendingUpdates();
       } else {
         setMessage({ type: 'error', text: data.error || 'Broadcast gönderilemedi' });
       }
-    } catch (error) {
-      setMessage({ type: 'error', text: 'Broadcast gönderme işlemi başarısız' });
+    } catch (error: any) {
+      console.error('Error sending broadcast:', error);
+      setMessage({ type: 'error', text: error.message || 'Broadcast gönderme işlemi başarısız' });
     } finally {
       setLoading(false);
     }

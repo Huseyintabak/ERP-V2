@@ -5,12 +5,12 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyJWT } from '@/lib/auth/jwt';
-import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/server';
 import { logger } from '@/lib/utils/logger';
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
     // Authentication check
@@ -29,11 +29,12 @@ export async function POST(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const { id } = await params;
+    const { id } = params;
     const body = await request.json();
     const { reason } = body;
 
-    const supabase = await createClient();
+    // Use admin client to bypass RLS (we already checked role above)
+    const supabase = createAdminClient();
 
     // Get approval
     const { data: approval, error: fetchError } = await supabase

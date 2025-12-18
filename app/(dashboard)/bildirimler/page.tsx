@@ -54,6 +54,8 @@ const getNotificationIcon = (type: string) => {
       return '⚠️';
     case 'order_update':
       return '📋';
+    case 'ai_approval':
+      return '🤖';
     default:
       return '📢';
   }
@@ -67,6 +69,8 @@ const getNotificationTypeDisplay = (type: string) => {
       return 'Üretim Gecikmesi';
     case 'order_update':
       return 'Sipariş Güncellemesi';
+    case 'ai_approval':
+      return 'AI Onay Bekliyor';
     default:
       return type;
   }
@@ -80,6 +84,8 @@ const getNotificationColor = (type: string) => {
       return 'bg-yellow-100 text-yellow-800 border-yellow-200';
     case 'order_update':
       return 'bg-blue-100 text-blue-800 border-blue-200';
+    case 'ai_approval':
+      return 'bg-purple-100 text-purple-800 border-purple-200';
     default:
       return 'bg-gray-100 text-gray-800 border-gray-200';
   }
@@ -198,7 +204,7 @@ export default function BildirimlerPage() {
       </Card>
 
       {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Toplam Bildirim</CardTitle>
@@ -239,6 +245,17 @@ export default function BildirimlerPage() {
             </div>
           </CardContent>
         </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">AI Onay Bekliyor</CardTitle>
+            <span className="text-lg">🤖</span>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-purple-600">
+              {notifications.filter(n => n.type === 'ai_approval' && !n.is_read).length}
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Filters */}
@@ -260,6 +277,7 @@ export default function BildirimlerPage() {
                 <SelectItem value="critical_stock">Kritik Stok</SelectItem>
                 <SelectItem value="production_delay">Üretim Gecikmesi</SelectItem>
                 <SelectItem value="order_update">Sipariş Güncellemesi</SelectItem>
+                <SelectItem value="ai_approval">AI Onay Bekliyor</SelectItem>
               </SelectContent>
             </Select>
             <Select value={statusFilter} onValueChange={setStatusFilter}>

@@ -104,9 +104,6 @@ function sendBroadcast(gitInfo) {
     // Service token ekle (eğer varsa)
     if (BROADCAST_SERVICE_TOKEN) {
       headers['x-service-token'] = BROADCAST_SERVICE_TOKEN;
-      console.log('🔑 Service token kullanılıyor (uzunluk: ' + BROADCAST_SERVICE_TOKEN.length + ')');
-    } else {
-      console.log('⚠️  BROADCAST_SERVICE_TOKEN tanımlı değil, authentication olmadan denenecek');
     }
     
     const options = {

@@ -5,13 +5,13 @@ import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { 
-  DollarSign, 
-  TrendingUp, 
+import {
+  DollarSign,
+  TrendingUp,
   TrendingDown,
-  CheckCircle, 
-  Clock, 
-  Users, 
+  CheckCircle,
+  Clock,
+  Users,
   AlertTriangle,
   BarChart3,
   Factory,
@@ -28,6 +28,7 @@ import { useDashboardStats, useDashboardActions, useDashboardLoading } from '@/s
 import { useRoleBasedRealtime } from '@/lib/hooks/use-realtime-store';
 import { useAuthStore } from '@/stores/auth-store';
 import { InventoryApprovalList } from '@/components/stock/inventory-approval-list';
+import { HumanApprovalPanel } from '@/components/ai/human-approval-panel';
 // import { useMemoryLeakDetector } from '@/lib/hooks/use-memory-leak-detector';
 // import { usePerformanceMonitor } from '@/lib/hooks/use-performance-monitor';
 // import { useStoreSync } from '@/lib/hooks/use-store-sync';
@@ -38,7 +39,7 @@ export default function YoneticiDashboard() {
   const stats = useDashboardStats('yonetici');
   const loading = useDashboardLoading('yonetici');
   const actions = useDashboardActions();
-  
+
   const [aiStats, setAiStats] = useState<any>(null);
   const [aiCosts, setAiCosts] = useState<any>(null);
   const [aiLoading, setAiLoading] = useState(true);
@@ -61,7 +62,7 @@ export default function YoneticiDashboard() {
     fetchAIStats();
     fetchAICosts();
   }, [actions]);
-  
+
   const fetchAIStats = async () => {
     try {
       const res = await fetch('/api/ai/dashboard');
@@ -75,7 +76,7 @@ export default function YoneticiDashboard() {
       setAiLoading(false);
     }
   };
-  
+
   const fetchAICosts = async () => {
     try {
       const res = await fetch('/api/ai/costs?period=month');
@@ -185,7 +186,7 @@ export default function YoneticiDashboard() {
           <CardContent>
             <div className="text-2xl font-bold">₺{(currentStats.totalStockValue || 0).toLocaleString()}</div>
             <p className="text-xs text-muted-foreground mb-3">Toplam stok değeri (işçilik hariç)</p>
-            
+
             {/* Detailed Breakdown - Table Format */}
             <div className="mt-3 pt-3 border-t">
               <div className="space-y-2">
@@ -196,7 +197,7 @@ export default function YoneticiDashboard() {
                   <div className="text-right">Miktar</div>
                   <div className="text-right">Değer</div>
                 </div>
-                
+
                 {/* Hammaddeler */}
                 <div className="grid grid-cols-4 gap-2 text-xs">
                   <div className="font-medium">Hammaddeler</div>
@@ -204,7 +205,7 @@ export default function YoneticiDashboard() {
                   <div className="text-right">{(currentStats.stockValueBreakdown?.rawMaterials?.quantity || 0).toLocaleString('tr-TR', { maximumFractionDigits: 2 })}</div>
                   <div className="text-right font-semibold">₺{(currentStats.stockValueBreakdown?.rawMaterials?.value || 0).toLocaleString('tr-TR', { maximumFractionDigits: 2 })}</div>
                 </div>
-                
+
                 {/* Yarı Mamuller */}
                 <div className="grid grid-cols-4 gap-2 text-xs">
                   <div className="font-medium">Yarı Mamuller</div>
@@ -212,7 +213,7 @@ export default function YoneticiDashboard() {
                   <div className="text-right">{(currentStats.stockValueBreakdown?.semiFinished?.quantity || 0).toLocaleString('tr-TR', { maximumFractionDigits: 2 })}</div>
                   <div className="text-right font-semibold">₺{(currentStats.stockValueBreakdown?.semiFinished?.value || 0).toLocaleString('tr-TR', { maximumFractionDigits: 2 })}</div>
                 </div>
-                
+
                 {/* Nihai Ürünler */}
                 <div className="grid grid-cols-4 gap-2 text-xs">
                   <div className="font-medium">Nihai Ürünler</div>
@@ -409,8 +410,8 @@ export default function YoneticiDashboard() {
 
           {/* AI Quick Links */}
           <div className="mt-6 grid gap-4 sm:grid-cols-3">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               className="h-auto p-4 hover:bg-blue-50 hover:border-blue-300 transition-colors justify-start"
               onClick={() => router.push('/ai-dashboard')}
             >
@@ -422,8 +423,8 @@ export default function YoneticiDashboard() {
                 </div>
               </div>
             </Button>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               className="h-auto p-4 hover:bg-green-50 hover:border-green-300 transition-colors justify-start"
               onClick={() => router.push('/ai-konusmalar')}
             >
@@ -435,8 +436,8 @@ export default function YoneticiDashboard() {
                 </div>
               </div>
             </Button>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               className="h-auto p-4 hover:bg-orange-50 hover:border-orange-300 transition-colors justify-start"
               onClick={() => router.push('/ai-maliyetler')}
             >
@@ -451,6 +452,9 @@ export default function YoneticiDashboard() {
           </div>
         </CardContent>
       </Card>
+
+      {/* AI Karar Onayları */}
+      <HumanApprovalPanel />
 
       {/* Envanter Sayım Onayları */}
       <InventoryApprovalList />

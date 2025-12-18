@@ -11,7 +11,7 @@ import { logger } from '@/lib/utils/logger';
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
     const token = request.cookies.get('thunder_token')?.value;
@@ -24,7 +24,7 @@ export async function POST(
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
 
-    const { id: conversationId } = await params;
+    const { id: conversationId } = params;
 
     logger.log(`🛑 Manuel conversation sonlandırma isteği: ${conversationId}`);
 

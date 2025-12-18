@@ -33,6 +33,8 @@ export async function GET(request: NextRequest) {
     const unread_only = searchParams.get('unread_only') === 'true';
     const type = searchParams.get('type');
 
+    // Bildirimler şu an sistem geneli için tutuluyor (user_id çoğu kayıtta NULL).
+    // Bu yüzden sadece current user'a göre filtrelemek yerine tüm bildirimleri döndürüyoruz.
     let query = supabase
       .from('notifications')
       .select(`
@@ -46,7 +48,6 @@ export async function GET(request: NextRequest) {
         is_read,
         created_at
       `)
-      .eq('user_id', payload.userId)
       .order('created_at', { ascending: false });
 
     if (unread_only) {

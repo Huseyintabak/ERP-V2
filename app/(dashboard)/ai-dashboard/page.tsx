@@ -53,6 +53,9 @@ interface DashboardStats {
     cache: {
       size: number;
       keys: number;
+      hitRate?: number;
+      totalHits?: number;
+      totalMisses?: number;
     };
     rateLimiting: {
       total: number;
@@ -106,7 +109,7 @@ export default function AIDashboardPage() {
             conversations: { total: 0, pending: 0, inProgress: 0, completed: 0, failed: 0 },
             approvals: { pending: 0, approved: 0, rejected: 0, expired: 0 },
             costs: { dailyTotal: 0, totalTokens: 0, totalRequests: 0, byAgent: {} },
-            cache: { size: 0, keys: 0 },
+            cache: { size: 0, keys: 0, hitRate: 0, totalHits: 0, totalMisses: 0 },
             rateLimiting: { total: 0, byAgent: {} }
           },
           recentLogs: [],
@@ -346,9 +349,32 @@ export default function AIDashboardPage() {
           <CardContent>
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-sm">Cache Boyutu</span>
-                <Badge>{dashboardStats.cache.size} items</Badge>
+                <span className="text-sm">Cache Boyutu (Aktif)</span>
+                <Badge className={dashboardStats.cache.size > 0 ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'}>
+                  {dashboardStats.cache.size} items
+                </Badge>
               </div>
+              {dashboardStats.cache.size === 0 && (
+                <div className="text-xs text-muted-foreground italic">
+                  Not: Cache server restart sonrası sıfırlanır. Yeni AI işlemleri ile dolacak.
+                </div>
+              )}
+              {dashboardStats.cache.hitRate !== undefined && (
+                <div className="flex items-center justify-between">
+                  <span className="text-sm">Cache Hit Rate</span>
+                  <Badge className={dashboardStats.cache.hitRate > 50 ? 'bg-green-100 text-green-800' : dashboardStats.cache.hitRate > 20 ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}>
+                    {dashboardStats.cache.hitRate.toFixed(1)}%
+                  </Badge>
+                </div>
+              )}
+              {dashboardStats.cache.totalHits !== undefined && (
+                <div className="flex items-center justify-between">
+                  <span className="text-sm">Cache Hits / Misses</span>
+                  <Badge variant="outline">
+                    {dashboardStats.cache.totalHits} / {dashboardStats.cache.totalMisses}
+                  </Badge>
+                </div>
+              )}
               <div className="flex items-center justify-between">
                 <span className="text-sm">Rate Limit (Toplam)</span>
                 <Badge>{dashboardStats.rateLimiting.total} / dakika</Badge>

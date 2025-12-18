@@ -2,7 +2,8 @@
 // Test environment için global ayarlar
 
 // .env.local dosyasından environment variable'ları yükle
-const result = require('dotenv').config({ path: '.env.local' })
+import dotenv from 'dotenv'
+const result = dotenv.config({ path: '.env.local' })
 
 if (result.error) {
   console.warn('⚠️ .env.local dosyası yüklenemedi:', result.error.message)
@@ -57,4 +58,3 @@ if (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
 //   warn: jest.fn(),
 //   error: jest.fn(),
 // }
-

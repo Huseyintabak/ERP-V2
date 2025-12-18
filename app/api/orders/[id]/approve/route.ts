@@ -8,21 +8,21 @@ import { logger } from '@/lib/utils/logger';
 // Support both POST and PATCH for flexibility
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   return handleApprove(request, params);
 }
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   return handleApprove(request, params);
 }
 
 async function handleApprove(
   request: NextRequest,
-  params: Promise<{ id: string }>
+  params: { id: string }
 ) {
   try {
     logger.log('🚀 Order approval endpoint called');
@@ -33,7 +33,7 @@ async function handleApprove(
     }
 
     const payload = await verifyJWT(token);
-    const { id } = await params;
+    const { id } = params;
     logger.log(`📦 Approving order: ${id}, User: ${payload.userId}, Role: ${payload.role}`);
     const supabase = await createClient();
 

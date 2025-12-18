@@ -102,7 +102,9 @@ export function FinishedProductsTable({
             ) : (
               products.map((product) => {
                 const availableQty = product.quantity - (product.reserved_quantity || 0);
-                const isCritical = availableQty <= (product.critical_level || 0);
+                const criticalLevel = product.critical_level || 0;
+                const isCritical = criticalLevel > 0 && availableQty <= criticalLevel;
+                const isOutOfStock = product.quantity === 0 && criticalLevel === 0;
 
                 return (
                   <TableRow key={product.id}>
@@ -125,6 +127,10 @@ export function FinishedProductsTable({
                     <TableCell>
                       {isCritical ? (
                         <Badge variant="destructive">Kritik Seviye</Badge>
+                      ) : isOutOfStock ? (
+                        <Badge variant="outline" className="bg-blue-600 text-white border-blue-600">
+                          Stok Yok
+                        </Badge>
                       ) : (
                         <Badge variant="default" className="bg-green-600">Normal</Badge>
                       )}

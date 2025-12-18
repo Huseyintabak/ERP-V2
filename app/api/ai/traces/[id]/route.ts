@@ -10,7 +10,7 @@ import { getTraceTracker } from '@/lib/ai/utils/trace-tracker';
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
     const token = request.cookies.get('thunder_token')?.value;
@@ -28,7 +28,7 @@ export async function GET(
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
     }
 
-    const { id } = await params;
+    const { id } = params;
     const conversationId = id;
     const traceTracker = getTraceTracker();
     

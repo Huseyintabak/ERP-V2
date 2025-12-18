@@ -5,7 +5,7 @@ import { verifyJWT } from '@/lib/auth/jwt';
 import { logger } from '@/lib/utils/logger';
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ orderId: string }> }
+  { params }: { params: { orderId: string } }
 ) {
   try {
     // Auth check
@@ -22,7 +22,7 @@ export async function GET(
     const operatorId = payload.userId;
     const supabase = await createClient();
 
-    const { orderId } = await params;
+    const { orderId } = params;
 
     // Yarı mamul üretim siparişini getir
     const { data: order, error: orderError } = await supabase

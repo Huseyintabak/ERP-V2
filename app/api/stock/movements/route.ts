@@ -27,6 +27,8 @@ export async function GET(request: NextRequest) {
     const materialType = searchParams.get('type');
     const materialId = searchParams.get('materialId');
     const movementType = searchParams.get('movementType');
+    const fromDate = searchParams.get('fromDate');
+    const toDate = searchParams.get('toDate');
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '50');
     const offset = (page - 1) * limit;
@@ -47,6 +49,14 @@ export async function GET(request: NextRequest) {
     }
     if (movementType && movementType !== 'all') {
       query = query.eq('movement_type', movementType);
+    }
+
+    // Date range filter (created_at)
+    if (fromDate) {
+      query = query.gte('created_at', `${fromDate}T00:00:00.000Z`);
+    }
+    if (toDate) {
+      query = query.lte('created_at', `${toDate}T23:59:59.999Z`);
     }
 
     // Apply pagination and ordering

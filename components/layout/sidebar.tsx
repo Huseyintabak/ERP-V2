@@ -96,9 +96,7 @@ const navItems: NavItem[] = [
       { title: 'Yarı Mamul Üretimi', href: '/uretim/yarimamul-uretim', icon: Package },
       { title: 'Üretim Planları', href: '/uretim/planlar', icon: CalendarClock },
       { title: 'BOM Yönetimi', href: '/uretim/bom', icon: Boxes },
-      { title: 'Rezervasyonlar', href: '/uretim/rezervasyonlar', icon: PackageOpen },
       { title: 'Operatörler', href: '/uretim/operatorler', icon: Users },
-      { title: 'Çoklu Operatör', href: '/uretim/multi-operator', icon: UserCheck },
     ],
   },
   {

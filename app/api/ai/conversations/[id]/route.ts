@@ -10,7 +10,7 @@ import { logger } from '@/lib/utils/logger';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
     // Authentication check
@@ -29,7 +29,7 @@ export async function GET(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const { id } = await params;
+    const { id } = params;
     let conversation: any = null;
 
     // 1. Önce in-memory'den kontrol et

@@ -5,7 +5,7 @@ import { verifyJWT } from '@/lib/auth/jwt';
 import { logger } from '@/lib/utils/logger';
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
     const token = request.cookies.get('thunder_token')?.value;
@@ -14,7 +14,7 @@ export async function GET(
     }
 
     const payload = await verifyJWT(token);
-    const { id } = await params;
+    const { id } = params;
     const supabase = await createClient();
 
     const { data: order, error } = await supabase
@@ -60,7 +60,7 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
     const token = request.cookies.get('thunder_token')?.value;
@@ -69,7 +69,7 @@ export async function PUT(
     }
 
     const payload = await verifyJWT(token);
-    const { id } = await params;
+    const { id } = params;
     const supabase = await createClient();
 
     // Only managers and planlama can update orders
@@ -135,7 +135,7 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
     const token = request.cookies.get('thunder_token')?.value;
@@ -144,7 +144,7 @@ export async function DELETE(
     }
 
     const payload = await verifyJWT(token);
-    const { id } = await params;
+    const { id } = params;
     const supabase = await createClient();
 
     // Only managers and planlama can delete orders

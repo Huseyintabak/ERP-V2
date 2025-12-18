@@ -49,10 +49,12 @@ export async function GET(request: NextRequest) {
     const supabase = await createClient();
 
     // Build query - just get purchase requests first
+    // Sadece hammadde talepleri göster (yarı mamul üretim ürünü, sipariş verilemez)
     let query = supabase
       .from('purchase_requests')
       .select('*', { count: 'exact' })
-      .neq('status', 'iptal_edildi'); // İptal edilen talepleri hariç tut
+      .neq('status', 'iptal_edildi') // İptal edilen talepleri hariç tut
+      .in('material_type', ['raw', 'raw_materials']); // Sadece hammaddeler
 
     // Apply filters
     if (status && status !== 'all') {
@@ -197,9 +199,10 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    if (!['raw', 'semi'].includes(material_type)) {
+    // Yarı mamul için purchase request oluşturulamaz (üretim ürünü)
+    if (material_type !== 'raw') {
       return NextResponse.json({ 
-        error: 'material_type must be either "raw" or "semi"' 
+        error: 'Sadece hammadde için tedarik talebi oluşturulabilir. Yarı mamul üretim ürünüdür.' 
       }, { status: 400 });
     }
 
