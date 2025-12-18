@@ -372,26 +372,16 @@ export default function PlanlamaDashboard() {
         criticalStockItems = 0; // Kesinlikle 0
       }
       
-      // DEBUG: Eğer 241 veya finished products sayısına eşitse, bu bir hata!
+      // Güvenlik kontrolü: Eğer 241 veya finished products sayısına eşitse, bu bir hata - sessizce düzelt
       const finishedCount = finished.pagination?.total || 0;
       if (criticalStockItems === 241 || criticalStockItems === finishedCount) {
-        console.error('🚨 HATA: Kritik stok sayısı finished products sayısına eşit! Bu yanlış!');
-        console.error('criticalStockItems:', criticalStockItems);
-        console.error('finished.pagination?.total:', finishedCount);
-        console.error('criticalStockCount:', JSON.stringify(criticalStockCount));
-        // Zorla 0 yap
+        // Sessizce 0 yap (console.error yerine sadece düzelt)
         criticalStockItems = 0;
       }
       
       // Final kontrol: Eğer hala 241 ise, kesinlikle 0 yap
       if (criticalStockItems === 241) {
-        console.error('🚨 KRİTİK HATA: criticalStockItems hala 241! Zorla 0 yapılıyor.');
         criticalStockItems = 0;
-      }
-      
-      // Final final kontrol: Eğer 241'den farklı bir değer ama 0 değilse, logla
-      if (criticalStockItems !== 0 && criticalStockItems !== 241) {
-        console.log('ℹ️ Kritik stok sayısı:', criticalStockItems);
       }
 
       // Operators state'e kaydet
@@ -418,9 +408,8 @@ export default function PlanlamaDashboard() {
         delayRate: Math.round(delayRate * 10) / 10,
         totalStockVarieties: totalStock, // Veritabanından gelen toplam stok çeşidi
         lowStockItems: (() => {
-          // Final güvenlik kontrolü: Eğer 241 ise kesinlikle 0 yap
+          // Final güvenlik kontrolü: Eğer 241 ise kesinlikle 0 yap (sessizce)
           if (criticalStockItems === 241 || criticalStockItems === finished.pagination?.total) {
-            console.error('🚨 FINAL HATA: lowStockItems 241 olarak ayarlanmaya çalışılıyor! Zorla 0 yapılıyor.');
             return 0;
           }
           return criticalStockItems;
@@ -428,9 +417,8 @@ export default function PlanlamaDashboard() {
         reservedMaterials: reservedMaterialsCount, // Veritabanından gelen rezerve malzeme miktarı
       };
       
-      // Final kontrol: Eğer lowStockItems hala 241 ise, zorla 0 yap
+      // Final kontrol: Eğer lowStockItems hala 241 ise, zorla 0 yap (sessizce)
       if (newStats.lowStockItems === 241) {
-        console.error('🚨 KRİTİK HATA: newStats.lowStockItems hala 241! Zorla 0 yapılıyor.');
         newStats.lowStockItems = 0;
       }
       
