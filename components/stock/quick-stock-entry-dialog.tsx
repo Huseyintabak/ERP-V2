@@ -20,7 +20,16 @@ interface Props {
 }
 
 export function QuickStockEntryDialog({ open, onClose, type }: Props) {
+  // Stok girişi için yarı mamul ve nihai ürün seçilemez (üretim ürünleri)
   const [materialType, setMaterialType] = useState<'raw' | 'semi' | 'finished'>('raw');
+  
+  // Stok girişi için yarı mamul veya nihai ürün seçilmişse hammadde'ye reset et
+  useEffect(() => {
+    if (open && type === 'giris' && (materialType === 'semi' || materialType === 'finished')) {
+      setMaterialType('raw');
+      setSelectedMaterialId('');
+    }
+  }, [open, type, materialType]);
   const [materials, setMaterials] = useState<any[]>([]);
   const [selectedMaterialId, setSelectedMaterialId] = useState('');
   const [quantity, setQuantity] = useState('');
@@ -68,6 +77,15 @@ export function QuickStockEntryDialog({ open, onClose, type }: Props) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Stok girişi için yarı mamul ve nihai ürün seçilemez (üretim ürünleri)
+    if (type === 'giris' && (materialType === 'semi' || materialType === 'finished')) {
+      const productType = materialType === 'semi' ? 'Yarı Mamul' : 'Nihai Ürün';
+      toast.error(`${productType} bir üretim ürünüdür. Doğrudan stok girişi yapılamaz.`);
+      setMaterialType('raw');
+      setSelectedMaterialId('');
+      return;
+    }
     
     if (!selectedMaterialId || !quantity) {
       toast.error('Lütfen tüm alanları doldurun');
@@ -152,10 +170,28 @@ export function QuickStockEntryDialog({ open, onClose, type }: Props) {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="raw">Hammadde</SelectItem>
-                <SelectItem value="semi">Yarı Mamul</SelectItem>
-                <SelectItem value="finished">Nihai Ürün</SelectItem>
+                {type === 'giris' ? (
+                  <>
+                    <SelectItem value="semi" disabled>
+                      Yarı Mamul
+                    </SelectItem>
+                    <SelectItem value="finished" disabled>
+                      Nihai Ürün
+                    </SelectItem>
+                  </>
+                ) : (
+                  <>
+                    <SelectItem value="semi">Yarı Mamul</SelectItem>
+                    <SelectItem value="finished">Nihai Ürün</SelectItem>
+                  </>
+                )}
               </SelectContent>
             </Select>
+            {type === 'giris' && (materialType === 'semi' || materialType === 'finished') && (
+              <p className="text-xs text-amber-600 mt-1">
+                ⚠️ {materialType === 'semi' ? 'Yarı Mamul' : 'Nihai Ürün'} bir üretim ürünüdür. Doğrudan stok girişi yapılamaz.
+              </p>
+            )}
           </div>
 
           {/* Malzeme Seçimi */}

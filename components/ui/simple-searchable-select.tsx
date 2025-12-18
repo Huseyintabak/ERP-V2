@@ -6,7 +6,6 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
 
 export interface SearchableSelectOption {
   value: string;
@@ -163,53 +162,61 @@ export function SimpleSearchableSelect({
             </div>
           </div>
           
-          <ScrollArea style={{ maxHeight, backgroundColor: '#ffffff' }} className="p-1 bg-white">
-            {loading ? (
-              <div className="flex items-center justify-center py-4">
-                <div className="text-sm text-muted-foreground">Yükleniyor...</div>
-              </div>
-            ) : filteredOptions.length === 0 ? (
-              <div className="flex items-center justify-center py-4">
-                <div className="text-sm text-muted-foreground">{emptyText}</div>
-              </div>
-            ) : (
-              <div className="space-y-1">
-                {filteredOptions.map((option, index) => (
-                  <div
-                    key={option.key || option.value || index}
-                    onMouseDown={(e) => {
-                      e.preventDefault();
-                      handleSelect(option.value);
-                    }}
-                    className={cn(
-                      "flex items-center justify-between p-2 rounded-md cursor-pointer hover:bg-gray-100 transition-colors",
-                      option.disabled && "opacity-50 cursor-not-allowed hover:bg-transparent",
-                      value === option.value && "bg-blue-50 hover:bg-blue-100"
-                    )}
-                  >
-                    <div className="flex flex-col items-start flex-1 min-w-0">
-                      <span className="font-medium truncate">{option.label}</span>
-                      {option.description && (
-                        <span className="text-sm text-muted-foreground truncate">
-                          {option.description}
-                        </span>
+          <div 
+            className="overflow-y-auto bg-white"
+            style={{ 
+              maxHeight: '450px', // 9 ürün için optimize edilmiş yükseklik (her ürün ~50px)
+              overflowX: 'hidden'
+            }}
+          >
+            <div className="p-1">
+              {loading ? (
+                <div className="flex items-center justify-center py-4">
+                  <div className="text-sm text-muted-foreground">Yükleniyor...</div>
+                </div>
+              ) : filteredOptions.length === 0 ? (
+                <div className="flex items-center justify-center py-4">
+                  <div className="text-sm text-muted-foreground">{emptyText}</div>
+                </div>
+              ) : (
+                <div className="space-y-1">
+                  {filteredOptions.map((option, index) => (
+                    <div
+                      key={option.key || option.value || index}
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        handleSelect(option.value);
+                      }}
+                      className={cn(
+                        "flex items-center justify-between p-2 rounded-md cursor-pointer hover:bg-gray-100 transition-colors min-h-[50px]",
+                        option.disabled && "opacity-50 cursor-not-allowed hover:bg-transparent",
+                        value === option.value && "bg-blue-50 hover:bg-blue-100"
                       )}
+                    >
+                      <div className="flex flex-col items-start flex-1 min-w-0">
+                        <span className="font-medium truncate">{option.label}</span>
+                        {option.description && (
+                          <span className="text-sm text-muted-foreground truncate">
+                            {option.description}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 ml-2">
+                        {option.badge && (
+                          <Badge variant="secondary" className="text-xs">
+                            {option.badge}
+                          </Badge>
+                        )}
+                        {value === option.value && (
+                          <Check className="h-4 w-4 text-blue-600" />
+                        )}
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2 ml-2">
-                      {option.badge && (
-                        <Badge variant="secondary" className="text-xs">
-                          {option.badge}
-                        </Badge>
-                      )}
-                      {value === option.value && (
-                        <Check className="h-4 w-4 text-blue-600" />
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </ScrollArea>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
     </div>
