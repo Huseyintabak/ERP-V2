@@ -141,6 +141,7 @@ const navItems: NavItem[] = [
     roles: ['yonetici', 'planlama'],
     children: [
       { title: 'AI Dashboard', href: '/ai-dashboard', icon: Activity },
+      { title: 'Agent Builder', href: '/ai-agent-builder', icon: Bot },
       { title: 'Karar Onayları', href: '/ai-onaylar', icon: UserCheck },
       { title: 'Maliyetler', href: '/ai-maliyetler', icon: DollarSign },
       { title: 'Agent Konuşmaları', href: '/ai-konusmalar', icon: MessageSquare },
