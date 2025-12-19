@@ -22,7 +22,6 @@ export async function GET(request: NextRequest) {
     }
 
     const operatorId = payload.userId;
-    logger.log('🔍 Operator ID from token:', operatorId);
     
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1');
@@ -31,18 +30,9 @@ export async function GET(request: NextRequest) {
     const sortBy = searchParams.get('sort') || 'created_at';
     const sortOrder = searchParams.get('order') || 'desc';
 
-    logger.log('🔍 Query params:', { status, page, limit });
-
     const supabase = await createClient();
 
-    // DEBUG: Önce tüm production plan'ları görelim
-    const { data: allPlans } = await supabase
-      .from('production_plans')
-      .select('id, assigned_operator_id, status');
-    
-    logger.log('📊 All production plans:', JSON.stringify(allPlans, null, 2));
-    logger.log('📊 Total plans count:', allPlans?.length || 0);
-
+    // Query only the operator's assigned tasks (filtered at database level)
     let query = supabase
       .from('production_plans')
       .select(`
@@ -63,8 +53,6 @@ export async function GET(request: NextRequest) {
         )
       `, { count: 'exact' })
       .eq('assigned_operator_id', operatorId);
-    
-    logger.log('🔍 Filtering by assigned_operator_id:', operatorId);
 
     // Filter by status if provided
     if (status) {
@@ -89,34 +77,6 @@ export async function GET(request: NextRequest) {
     if (error) {
       logger.error('❌ Error fetching operator tasks:', error);
       return NextResponse.json({ error: 'Failed to fetch tasks' }, { status: 500 });
-    }
-
-    logger.log('✅ Tasks found:', data?.length || 0);
-    logger.log('📦 Tasks data:', JSON.stringify(data, null, 2));
-    
-    // DEBUG: Aynı order_id'ye sahip planları kontrol et
-    if (data && data.length > 0) {
-      const orderGroups = new Map();
-      data.forEach((plan: any) => {
-        const orderId = plan.order_id;
-        if (!orderGroups.has(orderId)) {
-          orderGroups.set(orderId, []);
-        }
-        orderGroups.get(orderId).push({
-          plan_id: plan.id,
-          product_id: plan.product_id,
-          product_name: plan.product?.name,
-          order_number: plan.order?.order_number
-        });
-      });
-      
-      logger.log('📊 Plans grouped by order_id:');
-      orderGroups.forEach((plans, orderId) => {
-        logger.log(`  Order ${orderId}: ${plans.length} plans`);
-        plans.forEach((p: any) => {
-          logger.log(`    - Plan ${p.plan_id}: ${p.product_name} (${p.product_id})`);
-        });
-      });
     }
 
     return NextResponse.json({

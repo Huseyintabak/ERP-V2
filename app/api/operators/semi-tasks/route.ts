@@ -22,7 +22,6 @@ export async function GET(request: NextRequest) {
     }
 
     const operatorId = payload.userId;
-    logger.log('🔍 Operator ID from token:', operatorId);
     
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1');
@@ -31,18 +30,9 @@ export async function GET(request: NextRequest) {
     const sortBy = searchParams.get('sort') || 'created_at';
     const sortOrder = searchParams.get('order') || 'desc';
 
-    logger.log('🔍 Semi tasks query params:', { status, page, limit });
-
     const supabase = await createClient();
 
-    // DEBUG: Önce tüm semi production orders'ları görelim
-    const { data: allSemiOrders } = await supabase
-      .from('semi_production_orders')
-      .select('id, assigned_operator_id, status');
-    
-    logger.log('📊 All semi production orders:', JSON.stringify(allSemiOrders, null, 2));
-    logger.log('📊 Total semi orders count:', allSemiOrders?.length || 0);
-
+    // Query only the operator's assigned semi tasks (filtered at database level)
     let query = supabase
       .from('semi_production_orders')
       .select(`
@@ -55,8 +45,6 @@ export async function GET(request: NextRequest) {
         )
       `, { count: 'exact' })
       .eq('assigned_operator_id', operatorId);
-    
-    logger.log('🔍 Filtering semi orders by assigned_operator_id:', operatorId);
 
     // Filter by status if provided
     if (status) {
@@ -82,9 +70,6 @@ export async function GET(request: NextRequest) {
       logger.error('❌ Error fetching operator semi tasks:', error);
       return NextResponse.json({ error: 'Failed to fetch semi tasks' }, { status: 500 });
     }
-
-    logger.log('✅ Semi tasks found:', data?.length || 0);
-    logger.log('📦 Semi tasks data:', JSON.stringify(data, null, 2));
 
     return NextResponse.json({
       data: data || [],

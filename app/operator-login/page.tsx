@@ -88,8 +88,13 @@ export default function OperatorLoginPage() {
       setUser(result.user);
       toast.success(`Hoş geldiniz, ${result.user.name}!`);
       
-      // Hard navigation
-      window.location.href = result.redirectUrl;
+      // Cookie httpOnly olduğu için JavaScript'ten okunamaz
+      // Bu yüzden direkt redirect yapıyoruz, cookie server tarafında set edildi
+      // Hard navigation cookie'yi garanti eder
+      console.log('🔄 Redirecting to:', result.redirectUrl);
+      setTimeout(() => {
+        window.location.href = result.redirectUrl;
+      }, 200); // Delay to allow cookie to be set
     } catch (error: any) {
       toast.error(error.message || 'Giriş başarısız');
     } finally {
