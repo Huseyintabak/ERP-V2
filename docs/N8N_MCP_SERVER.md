@@ -39,10 +39,16 @@ cat >> .env.local << 'EOF'
 # n8n MCP Server Configuration
 N8N_MCP_SERVER_URL=http://192.168.1.250:5678/mcp-server/http
 N8N_MCP_ACCESS_TOKEN=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+
+# n8n API Configuration (Workflow oluşturma için)
+N8N_BASE_URL=http://192.168.1.250:5678
+N8N_API_KEY=your-api-key-here
 EOF
 ```
 
-**ÖNEMLİ:** `N8N_MCP_ACCESS_TOKEN` değerini n8n UI'den aldığınız token ile değiştirin!
+**ÖNEMLİ:** 
+- `N8N_MCP_ACCESS_TOKEN` değerini n8n UI'den aldığınız token ile değiştirin!
+- `N8N_API_KEY` için: n8n UI → Settings → API → Create API Key
 
 ### 3. Thunder ERP'yi Yeniden Başlat
 
@@ -212,6 +218,51 @@ const prompt = await mcpClient.getPrompt('production-planning-prompt', {
   orderId: '12345',
   quantity: 100
 });
+```
+
+### 4. MCP ile Workflow Oluşturma
+
+```typescript
+import { getN8nWorkflowGenerator } from '@/lib/ai/n8n-workflow-generator';
+
+// Workflow generator'ı al
+const generator = getN8nWorkflowGenerator();
+
+// Basit Planning Agent workflow'u oluştur
+const workflowId = await generator.createBasicPlanningWorkflow();
+console.log('Workflow oluşturuldu:', workflowId);
+
+// JSON'dan import et
+const importedId = await generator.importWorkflowFromFile('/path/to/workflow.json');
+
+// Mevcut workflow'ları analiz et
+const analysis = await generator.analyzeWorkflows();
+console.log(`Toplam ${analysis.total} workflow, ${analysis.active} aktif`);
+```
+
+### 5. API ile Workflow Yönetimi
+
+```typescript
+import { getN8nApiClient } from '@/lib/ai/n8n-api-client';
+
+const apiClient = getN8nApiClient();
+
+// Workflow oluştur
+const workflow = {
+  name: 'My Workflow',
+  nodes: [...],
+  connections: {...}
+};
+const result = await apiClient.createWorkflow(workflow);
+
+// Workflow'u aktifleştir
+await apiClient.activateWorkflow(result.id, true);
+
+// Workflow'u çalıştır
+const execution = await apiClient.executeWorkflow(result.id, { data: {...} });
+
+// Execution durumunu kontrol et
+const status = await apiClient.getExecution(execution.id);
 ```
 
 ---
