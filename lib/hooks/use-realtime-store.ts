@@ -32,6 +32,15 @@ export const useRealtimeStore = (handlers: RealtimeHandlers = {}) => {
 
   // Check authentication before setting up Realtime connections
   useEffect(() => {
+    // Don't check auth on login/auth pages
+    if (typeof window !== 'undefined') {
+      const pathname = window.location.pathname;
+      if (pathname.includes('/login') || pathname.includes('/operator-login') || pathname === '/') {
+        setIsAuthenticated(false);
+        return;
+      }
+    }
+
     const checkAuth = async () => {
       // If user is already in store, we're authenticated
       if (user) {
@@ -39,7 +48,7 @@ export const useRealtimeStore = (handlers: RealtimeHandlers = {}) => {
         return;
       }
 
-      // Otherwise check via API
+      // Otherwise check via API - but silently fail
       try {
         const response = await fetch('/api/auth/me', {
           credentials: 'include',

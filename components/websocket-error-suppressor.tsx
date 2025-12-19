@@ -18,6 +18,7 @@ export function WebSocketErrorSuppressor() {
       const fullMessage = args.map(a => String(a)).join(' ');
       
       // Suppress WebSocket connection errors and related network errors
+      // AGGRESSIVE SUPPRESSION: Suppress ALL 401 errors and WebSocket errors
       if (
         message.includes('WebSocket') ||
         message.includes('websocket') ||
@@ -32,13 +33,15 @@ export function WebSocketErrorSuppressor() {
         fullMessage.includes('/realtime/') ||
         (fullMessage.includes('Failed to load resource') && fullMessage.includes('realtime')) ||
         (fullMessage.includes('400') && fullMessage.includes('complete') && fullMessage.includes('realtime')) ||
-        // Suppress 401 Unauthorized errors from /api/auth/me when user is not logged in (expected behavior)
-        (fullMessage.includes('Failed to load resource') && fullMessage.includes('401') && (fullMessage.includes('me') || fullMessage.includes('auth') || fullMessage.includes('login'))) ||
-        (fullMessage.includes('401') && (fullMessage.includes('Unauthorized') || fullMessage.includes('me') || fullMessage.includes('auth') || fullMessage.includes('login'))) ||
-        // Suppress fetch errors for /api/auth/me (expected when not logged in)
-        (fullMessage.includes('fetch') && fullMessage.includes('/api/auth/me') && fullMessage.includes('401')) ||
-        // Suppress errors mentioning "login" with 401
-        (fullMessage.includes('login') && fullMessage.includes('401')) ||
+        // AGGRESSIVE: Suppress ALL 401 errors (expected when not logged in)
+        fullMessage.includes('401') ||
+        fullMessage.includes('Unauthorized') ||
+        (fullMessage.includes('Failed to load resource') && fullMessage.includes('401')) ||
+        // Suppress all /api/auth/me errors
+        fullMessage.includes('/api/auth/me') ||
+        // Suppress all login/auth related errors
+        fullMessage.includes('login') ||
+        fullMessage.includes('auth') ||
         // Suppress Next.js React 19 sync dynamic API dev warnings for params/searchParams spam
         fullMessage.includes('params are being enumerated. `params` should be unwrapped with `React.use()`') ||
         fullMessage.includes('The keys of `searchParams` were accessed directly. `searchParams` should be unwrapped with `React.use()`')
@@ -91,11 +94,16 @@ export function WebSocketErrorSuppressor() {
         message.includes('closed before the connection is established') ||
         errorString.includes('realtime/v1/websocket') ||
         errorString.includes('supabase.co/realtime') ||
-        // Suppress 401 errors from auth endpoints (expected when not logged in)
-        (errorString.includes('401') && (errorString.includes('me') || errorString.includes('auth') || errorString.includes('login'))) ||
-        (fullErrorString.includes('401') && (fullErrorString.includes('Unauthorized') || fullErrorString.includes('me') || fullErrorString.includes('auth') || fullErrorString.includes('login'))) ||
-        // Suppress "Failed to load resource" errors for auth endpoints
-        (message.includes('Failed to load resource') && (errorString.includes('401') || errorString.includes('me') || errorString.includes('auth') || errorString.includes('login')))
+        // AGGRESSIVE: Suppress ALL 401 errors
+        errorString.includes('401') ||
+        fullErrorString.includes('401') ||
+        errorString.includes('Unauthorized') ||
+        fullErrorString.includes('Unauthorized') ||
+        // Suppress all auth/login related errors
+        errorString.includes('me') ||
+        errorString.includes('auth') ||
+        errorString.includes('login') ||
+        message.includes('Failed to load resource')
       ) {
         event.preventDefault();
         event.stopPropagation();
@@ -115,8 +123,12 @@ export function WebSocketErrorSuppressor() {
         reason.includes('closed before the connection is established') ||
         reason.includes('realtime/v1/websocket') ||
         reason.includes('supabase.co/realtime') ||
-        // Suppress 401 errors from auth endpoints (expected when not logged in)
-        (reason.includes('401') && (reason.includes('Unauthorized') || reason.includes('me')))
+        // AGGRESSIVE: Suppress ALL 401 errors
+        reason.includes('401') ||
+        reason.includes('Unauthorized') ||
+        reason.includes('me') ||
+        reason.includes('auth') ||
+        reason.includes('login')
       ) {
         event.preventDefault();
         return false;

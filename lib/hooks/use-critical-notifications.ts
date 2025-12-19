@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { toast } from 'sonner';
 import { useRealtimeStore } from './use-realtime-store';
 import { useNotificationStore } from '@/stores/notification-store';
+import { useAuthStore } from '@/stores/auth-store';
 
 interface CriticalNotification {
   id: string;
@@ -44,6 +45,7 @@ export const useCriticalNotifications = () => {
   };
 
   // Subscribe to real-time notifications
+  // useRealtimeStore will handle auth check internally
   useRealtimeStore(handlers);
 
   // Also add to notification store for persistent display
@@ -55,6 +57,7 @@ export const useCriticalNotifications = () => {
 
 // Hook for specific critical stock notifications
 export const useCriticalStockNotifications = () => {
+
   const handlers = {
     onRawMaterialUpdate: (material: any) => {
       // Check if material quantity is at critical level
@@ -105,6 +108,8 @@ export const useCriticalStockNotifications = () => {
     },
   };
 
+  // Subscribe to real-time notifications
+  // useRealtimeStore will handle auth check internally
   useRealtimeStore(handlers);
 };
 
@@ -156,6 +161,8 @@ export const useProductionAlerts = () => {
     },
   };
 
+  // Subscribe to real-time notifications
+  // useRealtimeStore will handle auth check internally
   useRealtimeStore(handlers);
 };
 
