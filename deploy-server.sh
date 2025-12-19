@@ -49,11 +49,11 @@ npm run build
 echo -e "${YELLOW}🔐 Build klasörüne yazma izni veriliyor...${NC}"
 sudo chmod -R u+w .next
 
-# 8. PM2 hard restart (stop + start for clean restart)
-echo -e "${YELLOW}🔄 PM2 ile uygulama yeniden başlatılıyor (hard restart)...${NC}"
+# 8. PM2 hard restart (stop + start for clean restart with env update)
+echo -e "${YELLOW}🔄 PM2 ile uygulama yeniden başlatılıyor (hard restart + env update)...${NC}"
 pm2 stop thunder-erp || true
 sleep 2
-pm2 start thunder-erp
+pm2 start thunder-erp --update-env
 sleep 3
 
 # 9. Durum kontrolü
