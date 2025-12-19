@@ -27,7 +27,30 @@ export const useRealtime = (
     const supabase = createClient();
     let channel: any = null;
 
-    const setupRealtime = () => {
+    // Check if user is authenticated before attempting Realtime connection
+    const checkAuth = async () => {
+      try {
+        const response = await fetch('/api/auth/me');
+        if (!response.ok || response.status === 401) {
+          // User not authenticated, skip Realtime connection
+          logger.log(`🔔 Skipping Realtime connection for ${table} - user not authenticated`);
+          return false;
+        }
+        return true;
+      } catch (error) {
+        // Auth check failed, skip Realtime connection
+        logger.log(`🔔 Skipping Realtime connection for ${table} - auth check failed`);
+        return false;
+      }
+    };
+
+    const setupRealtime = async () => {
+      // Check authentication first
+      const isAuthenticated = await checkAuth();
+      if (!isAuthenticated) {
+        return;
+      }
+
       try {
         logger.log(`🔔 Setting up real-time subscription for table: ${table}`);
 
@@ -86,8 +109,11 @@ export const useRealtime = (
                 reconnectTimeoutRef.current = setTimeout(() => {
                   if (channel) {
                     supabase.removeChannel(channel);
+                    channel = null;
                   }
-                  setupRealtime();
+                  setupRealtime().catch((error) => {
+                    logger.error('🔔 Error in setupRealtime retry:', error);
+                  });
                 }, Math.min(1000 * Math.pow(2, reconnectAttemptsRef.current), 30000));
               } else {
                 logger.error('🔔 Max reconnection attempts reached, giving up');
@@ -99,7 +125,9 @@ export const useRealtime = (
       }
     };
 
-    setupRealtime();
+    setupRealtime().catch((error) => {
+      logger.error('🔔 Error in setupRealtime:', error);
+    });
 
     return () => {
       logger.log(`🔔 Cleaning up real-time subscription for table: ${table}`);

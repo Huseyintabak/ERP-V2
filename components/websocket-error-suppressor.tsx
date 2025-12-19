@@ -32,11 +32,14 @@ export function WebSocketErrorSuppressor() {
         fullMessage.includes('/realtime/') ||
         (fullMessage.includes('Failed to load resource') && fullMessage.includes('realtime')) ||
         (fullMessage.includes('400') && fullMessage.includes('complete') && fullMessage.includes('realtime')) ||
+        // Suppress 401 Unauthorized errors from /api/auth/me when user is not logged in (expected behavior)
+        (fullMessage.includes('Failed to load resource') && fullMessage.includes('401') && fullMessage.includes('me')) ||
+        (fullMessage.includes('401') && (fullMessage.includes('Unauthorized') || fullMessage.includes('me'))) ||
         // Suppress Next.js React 19 sync dynamic API dev warnings for params/searchParams spam
         fullMessage.includes('params are being enumerated. `params` should be unwrapped with `React.use()`') ||
         fullMessage.includes('The keys of `searchParams` were accessed directly. `searchParams` should be unwrapped with `React.use()`')
       ) {
-        // Completely suppress - these are handled by our hooks
+        // Completely suppress - these are handled by our hooks or are expected when user is not authenticated
         return;
       }
 
@@ -67,7 +70,7 @@ export function WebSocketErrorSuppressor() {
     console.error = filteredError;
     console.warn = filteredWarn;
 
-    // Suppress unhandled WebSocket errors
+    // Suppress unhandled WebSocket errors and auth errors
     const errorHandler = (event: ErrorEvent) => {
       const message = event.message || '';
       const filename = event.filename || '';
@@ -80,7 +83,9 @@ export function WebSocketErrorSuppressor() {
         message.includes('ws://') ||
         message.includes('closed before the connection is established') ||
         errorString.includes('realtime/v1/websocket') ||
-        errorString.includes('supabase.co/realtime')
+        errorString.includes('supabase.co/realtime') ||
+        // Suppress 401 errors from auth endpoints (expected when not logged in)
+        (errorString.includes('401') && (errorString.includes('me') || errorString.includes('auth')))
       ) {
         event.preventDefault();
         event.stopPropagation();
@@ -88,7 +93,7 @@ export function WebSocketErrorSuppressor() {
       }
     };
 
-    // Suppress unhandled promise rejections from WebSocket
+    // Suppress unhandled promise rejections from WebSocket and auth errors
     const rejectionHandler = (event: PromiseRejectionEvent) => {
       const reason = event.reason?.toString() || '';
       if (
@@ -99,7 +104,9 @@ export function WebSocketErrorSuppressor() {
         reason.includes('ws://') ||
         reason.includes('closed before the connection is established') ||
         reason.includes('realtime/v1/websocket') ||
-        reason.includes('supabase.co/realtime')
+        reason.includes('supabase.co/realtime') ||
+        // Suppress 401 errors from auth endpoints (expected when not logged in)
+        (reason.includes('401') && (reason.includes('Unauthorized') || reason.includes('me')))
       ) {
         event.preventDefault();
         return false;

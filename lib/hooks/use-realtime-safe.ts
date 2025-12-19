@@ -28,7 +28,32 @@ export const useRealtimeSafe = (
     const supabase = createClient();
     let channel: any = null;
 
-    const setupRealtime = () => {
+    // Check if user is authenticated before attempting Realtime connection
+    const checkAuth = async () => {
+      try {
+        const response = await fetch('/api/auth/me');
+        if (!response.ok || response.status === 401) {
+          // User not authenticated, skip Realtime connection
+          logger.log(`🔔 Skipping Realtime connection for ${table} - user not authenticated`);
+          setIsConnected(false);
+          return false;
+        }
+        return true;
+      } catch (error) {
+        // Auth check failed, skip Realtime connection
+        logger.log(`🔔 Skipping Realtime connection for ${table} - auth check failed`);
+        setIsConnected(false);
+        return false;
+      }
+    };
+
+    const setupRealtime = async () => {
+      // Check authentication first
+      const isAuthenticated = await checkAuth();
+      if (!isAuthenticated) {
+        return;
+      }
+
       try {
         logger.log(`🔔 Setting up safe real-time subscription for table: ${table}`);
 
@@ -89,8 +114,12 @@ export const useRealtimeSafe = (
                 reconnectTimeoutRef.current = setTimeout(() => {
                   if (channel) {
                     supabase.removeChannel(channel);
+                    channel = null;
                   }
-                  setupRealtime();
+                  setupRealtime().catch((error) => {
+                    logger.error('🔔 Error in setupRealtime retry:', error);
+                    setIsConnected(false);
+                  });
                 }, Math.min(2000 * reconnectAttemptsRef.current, 10000));
               } else {
                 logger.error('🔔 Max safe reconnection attempts reached, giving up');
@@ -103,7 +132,10 @@ export const useRealtimeSafe = (
       }
     };
 
-    setupRealtime();
+    setupRealtime().catch((error) => {
+      logger.error('🔔 Error in setupRealtime:', error);
+      setIsConnected(false);
+    });
 
     return () => {
       logger.log(`🔔 Cleaning up safe real-time subscription for table: ${table}`);
