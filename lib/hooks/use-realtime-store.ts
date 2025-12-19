@@ -1,9 +1,10 @@
-import { useEffect, useRef, useMemo } from 'react';
+import { useEffect, useRef, useMemo, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useStockStore, type RawMaterial, type SemiFinishedProduct, type FinishedProduct, type StockMovement } from '@/stores/stock-store';
 import { useOrderStore, type Order, type ProductionPlan } from '@/stores/order-store';
 import { useDashboardStatsStore } from '@/stores/dashboard-stats-store';
 import { useNotificationStore } from '@/stores/notification-store';
+import { useAuthStore } from '@/stores/auth-store';
 import { logger } from '@/lib/utils/logger';
 
 // Real-time event handlers
@@ -23,11 +24,46 @@ export const useRealtimeStore = (handlers: RealtimeHandlers = {}) => {
   const orderActions = useOrderStore((state) => state.actions);
   const dashboardActions = useDashboardStatsStore((state) => state.actions);
   const addNotification = useNotificationStore((state) => state.addNotification);
+  const { user } = useAuthStore();
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   
   const subscriptionsRef = useRef<Array<{ channel: any; table: string }>>([]);
   const supabaseRef = useRef(createClient());
 
+  // Check authentication before setting up Realtime connections
   useEffect(() => {
+    const checkAuth = async () => {
+      // If user is already in store, we're authenticated
+      if (user) {
+        setIsAuthenticated(true);
+        return;
+      }
+
+      // Otherwise check via API
+      try {
+        const response = await fetch('/api/auth/me', {
+          credentials: 'include',
+        }).catch(() => null);
+        
+        if (response && response.ok) {
+          setIsAuthenticated(true);
+        } else {
+          setIsAuthenticated(false);
+        }
+      } catch (error) {
+        setIsAuthenticated(false);
+      }
+    };
+
+    checkAuth();
+  }, [user]);
+
+  useEffect(() => {
+    // Only set up Realtime connections if authenticated
+    if (!isAuthenticated) {
+      return;
+    }
+
     const supabase = supabaseRef.current;
     const subscriptions: Array<{ channel: any; table: string }> = [];
 
@@ -460,7 +496,7 @@ export const useRealtimeStore = (handlers: RealtimeHandlers = {}) => {
       });
       subscriptionsRef.current = [];
     };
-  }, [stockActions, orderActions, dashboardActions, addNotification, handlers]);
+  }, [stockActions, orderActions, dashboardActions, addNotification, handlers, isAuthenticated]);
 
   // Return subscription info for debugging
   return {

@@ -16,6 +16,7 @@ export default function DashboardLayout({
   const { user, setUser } = useAuthStore();
   
   // Enable critical notifications for all dashboard pages
+  // Hook will check authentication internally
   useAllCriticalNotifications();
 
   useEffect(() => {
