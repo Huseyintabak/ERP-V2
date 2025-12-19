@@ -15,49 +15,32 @@ export default function OperatorLayout({
   const { user, setUser, logout } = useAuthStore();
 
   useEffect(() => {
-    // Auth check - fetch user data (cookie httpOnly olduğu için JavaScript'ten okunamaz)
-    const checkAuth = async (retryCount = 0) => {
+    // Auth check - middleware zaten cookie kontrolü yapıyor
+    // Bu sadece user verilerini yüklemek için
+    const fetchUser = async () => {
       try {
         const response = await fetch('/api/auth/me', {
           credentials: 'include',
-        }).catch(() => null); // Silently handle network errors
+        });
         
-        if (!response || !response.ok) {
-          // If 401, retry with delay (cookie might not be ready yet after login redirect)
-          if (response?.status === 401 && retryCount < 3) {
-            setTimeout(() => {
-              checkAuth(retryCount + 1);
-            }, 300 * (retryCount + 1)); // Increasing delay: 300ms, 600ms, 900ms
+        if (response.ok) {
+          const userData = await response.json();
+          
+          if (userData.role !== 'operator') {
+            router.push('/403');
             return;
           }
-          router.push('/operator-login');
-          return;
+          
+          setUser(userData);
         }
-        const userData = await response.json();
-        
-        if (userData.role !== 'operator') {
-          router.push('/403');
-          return;
-        }
-        
-        setUser(userData);
-      } catch (error) {
-        // Retry on network error
-        if (retryCount < 3) {
-          setTimeout(() => {
-            checkAuth(retryCount + 1);
-          }, 300 * (retryCount + 1));
-          return;
-        }
-        router.push('/operator-login');
+        // 401 ise middleware zaten redirect yapacak
+      } catch {
+        // Network error - middleware kontrolünü bekle
       }
     };
 
     if (!user) {
-      // Initial delay to allow cookie to be set after redirect from login
-      setTimeout(() => {
-        checkAuth();
-      }, 200);
+      fetchUser();
     }
   }, [user, setUser, router]);
 
