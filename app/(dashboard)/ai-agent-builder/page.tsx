@@ -156,8 +156,28 @@ export default function AIAgentBuilderPage() {
       <div>
         <h1 className="text-3xl font-bold">🤖 OpenAI Agent Builder</h1>
         <p className="text-muted-foreground mt-2">
-          Thunder ERP AI Agent'larını test edin ve OpenAI Dashboard'da izleyin
+          Thunder ERP AI Agent'larını test edin ve OpenAI <strong>Traces Dashboard</strong>'da izleyin
         </p>
+        <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg">
+          <p className="text-sm text-blue-900 dark:text-blue-100">
+            <strong>ℹ️ Not:</strong> Agent çalışmalarını <strong>Traces Dashboard</strong>'da göreceksiniz, 
+            <a 
+              href="https://platform.openai.com/agent-builder" 
+              target="_blank" 
+              className="underline mx-1"
+            >
+              Agent Builder
+            </a>
+            sayfasında değil. 
+            <a 
+              href="https://platform.openai.com/traces" 
+              target="_blank" 
+              className="underline ml-1 font-semibold"
+            >
+              🔗 Traces'e Git
+            </a>
+          </p>
+        </div>
       </div>
 
       {/* Agent Info Card */}
@@ -185,7 +205,7 @@ export default function AIAgentBuilderPage() {
                 onClick={() => window.open(agentInfo.dashboardLinks.traces, '_blank')}
               >
                 <ExternalLink className="w-4 h-4 mr-2" />
-                OpenAI Dashboard'ı Aç
+                Traces Dashboard'ı Aç
               </Button>
             </div>
           ) : (
@@ -332,7 +352,7 @@ export default function AIAgentBuilderPage() {
                   onClick={() => window.open(result.dashboardLinks.traces, '_blank')}
                 >
                   <ExternalLink className="w-4 h-4 mr-2" />
-                  Dashboard'da Görüntüle
+                  Traces'de Görüntüle
                 </Button>
               )}
             </CardTitle>
