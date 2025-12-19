@@ -15,19 +15,34 @@ export default function OperatorLayout({
   const { user, setUser, logout } = useAuthStore();
 
   useEffect(() => {
-    // Auth check with retry mechanism for cookie timing issues
+    // Auth check - first check cookie, then fetch user data if cookie exists
     const checkAuth = async (retryCount = 0) => {
-      try {
-        const response = await fetch('/api/auth/me', {
-          credentials: 'include', // Ensure cookies are sent
+      // First check cookie - if no cookie, redirect immediately
+      if (typeof document !== 'undefined') {
+        const cookies = document.cookie.split(';');
+        const hasToken = cookies.some(cookie => {
+          const [name] = cookie.trim().split('=');
+          return name === 'thunder_token';
         });
         
-        if (!response.ok || response.status === 401) {
+        if (!hasToken) {
+          router.push('/operator-login');
+          return;
+        }
+      }
+
+      // Cookie exists, fetch user data
+      try {
+        const response = await fetch('/api/auth/me', {
+          credentials: 'include',
+        }).catch(() => null); // Silently handle network errors
+        
+        if (!response || !response.ok || response.status === 401) {
           // If 401 and we just logged in, retry once after a short delay
-          if (response.status === 401 && retryCount === 0) {
+          if (response?.status === 401 && retryCount === 0) {
             setTimeout(() => {
               checkAuth(1);
-            }, 100); // Small delay to allow cookie to be set
+            }, 100);
             return;
           }
           router.push('/operator-login');

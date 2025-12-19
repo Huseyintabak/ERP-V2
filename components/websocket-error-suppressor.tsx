@@ -18,8 +18,9 @@ export function WebSocketErrorSuppressor() {
       const fullMessage = args.map(a => String(a)).join(' ');
       
       // Suppress WebSocket connection errors and related network errors
-      // AGGRESSIVE SUPPRESSION: Suppress ALL 401 errors and WebSocket errors
+      // ULTRA AGGRESSIVE SUPPRESSION: Suppress ALL 401 errors, WebSocket errors, and auth-related errors
       if (
+        // WebSocket errors
         message.includes('WebSocket') ||
         message.includes('websocket') ||
         message.includes('realtime') ||
@@ -33,15 +34,18 @@ export function WebSocketErrorSuppressor() {
         fullMessage.includes('/realtime/') ||
         (fullMessage.includes('Failed to load resource') && fullMessage.includes('realtime')) ||
         (fullMessage.includes('400') && fullMessage.includes('complete') && fullMessage.includes('realtime')) ||
-        // AGGRESSIVE: Suppress ALL 401 errors (expected when not logged in)
+        // ULTRA AGGRESSIVE: Suppress ALL 401 errors (expected when not logged in)
         fullMessage.includes('401') ||
         fullMessage.includes('Unauthorized') ||
-        (fullMessage.includes('Failed to load resource') && fullMessage.includes('401')) ||
-        // Suppress all /api/auth/me errors
+        (fullMessage.includes('Failed to load resource') && (fullMessage.includes('401') || fullMessage.includes('Unauthorized'))) ||
+        // Suppress all /api/auth/me errors (even if 401)
         fullMessage.includes('/api/auth/me') ||
+        fullMessage.includes('api/auth/me') ||
         // Suppress all login/auth related errors
-        fullMessage.includes('login') ||
-        fullMessage.includes('auth') ||
+        (fullMessage.includes('login') && (fullMessage.includes('401') || fullMessage.includes('Unauthorized') || fullMessage.includes('Failed'))) ||
+        (fullMessage.includes('auth') && (fullMessage.includes('401') || fullMessage.includes('Unauthorized') || fullMessage.includes('Failed'))) ||
+        // Suppress "me" endpoint errors
+        (fullMessage.includes('me') && (fullMessage.includes('401') || fullMessage.includes('Unauthorized') || fullMessage.includes('Failed'))) ||
         // Suppress Next.js React 19 sync dynamic API dev warnings for params/searchParams spam
         fullMessage.includes('params are being enumerated. `params` should be unwrapped with `React.use()`') ||
         fullMessage.includes('The keys of `searchParams` were accessed directly. `searchParams` should be unwrapped with `React.use()`')
