@@ -5,7 +5,6 @@
 
 import { agentLogger } from './utils/logger';
 import { env } from '@/lib/env';
-import { env } from '@/lib/env';
 
 export interface N8nWorkflow {
   name: string;
