@@ -119,14 +119,14 @@ export class AgentBuilderWrapper {
 
       // Cost tracking (approximation)
       const estimatedTokens = this.estimateTokens(request, result.output);
-      await costTracker.trackCost({
-        agentName: this.agentName,
+      const totalCost = this.calculateCost(estimatedTokens);
+      await costTracker.trackUsage({
+        agent: this.agentName,
         model: this.agent.model || 'gpt-4o',
-        inputTokens: estimatedTokens.input,
-        outputTokens: estimatedTokens.output,
-        totalCost: this.calculateCost(estimatedTokens),
+        tokens: estimatedTokens.input + estimatedTokens.output,
+        cost: totalCost,
         requestId,
-        duration
+        timestamp: new Date()
       });
 
       agentLogger.log(`✅ [${this.agentName}] Traced execution completed: ${requestId} (${duration}ms)`);
