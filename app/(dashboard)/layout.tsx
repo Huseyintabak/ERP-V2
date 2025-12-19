@@ -31,6 +31,13 @@ export default function DashboardLayout({
         });
         
         if (!hasToken) {
+          // Cookie yok, ama login'den geliyorsak biraz bekle (cookie henüz yazılmamış olabilir)
+          if (retryCount < 3) {
+            setTimeout(() => {
+              checkAuth(retryCount + 1);
+            }, 200 * (retryCount + 1)); // Increasing delay: 200ms, 400ms, 600ms
+            return;
+          }
           router.push('/login');
           return;
         }
@@ -43,11 +50,11 @@ export default function DashboardLayout({
         }).catch(() => null); // Silently handle network errors
         
         if (!response || !response.ok) {
-          // If 401 and we just logged in, retry once after a short delay
-          if (response?.status === 401 && retryCount === 0) {
+          // If 401, retry with longer delay (cookie might not be ready yet)
+          if (response?.status === 401 && retryCount < 3) {
             setTimeout(() => {
-              checkAuth(1);
-            }, 100);
+              checkAuth(retryCount + 1);
+            }, 200 * (retryCount + 1)); // Increasing delay: 200ms, 400ms, 600ms
             return;
           }
           router.push('/login');
@@ -56,11 +63,11 @@ export default function DashboardLayout({
         const userData = await response.json();
         setUser(userData);
       } catch (error) {
-        // Retry once on network error
-        if (retryCount === 0) {
+        // Retry on network error
+        if (retryCount < 3) {
           setTimeout(() => {
-            checkAuth(1);
-          }, 100);
+            checkAuth(retryCount + 1);
+          }, 200 * (retryCount + 1));
           return;
         }
         router.push('/login');
@@ -68,7 +75,10 @@ export default function DashboardLayout({
     };
 
     if (!user) {
-      checkAuth();
+      // Initial delay to allow cookie to be set after redirect from login
+      setTimeout(() => {
+        checkAuth();
+      }, 100);
     }
   }, [user, setUser, router]);
 

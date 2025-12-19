@@ -45,11 +45,25 @@ export default function LoginPage() {
       setUser(result.user);
       toast.success('Giriş başarılı!');
 
-      // Küçük bir delay ekle - cookie'nin browser'a yazılması için zaman tanı
-      // Hard navigation cookie'yi garanti eder ama bazı durumlarda timing sorunu olabilir
+      // Cookie'nin browser'a yazılması için daha uzun delay
+      // Hard navigation cookie'yi garanti eder
       setTimeout(() => {
-        window.location.href = result.redirectUrl;
-      }, 50);
+        // Cookie'nin yazıldığını kontrol et
+        const cookies = document.cookie.split(';');
+        const hasToken = cookies.some(cookie => {
+          const [name] = cookie.trim().split('=');
+          return name === 'thunder_token';
+        });
+        
+        if (hasToken) {
+          window.location.href = result.redirectUrl;
+        } else {
+          // Cookie henüz yazılmamış, biraz daha bekle
+          setTimeout(() => {
+            window.location.href = result.redirectUrl;
+          }, 200);
+        }
+      }, 150);
     } catch (error: any) {
       toast.error(error.message || 'Bir hata oluştu');
     } finally {
