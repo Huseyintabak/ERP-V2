@@ -80,15 +80,28 @@ echo ""
 # 4. Create Docker Compose File
 # ============================================
 echo "📝 Step 4: Creating docker-compose.yml..."
-cat > docker-compose.yml << 'EOF'
+cat > docker-compose.yml << 'EOFDOCKER'
 services:
   n8n:
     image: n8nio/n8n:latest
     container_name: thunder-n8n
     restart: unless-stopped
+    user: "${UID:-1000}:${GID:-1000}"
     ports:
       - "5678:5678"
     environment:
+EOFDOCKER
+
+# Get user UID/GID
+HOST_UID=$(id -u)
+HOST_GID=$(id -g)
+
+# Replace UID/GID placeholders
+sed -i "s/\${UID:-1000}/${HOST_UID}/g" docker-compose.yml
+sed -i "s/\${GID:-1000}/${HOST_GID}/g" docker-compose.yml
+
+# Add the rest of the docker-compose.yml
+cat >> docker-compose.yml << 'EOF'
       - N8N_BASIC_AUTH_ACTIVE=true
       - N8N_BASIC_AUTH_USER=admin
       - N8N_BASIC_AUTH_PASSWORD=Thunder2025!

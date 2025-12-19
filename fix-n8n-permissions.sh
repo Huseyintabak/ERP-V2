@@ -1,0 +1,71 @@
+#!/bin/bash
+
+# ============================================
+# Fix n8n Permission Issues
+# ============================================
+
+set -e
+
+echo "🔧 n8n Permission Sorunlarını Düzeltiyorum..."
+echo ""
+
+cd /var/www/thunder-erp
+
+# 1. Container'ı durdur
+echo "1. Container'ı durduruyorum..."
+sudo docker compose down
+
+# 2. n8n dizinini temizle ve yeniden oluştur
+echo "2. n8n dizinini düzeltiyorum..."
+sudo rm -rf ~/.n8n
+mkdir -p ~/.n8n
+chmod 777 ~/.n8n
+
+# 3. docker-compose.yml'i güncelliyorum (user ID ekliyorum)
+echo "3. docker-compose.yml'i güncelliyorum..."
+
+# Host kullanıcısının UID'sini al
+HOST_UID=$(id -u)
+HOST_GID=$(id -g)
+
+# docker-compose.yml'e user ekle (eğer yoksa)
+if ! grep -q "^    user:" docker-compose.yml; then
+    # user satırını ports'dan sonra ekle
+    sed -i '/ports:/a\    user: "'${HOST_UID}':'${HOST_GID}'"' docker-compose.yml
+    echo "✅ User ID eklendi: ${HOST_UID}:${HOST_GID}"
+else
+    # Mevcut user ID'yi güncelle
+    sed -i 's/^    user:.*/    user: "'${HOST_UID}':'${HOST_GID}'"/' docker-compose.yml
+    echo "✅ User ID güncellendi: ${HOST_UID}:${HOST_GID}"
+fi
+
+# 4. Dizini host kullanıcısına ver
+echo "4. Dizin sahipliğini ayarlıyorum..."
+sudo chown -R ${HOST_UID}:${HOST_GID} ~/.n8n 2>/dev/null || true
+chmod -R 755 ~/.n8n
+
+# 5. Container'ı yeniden başlat
+echo "5. Container'ı yeniden başlatıyorum..."
+sudo docker compose up -d
+
+# 6. Bekle
+echo "6. Container'ın başlamasını bekliyorum..."
+sleep 10
+
+# 7. Logları kontrol et
+echo ""
+echo "7. Logları kontrol ediyorum..."
+sudo docker compose logs --tail=20 n8n
+
+echo ""
+echo "============================================"
+echo "✅ TAMAMLANDI!"
+echo "============================================"
+echo ""
+echo "📍 n8n'e erişim:"
+echo "   http://192.168.1.250:5678"
+echo ""
+echo "📊 Durum:"
+echo "   sudo docker compose ps"
+echo ""
+
