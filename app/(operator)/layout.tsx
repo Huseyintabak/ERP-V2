@@ -15,10 +15,21 @@ export default function OperatorLayout({
   const { user, setUser, logout } = useAuthStore();
 
   useEffect(() => {
-    const checkAuth = async () => {
+    // Auth check with retry mechanism for cookie timing issues
+    const checkAuth = async (retryCount = 0) => {
       try {
-        const response = await fetch('/api/auth/me');
+        const response = await fetch('/api/auth/me', {
+          credentials: 'include', // Ensure cookies are sent
+        });
+        
         if (!response.ok || response.status === 401) {
+          // If 401 and we just logged in, retry once after a short delay
+          if (response.status === 401 && retryCount === 0) {
+            setTimeout(() => {
+              checkAuth(1);
+            }, 100); // Small delay to allow cookie to be set
+            return;
+          }
           router.push('/operator-login');
           return;
         }
@@ -31,6 +42,13 @@ export default function OperatorLayout({
         
         setUser(userData);
       } catch (error) {
+        // Retry once on network error
+        if (retryCount === 0) {
+          setTimeout(() => {
+            checkAuth(1);
+          }, 100);
+          return;
+        }
         router.push('/operator-login');
       }
     };

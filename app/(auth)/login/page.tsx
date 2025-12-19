@@ -45,8 +45,11 @@ export default function LoginPage() {
       setUser(result.user);
       toast.success('Giriş başarılı!');
 
-      // Server'dan gelen redirect URL'e git (hard navigation - cookie'yi garanti eder)
-      window.location.href = result.redirectUrl;
+      // Küçük bir delay ekle - cookie'nin browser'a yazılması için zaman tanı
+      // Hard navigation cookie'yi garanti eder ama bazı durumlarda timing sorunu olabilir
+      setTimeout(() => {
+        window.location.href = result.redirectUrl;
+      }, 50);
     } catch (error: any) {
       toast.error(error.message || 'Bir hata oluştu');
     } finally {
