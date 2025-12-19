@@ -28,27 +28,22 @@ export const useRealtime = (
     let channel: any = null;
 
     // Check if user is authenticated before attempting Realtime connection
-    const checkAuth = async () => {
-      try {
-        const response = await fetch('/api/auth/me', {
-          // Sessizce handle et - 401 beklenen bir durum (kullanıcı giriş yapmamış)
-          credentials: 'include',
-        }).catch(() => null); // Network hatalarını sessizce handle et
-        
-        if (!response || !response.ok || response.status === 401) {
-          // User not authenticated, skip Realtime connection (sessizce)
-          return false;
-        }
-        return true;
-      } catch (error) {
-        // Auth check failed, skip Realtime connection (sessizce)
-        return false;
-      }
+    // Use cookie check instead of API call to avoid 401 errors
+    const checkAuth = () => {
+      if (typeof document === 'undefined') return false;
+      
+      const cookies = document.cookie.split(';');
+      const hasToken = cookies.some(cookie => {
+        const [name] = cookie.trim().split('=');
+        return name === 'thunder_token';
+      });
+      
+      return hasToken;
     };
 
-    const setupRealtime = async () => {
-      // Check authentication first
-      const isAuthenticated = await checkAuth();
+    const setupRealtime = () => {
+      // Check authentication first (synchronous cookie check)
+      const isAuthenticated = checkAuth();
       if (!isAuthenticated) {
         return;
       }
@@ -113,9 +108,7 @@ export const useRealtime = (
                     supabase.removeChannel(channel);
                     channel = null;
                   }
-                  setupRealtime().catch((error) => {
-                    logger.error('🔔 Error in setupRealtime retry:', error);
-                  });
+                  setupRealtime();
                 }, Math.min(1000 * Math.pow(2, reconnectAttemptsRef.current), 30000));
               } else {
                 logger.error('🔔 Max reconnection attempts reached, giving up');
@@ -127,9 +120,7 @@ export const useRealtime = (
       }
     };
 
-    setupRealtime().catch((error) => {
-      logger.error('🔔 Error in setupRealtime:', error);
-    });
+    setupRealtime();
 
     return () => {
       logger.log(`🔔 Cleaning up real-time subscription for table: ${table}`);

@@ -2,6 +2,10 @@ import { createBrowserClient } from '@supabase/ssr';
 import { env } from '@/lib/env';
 
 export function createClient() {
+  // Supabase Realtime anon key ile çalışır
+  // RLS (Row Level Security) ile korunur
+  // Custom JWT token kontrolü hook'larda yapılıyor (cookie check)
+  // Bu sayede /api/auth/me çağrısına gerek kalmaz ve 401 hatası oluşmaz
   return createBrowserClient(
     env.NEXT_PUBLIC_SUPABASE_URL,
     env.NEXT_PUBLIC_SUPABASE_ANON_KEY,

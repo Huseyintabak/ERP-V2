@@ -29,29 +29,30 @@ export const useRealtimeSafe = (
     let channel: any = null;
 
     // Check if user is authenticated before attempting Realtime connection
-    const checkAuth = async () => {
-      try {
-        const response = await fetch('/api/auth/me', {
-          // Sessizce handle et - 401 beklenen bir durum (kullanıcı giriş yapmamış)
-          credentials: 'include',
-        }).catch(() => null); // Network hatalarını sessizce handle et
-        
-        if (!response || !response.ok || response.status === 401) {
-          // User not authenticated, skip Realtime connection (sessizce)
-          setIsConnected(false);
-          return false;
-        }
-        return true;
-      } catch (error) {
-        // Auth check failed, skip Realtime connection (sessizce)
+    // Use cookie check instead of API call to avoid 401 errors
+    const checkAuth = () => {
+      if (typeof document === 'undefined') {
         setIsConnected(false);
         return false;
       }
+      
+      const cookies = document.cookie.split(';');
+      const hasToken = cookies.some(cookie => {
+        const [name] = cookie.trim().split('=');
+        return name === 'thunder_token';
+      });
+      
+      if (!hasToken) {
+        setIsConnected(false);
+        return false;
+      }
+      
+      return true;
     };
 
-    const setupRealtime = async () => {
-      // Check authentication first
-      const isAuthenticated = await checkAuth();
+    const setupRealtime = () => {
+      // Check authentication first (synchronous cookie check)
+      const isAuthenticated = checkAuth();
       if (!isAuthenticated) {
         return;
       }
@@ -118,10 +119,7 @@ export const useRealtimeSafe = (
                     supabase.removeChannel(channel);
                     channel = null;
                   }
-                  setupRealtime().catch((error) => {
-                    logger.error('🔔 Error in setupRealtime retry:', error);
-                    setIsConnected(false);
-                  });
+                  setupRealtime();
                 }, Math.min(2000 * reconnectAttemptsRef.current, 10000));
               } else {
                 logger.error('🔔 Max safe reconnection attempts reached, giving up');
@@ -134,10 +132,7 @@ export const useRealtimeSafe = (
       }
     };
 
-    setupRealtime().catch((error) => {
-      logger.error('🔔 Error in setupRealtime:', error);
-      setIsConnected(false);
-    });
+    setupRealtime();
 
     return () => {
       logger.log(`🔔 Cleaning up safe real-time subscription for table: ${table}`);

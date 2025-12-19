@@ -41,25 +41,28 @@ export const useRealtimeStore = (handlers: RealtimeHandlers = {}) => {
       }
     }
 
-    const checkAuth = async () => {
+    const checkAuth = () => {
       // If user is already in store, we're authenticated
       if (user) {
         setIsAuthenticated(true);
         return;
       }
 
-      // Otherwise check via API - but silently fail
-      try {
-        const response = await fetch('/api/auth/me', {
-          credentials: 'include',
-        }).catch(() => null);
+      // Check cookie directly instead of API call
+      // This avoids 401 errors completely
+      if (typeof document !== 'undefined') {
+        const cookies = document.cookie.split(';');
+        const hasToken = cookies.some(cookie => {
+          const [name] = cookie.trim().split('=');
+          return name === 'thunder_token';
+        });
         
-        if (response && response.ok) {
+        if (hasToken) {
           setIsAuthenticated(true);
         } else {
           setIsAuthenticated(false);
         }
-      } catch (error) {
+      } else {
         setIsAuthenticated(false);
       }
     };
