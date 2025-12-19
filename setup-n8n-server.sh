@@ -47,7 +47,10 @@ if ! command -v docker &> /dev/null; then
     sudo usermod -aG docker $USER
     
     echo "✅ Docker installed successfully!"
-    echo "⚠️  You may need to log out and log back in for docker group changes to take effect"
+    echo "⚠️  Activating docker group permissions..."
+    
+    # Activate docker group without logout (using newgrp)
+    # This will be done before docker commands
 else
     echo "✅ Docker is already installed"
     docker --version
@@ -78,8 +81,6 @@ echo ""
 # ============================================
 echo "📝 Step 4: Creating docker-compose.yml..."
 cat > docker-compose.yml << 'EOF'
-version: '3.8'
-
 services:
   n8n:
     image: n8nio/n8n:latest
@@ -166,25 +167,49 @@ echo "✅ Build complete"
 echo ""
 
 # ============================================
-# 8. Start n8n with Docker Compose
+# 8. Fix Docker Permissions
 # ============================================
-echo "🚀 Step 8: Starting n8n container..."
+echo "🔧 Step 8: Fixing Docker permissions..."
+
+# Check if user is in docker group
+if groups | grep -q docker; then
+    echo "✅ User is in docker group"
+else
+    echo "⚠️  User not in docker group. Adding..."
+    sudo usermod -aG docker $USER
+    echo "✅ User added to docker group"
+    echo "⚠️  Note: You may need to logout/login for group changes, but we'll use sudo for now"
+fi
+
+# Use sudo for docker commands if permission denied
+DOCKER_CMD="docker"
+if ! docker ps &>/dev/null; then
+    echo "⚠️  Using sudo for docker commands (permission issue)"
+    DOCKER_CMD="sudo docker"
+fi
+
+echo ""
+
+# ============================================
+# 9. Start n8n with Docker Compose
+# ============================================
+echo "🚀 Step 9: Starting n8n container..."
 
 # Stop existing container if running
-docker compose down 2>/dev/null || true
+$DOCKER_CMD compose down 2>/dev/null || true
 
 # Pull latest n8n image
-docker compose pull
+$DOCKER_CMD compose pull
 
 # Start n8n
-docker compose up -d
+$DOCKER_CMD compose up -d
 
 # Wait for container to be ready
 echo "⏳ Waiting for n8n to start..."
 sleep 5
 
 # Check container status
-docker compose ps
+$DOCKER_CMD compose ps
 
 echo "✅ n8n container started"
 
@@ -261,12 +286,12 @@ echo ""
 
 # Check n8n container
 echo "📊 n8n Container Status:"
-docker compose ps | grep n8n || echo "⚠️  n8n container not found"
+$DOCKER_CMD compose ps | grep n8n || echo "⚠️  n8n container not found"
 echo ""
 
 # Check n8n logs (last 10 lines)
 echo "📊 n8n Logs (last 10 lines):"
-docker compose logs --tail=10 n8n
+$DOCKER_CMD compose logs --tail=10 n8n
 echo ""
 
 # Check Thunder ERP PM2
