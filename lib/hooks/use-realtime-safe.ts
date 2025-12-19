@@ -31,17 +31,19 @@ export const useRealtimeSafe = (
     // Check if user is authenticated before attempting Realtime connection
     const checkAuth = async () => {
       try {
-        const response = await fetch('/api/auth/me');
-        if (!response.ok || response.status === 401) {
-          // User not authenticated, skip Realtime connection
-          logger.log(`🔔 Skipping Realtime connection for ${table} - user not authenticated`);
+        const response = await fetch('/api/auth/me', {
+          // Sessizce handle et - 401 beklenen bir durum (kullanıcı giriş yapmamış)
+          credentials: 'include',
+        }).catch(() => null); // Network hatalarını sessizce handle et
+        
+        if (!response || !response.ok || response.status === 401) {
+          // User not authenticated, skip Realtime connection (sessizce)
           setIsConnected(false);
           return false;
         }
         return true;
       } catch (error) {
-        // Auth check failed, skip Realtime connection
-        logger.log(`🔔 Skipping Realtime connection for ${table} - auth check failed`);
+        // Auth check failed, skip Realtime connection (sessizce)
         setIsConnected(false);
         return false;
       }

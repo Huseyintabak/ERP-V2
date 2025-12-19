@@ -33,8 +33,12 @@ export function WebSocketErrorSuppressor() {
         (fullMessage.includes('Failed to load resource') && fullMessage.includes('realtime')) ||
         (fullMessage.includes('400') && fullMessage.includes('complete') && fullMessage.includes('realtime')) ||
         // Suppress 401 Unauthorized errors from /api/auth/me when user is not logged in (expected behavior)
-        (fullMessage.includes('Failed to load resource') && fullMessage.includes('401') && fullMessage.includes('me')) ||
-        (fullMessage.includes('401') && (fullMessage.includes('Unauthorized') || fullMessage.includes('me'))) ||
+        (fullMessage.includes('Failed to load resource') && fullMessage.includes('401') && (fullMessage.includes('me') || fullMessage.includes('auth') || fullMessage.includes('login'))) ||
+        (fullMessage.includes('401') && (fullMessage.includes('Unauthorized') || fullMessage.includes('me') || fullMessage.includes('auth') || fullMessage.includes('login'))) ||
+        // Suppress fetch errors for /api/auth/me (expected when not logged in)
+        (fullMessage.includes('fetch') && fullMessage.includes('/api/auth/me') && fullMessage.includes('401')) ||
+        // Suppress errors mentioning "login" with 401
+        (fullMessage.includes('login') && fullMessage.includes('401')) ||
         // Suppress Next.js React 19 sync dynamic API dev warnings for params/searchParams spam
         fullMessage.includes('params are being enumerated. `params` should be unwrapped with `React.use()`') ||
         fullMessage.includes('The keys of `searchParams` were accessed directly. `searchParams` should be unwrapped with `React.use()`')
@@ -75,6 +79,9 @@ export function WebSocketErrorSuppressor() {
       const message = event.message || '';
       const filename = event.filename || '';
       const errorString = `${message} ${filename}`;
+      const source = event.source?.toString() || '';
+      const fullErrorString = `${message} ${filename} ${source}`;
+      
       if (
         message.includes('WebSocket') ||
         message.includes('websocket') ||
@@ -85,7 +92,10 @@ export function WebSocketErrorSuppressor() {
         errorString.includes('realtime/v1/websocket') ||
         errorString.includes('supabase.co/realtime') ||
         // Suppress 401 errors from auth endpoints (expected when not logged in)
-        (errorString.includes('401') && (errorString.includes('me') || errorString.includes('auth')))
+        (errorString.includes('401') && (errorString.includes('me') || errorString.includes('auth') || errorString.includes('login'))) ||
+        (fullErrorString.includes('401') && (fullErrorString.includes('Unauthorized') || fullErrorString.includes('me') || fullErrorString.includes('auth') || fullErrorString.includes('login'))) ||
+        // Suppress "Failed to load resource" errors for auth endpoints
+        (message.includes('Failed to load resource') && (errorString.includes('401') || errorString.includes('me') || errorString.includes('auth') || errorString.includes('login')))
       ) {
         event.preventDefault();
         event.stopPropagation();
