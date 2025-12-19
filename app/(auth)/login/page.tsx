@@ -48,7 +48,11 @@ export default function LoginPage() {
       // Cookie httpOnly olduğu için JavaScript'ten okunamaz
       // Bu yüzden direkt redirect yapıyoruz, cookie server tarafında set edildi
       // Hard navigation cookie'yi garanti eder
+      console.log('🔄 Login response:', result);
       console.log('🔄 Redirecting to:', result.redirectUrl);
+      console.log('🔄 User:', result.user);
+      
+      // Immediate redirect - no delay
       window.location.href = result.redirectUrl;
     } catch (error: any) {
       toast.error(error.message || 'Bir hata oluştu');

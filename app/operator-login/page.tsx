@@ -91,10 +91,11 @@ export default function OperatorLoginPage() {
       // Cookie httpOnly olduğu için JavaScript'ten okunamaz
       // Bu yüzden direkt redirect yapıyoruz, cookie server tarafında set edildi
       // Hard navigation cookie'yi garanti eder
+      console.log('🔄 Operator login response:', result);
       console.log('🔄 Redirecting to:', result.redirectUrl);
-      setTimeout(() => {
-        window.location.href = result.redirectUrl;
-      }, 200); // Delay to allow cookie to be set
+      
+      // Immediate redirect - middleware handles cookie validation
+      window.location.href = result.redirectUrl;
     } catch (error: any) {
       toast.error(error.message || 'Giriş başarısız');
     } finally {
