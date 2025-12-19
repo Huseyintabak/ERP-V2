@@ -20,41 +20,19 @@ export default function DashboardLayout({
   useAllCriticalNotifications();
 
   useEffect(() => {
-    // Auth check - first check cookie, then fetch user data if cookie exists
+    // Auth check - fetch user data (cookie httpOnly olduğu için JavaScript'ten okunamaz)
     const checkAuth = async (retryCount = 0) => {
-      // First check cookie - if no cookie, redirect immediately
-      if (typeof document !== 'undefined') {
-        const cookies = document.cookie.split(';');
-        const hasToken = cookies.some(cookie => {
-          const [name] = cookie.trim().split('=');
-          return name === 'thunder_token';
-        });
-        
-        if (!hasToken) {
-          // Cookie yok, ama login'den geliyorsak biraz bekle (cookie henüz yazılmamış olabilir)
-          if (retryCount < 3) {
-            setTimeout(() => {
-              checkAuth(retryCount + 1);
-            }, 200 * (retryCount + 1)); // Increasing delay: 200ms, 400ms, 600ms
-            return;
-          }
-          router.push('/login');
-          return;
-        }
-      }
-
-      // Cookie exists, fetch user data
       try {
         const response = await fetch('/api/auth/me', {
           credentials: 'include',
         }).catch(() => null); // Silently handle network errors
         
         if (!response || !response.ok) {
-          // If 401, retry with longer delay (cookie might not be ready yet)
+          // If 401, retry with delay (cookie might not be ready yet after login redirect)
           if (response?.status === 401 && retryCount < 3) {
             setTimeout(() => {
               checkAuth(retryCount + 1);
-            }, 200 * (retryCount + 1)); // Increasing delay: 200ms, 400ms, 600ms
+            }, 300 * (retryCount + 1)); // Increasing delay: 300ms, 600ms, 900ms
             return;
           }
           router.push('/login');
@@ -67,7 +45,7 @@ export default function DashboardLayout({
         if (retryCount < 3) {
           setTimeout(() => {
             checkAuth(retryCount + 1);
-          }, 200 * (retryCount + 1));
+          }, 300 * (retryCount + 1));
           return;
         }
         router.push('/login');
@@ -78,7 +56,7 @@ export default function DashboardLayout({
       // Initial delay to allow cookie to be set after redirect from login
       setTimeout(() => {
         checkAuth();
-      }, 100);
+      }, 200);
     }
   }, [user, setUser, router]);
 
