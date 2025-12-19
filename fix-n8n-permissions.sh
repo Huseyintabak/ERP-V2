@@ -17,6 +17,8 @@ echo "0. docker-compose.yml'i kontrol ediyorum..."
 # Host kullanıcısının UID'sini al
 HOST_UID=$(id -u)
 HOST_GID=$(id -g)
+HOME_DIR=$(eval echo ~$USER)
+N8N_DIR="${HOME_DIR}/.n8n"
 
 # docker-compose.yml'i tamamen yeniden oluştur (bozuk olabilir)
 cat > docker-compose.yml << EOF
@@ -43,7 +45,7 @@ services:
       - EXECUTIONS_DATA_PRUNE=true
       - EXECUTIONS_DATA_MAX_AGE=168
     volumes:
-      - ~/.n8n:/home/node/.n8n
+      - ${N8N_DIR}:/home/node/.n8n
     networks:
       - thunder-network
 
@@ -62,18 +64,14 @@ sudo docker compose down 2>/dev/null || echo "⚠️  Container zaten durmuş ve
 
 # 2. n8n dizinini temizle ve yeniden oluştur
 echo "2. n8n dizinini düzeltiyorum..."
-sudo rm -rf ~/.n8n
-mkdir -p ~/.n8n
-chmod 755 ~/.n8n
-
-# Host kullanıcısının UID'sini al
-HOST_UID=$(id -u)
-HOST_GID=$(id -g)
+sudo rm -rf ${N8N_DIR}
+mkdir -p ${N8N_DIR}
+chmod 755 ${N8N_DIR}
 
 # 3. Dizini host kullanıcısına ver
 echo "3. Dizin sahipliğini ayarlıyorum..."
-sudo chown -R ${HOST_UID}:${HOST_GID} ~/.n8n 2>/dev/null || true
-chmod -R 755 ~/.n8n
+sudo chown -R ${HOST_UID}:${HOST_GID} ${N8N_DIR} 2>/dev/null || true
+chmod -R 755 ${N8N_DIR}
 
 # 4. Container'ı yeniden başlat
 echo "4. Container'ı yeniden başlatıyorum..."
