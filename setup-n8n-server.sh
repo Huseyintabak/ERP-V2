@@ -109,6 +109,7 @@ cat >> docker-compose.yml << 'EOF'
       - N8N_PORT=5678
       - N8N_PROTOCOL=http
       - WEBHOOK_URL=http://192.168.1.250:5678/
+      - N8N_SECURE_COOKIE=false
       - GENERIC_TIMEZONE=Europe/Istanbul
       - TZ=Europe/Istanbul
       - N8N_LOG_LEVEL=info
