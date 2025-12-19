@@ -1,0 +1,171 @@
+{
+  "name": "Thunder Multi-Agent Consensus",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "multi-agent-consensus",
+        "responseMode": "responseNode"
+      },
+      "id": "webhook",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 500],
+      "webhookId": "multi-agent-consensus"
+    },
+    {
+      "parameters": {
+        "resource": "text",
+        "operation": "message",
+        "modelId": "gpt-4o",
+        "prompt": "={{ $json.body.prompt }}",
+        "options": {
+          "systemMessage": "Sen Planning Agent'sın. Üretim planlaması yap. Yanıt JSON: {\"decision\": \"approved\" | \"rejected\", \"reasoning\": \"...\"}",
+          "temperature": 0.7,
+          "maxTokens": 512
+        }
+      },
+      "id": "planning-agent",
+      "name": "Planning Agent",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1,
+      "position": [450, 300],
+      "credentials": {
+        "openAiApi": {
+          "id": "openai-credentials",
+          "name": "OpenAI API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "text",
+        "operation": "message",
+        "modelId": "gpt-4o",
+        "prompt": "={{ $json.body.prompt }}",
+        "options": {
+          "systemMessage": "Sen Production Agent'sın. Üretilebilirliği değerlendir. Yanıt JSON: {\"decision\": \"approved\" | \"rejected\", \"reasoning\": \"...\"}",
+          "temperature": 0.7,
+          "maxTokens": 512
+        }
+      },
+      "id": "production-agent",
+      "name": "Production Agent",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1,
+      "position": [450, 500],
+      "credentials": {
+        "openAiApi": {
+          "id": "openai-credentials",
+          "name": "OpenAI API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "text",
+        "operation": "message",
+        "modelId": "gpt-4o",
+        "prompt": "={{ $json.body.prompt }}",
+        "options": {
+          "systemMessage": "Sen Warehouse Agent'sın. Stok ve malzeme kontrolü yap. Yanıt JSON: {\"decision\": \"approved\" | \"rejected\", \"reasoning\": \"...\"}",
+          "temperature": 0.7,
+          "maxTokens": 512
+        }
+      },
+      "id": "warehouse-agent",
+      "name": "Warehouse Agent",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1,
+      "position": [450, 700],
+      "credentials": {
+        "openAiApi": {
+          "id": "openai-credentials",
+          "name": "OpenAI API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// 3 agent'ın cevaplarını topla\nconst planning = JSON.parse($input.first().json.message.content);\nconst production = JSON.parse($input.all()[1].json.message.content);\nconst warehouse = JSON.parse($input.all()[2].json.message.content);\n\nconst agents = [\n  { name: 'Planning', decision: planning.decision, reasoning: planning.reasoning },\n  { name: 'Production', decision: production.decision, reasoning: production.reasoning },\n  { name: 'Warehouse', decision: warehouse.decision, reasoning: warehouse.reasoning }\n];\n\n// Konsensüs analizi\nconst approveCount = agents.filter(a => a.decision === 'approved').length;\nconst rejectCount = agents.filter(a => a.decision === 'rejected').length;\n\nconst consensusPrompt = `3 agent'tan gelen cevaplar:\\n\\n${agents.map((a, i) => \n  `${i+1}. ${a.name} Agent: ${a.decision}\\n   Gerekçe: ${a.reasoning}\\n`\n).join('\\n')}\\n\\nKonsensüs: ${approveCount} approve, ${rejectCount} reject\\n\\nBu 3 agent'ın cevaplarını analiz et ve nihai karar ver.`;\n\nreturn [{\n  json: {\n    agents,\n    consensus: { approve: approveCount, reject: rejectCount },\n    consensusPrompt\n  }\n}];"
+      },
+      "id": "aggregate",
+      "name": "Aggregate Responses",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [650, 500]
+    },
+    {
+      "parameters": {
+        "resource": "text",
+        "operation": "message",
+        "modelId": "gpt-4o",
+        "prompt": "={{ $json.consensusPrompt }}",
+        "options": {
+          "systemMessage": "Sen Manager Agent'sın. 3 agent'ın görüşlerini değerlendirerek nihai karar ver.\n\nYanıt JSON:\n{\n  \"finalDecision\": \"approved\" | \"rejected\",\n  \"reasoning\": \"Detaylı açıklama\",\n  \"consensus\": {\n    \"approve\": 2,\n    \"reject\": 1\n  },\n  \"confidence\": 0.95\n}",
+          "temperature": 0.5,
+          "maxTokens": 1024
+        }
+      },
+      "id": "manager-agent",
+      "name": "Manager Agent (Consensus)",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1,
+      "position": [850, 500],
+      "credentials": {
+        "openAiApi": {
+          "id": "openai-credentials",
+          "name": "OpenAI API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ {\n  \"success\": true,\n  \"finalDecision\": JSON.parse($json.message.content).finalDecision,\n  \"consensus\": JSON.parse($json.message.content).consensus,\n  \"agentResponses\": $node[\"Aggregate Responses\"].json[\"agents\"],\n  \"managerReasoning\": JSON.parse($json.message.content).reasoning,\n  \"confidence\": JSON.parse($json.message.content).confidence,\n  \"tokens\": $json.usage.total_tokens,\n  \"cost\": ($json.usage.prompt_tokens * 0.005 / 1000) + ($json.usage.completion_tokens * 0.015 / 1000)\n} }}"
+      },
+      "id": "response",
+      "name": "Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1050, 500]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          { "node": "Planning Agent", "type": "main", "index": 0 },
+          { "node": "Production Agent", "type": "main", "index": 0 },
+          { "node": "Warehouse Agent", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Planning Agent": {
+      "main": [[{ "node": "Aggregate Responses", "type": "main", "index": 0 }]]
+    },
+    "Production Agent": {
+      "main": [[{ "node": "Aggregate Responses", "type": "main", "index": 0 }]]
+    },
+    "Warehouse Agent": {
+      "main": [[{ "node": "Aggregate Responses", "type": "main", "index": 0 }]]
+    },
+    "Aggregate Responses": {
+      "main": [[{ "node": "Manager Agent (Consensus)", "type": "main", "index": 0 }]]
+    },
+    "Manager Agent (Consensus)": {
+      "main": [[{ "node": "Response", "type": "main", "index": 0 }]]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0,
+  "updatedAt": "2025-01-27T00:00:00.000Z",
+  "versionId": "1"
+}
+

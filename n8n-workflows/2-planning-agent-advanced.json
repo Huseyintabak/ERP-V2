@@ -1,0 +1,155 @@
+{
+  "name": "Thunder Planning Agent (Advanced)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "planning-agent-advanced",
+        "responseMode": "responseNode"
+      },
+      "id": "webhook",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 400],
+      "webhookId": "planning-agent-advanced"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT p.*, f.name as product_name, f.quantity as required_quantity\nFROM production_plans p\nJOIN finished_products f ON p.product_id = f.id\nWHERE p.id = '{{ $json.body.plan_id }}'\nLIMIT 1",
+        "options": {}
+      },
+      "id": "get-plan",
+      "name": "Get Production Plan",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [450, 300],
+      "credentials": {
+        "postgres": {
+          "id": "supabase-postgres",
+          "name": "Thunder ERP Supabase"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT bom.*, rm.name, rm.quantity as stock_quantity, rm.unit\nFROM bom\nJOIN raw_materials rm ON bom.raw_material_id = rm.id\nWHERE bom.finished_product_id = '{{ $json.product_id }}'\nORDER BY bom.quantity DESC",
+        "options": {}
+      },
+      "id": "get-bom",
+      "name": "Get BOM",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [450, 500],
+      "credentials": {
+        "postgres": {
+          "id": "supabase-postgres",
+          "name": "Thunder ERP Supabase"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// BOM ve stok verilerini birleştir\nconst plan = $input.first().json;\nconst bomItems = $input.all()[1].map(item => item.json);\n\n// Stok yeterliliği kontrolü\nconst stockAnalysis = bomItems.map(item => {\n  const required = item.quantity * plan.required_quantity;\n  const available = item.stock_quantity || 0;\n  const sufficient = available >= required;\n  \n  return {\n    material: item.name,\n    required,\n    available,\n    unit: item.unit,\n    sufficient,\n    shortage: sufficient ? 0 : required - available\n  };\n});\n\nconst allMaterialsAvailable = stockAnalysis.every(item => item.sufficient);\n\nreturn [{\n  json: {\n    plan,\n    bom: bomItems,\n    stockAnalysis,\n    allMaterialsAvailable,\n    prompt: `Üretim planı analizi:\\n\\nSipariş: ${plan.required_quantity} adet ${plan.product_name}\\nTermin: ${plan.target_date}\\nDurum: ${plan.status}\\n\\nMalzeme durumu:\\n${stockAnalysis.map(s => \n  `- ${s.material}: ${s.required} ${s.unit} gerekli, ${s.available} ${s.unit} mevcut ${s.sufficient ? '✅' : '❌ Eksik: ' + s.shortage}`\n).join('\\n')}\\n\\nBu üretim planını değerlendir ve karar ver.`\n  }\n}];"
+      },
+      "id": "prepare-context",
+      "name": "Prepare Context",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [650, 400]
+    },
+    {
+      "parameters": {
+        "resource": "text",
+        "operation": "message",
+        "modelId": "gpt-4o",
+        "prompt": "={{ $json.prompt }}",
+        "options": {
+          "systemMessage": "Sen Thunder ERP'nin üretim planlama agent'ısın.\n\nVerilen BOM ve stok bilgilerine göre:\n1. Malzeme yeterliliğini değerlendir\n2. Üretim yapılabilirliğini analiz et\n3. Varsa riskleri belirt\n4. Karar ver: approved/rejected/needs_review\n\nYanıt formatı JSON:\n{\n  \"decision\": \"approved\" | \"rejected\" | \"needs_review\",\n  \"reasoning\": \"Detaylı açıklama\",\n  \"confidence\": 0.95,\n  \"warnings\": [],\n  \"recommendations\": []\n}",
+          "temperature": 0.5,
+          "maxTokens": 1024
+        }
+      },
+      "id": "planning-agent",
+      "name": "Planning Agent",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1,
+      "position": [850, 400],
+      "credentials": {
+        "openAiApi": {
+          "id": "openai-credentials",
+          "name": "OpenAI API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ JSON.parse($json.message.content).decision }}",
+              "operation": "equals",
+              "value2": "approved"
+            }
+          ]
+        }
+      },
+      "id": "decision-router",
+      "name": "Decision Router",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1050, 400]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ {\n  \"success\": true,\n  \"plan_id\": $node[\"Webhook\"].json[\"body\"][\"plan_id\"],\n  \"decision\": JSON.parse($json.message.content).decision,\n  \"agent_response\": JSON.parse($json.message.content),\n  \"stock_analysis\": $node[\"Prepare Context\"].json[\"stockAnalysis\"],\n  \"tokens\": $json.usage.total_tokens,\n  \"cost\": ($json.usage.prompt_tokens * 0.005 / 1000) + ($json.usage.completion_tokens * 0.015 / 1000)\n} }}"
+      },
+      "id": "response",
+      "name": "Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1250, 400]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          { "node": "Get Production Plan", "type": "main", "index": 0 },
+          { "node": "Get BOM", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Get Production Plan": {
+      "main": [[{ "node": "Prepare Context", "type": "main", "index": 0 }]]
+    },
+    "Get BOM": {
+      "main": [[{ "node": "Prepare Context", "type": "main", "index": 0 }]]
+    },
+    "Prepare Context": {
+      "main": [[{ "node": "Planning Agent", "type": "main", "index": 0 }]]
+    },
+    "Planning Agent": {
+      "main": [[{ "node": "Decision Router", "type": "main", "index": 0 }]]
+    },
+    "Decision Router": {
+      "main": [
+        [{ "node": "Response", "type": "main", "index": 0 }],
+        [{ "node": "Response", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0,
+  "updatedAt": "2025-01-27T00:00:00.000Z",
+  "versionId": "1"
+}
+
