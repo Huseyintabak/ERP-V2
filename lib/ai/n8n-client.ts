@@ -283,13 +283,17 @@ export class N8nClient {
 
       agentLogger.log(`🔧 Payload:`, JSON.stringify(payload, null, 2));
 
+      // Timeout için AbortController kullan (Node.js uyumluluğu için)
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 dakika timeout
+
       const response = await fetch(webhookUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
-        // Timeout için signal ekle
-        signal: AbortSignal.timeout(120000), // 2 dakika timeout
+        signal: controller.signal,
       }).catch((fetchError: any) => {
+        clearTimeout(timeoutId);
         agentLogger.error(`❌ Fetch error details:`, {
           message: fetchError.message,
           name: fetchError.name,
@@ -299,14 +303,16 @@ export class N8nClient {
         });
         
         // Daha açıklayıcı hata mesajı
-        if (fetchError.name === 'AbortError' || fetchError.name === 'TimeoutError') {
+        if (fetchError.name === 'AbortError' || fetchError.name === 'TimeoutError' || fetchError.message?.includes('aborted')) {
           throw new Error('n8n webhook timeout: İstek 2 dakikadan uzun sürdü. Lütfen n8n servisinin çalıştığından ve erişilebilir olduğundan emin olun.');
-        } else if (fetchError.message?.includes('ECONNREFUSED') || fetchError.message?.includes('Failed to fetch')) {
+        } else if (fetchError.message?.includes('ECONNREFUSED') || fetchError.message?.includes('Failed to fetch') || fetchError.message?.includes('fetch failed')) {
           throw new Error(`n8n webhook'una erişilemedi: ${this.baseUrl}. Lütfen n8n servisinin çalıştığından ve N8N_WEBHOOK_URL environment variable'ının doğru ayarlandığından emin olun.`);
         } else {
           throw new Error(`Network hatası: ${fetchError.message || 'Bilinmeyen hata'}`);
         }
       });
+
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         let errorMessage = `n8n webhook returned ${response.status}`;
