@@ -17,9 +17,9 @@
     },
     {
       "parameters": {
-        "text": "={{ `Plan ID: ${$json.body.plan_id}\n\nBu plan için üretim planlaması yap. Aşağıdaki plan_id ile ilgili verileri Supabase'den çek ve değerlendir.\n\nYanıtı JSON formatında ver: {\"decision\": \"approved\" | \"rejected\" | \"needs_review\", \"reasoning\": \"...\", \"confidence\": 0.0-1.0}` }}",
+        "text": "={{ $json.body.prompt }}",
         "options": {
-          "systemMessage": "Sen Planning Agent'sın. Üretim planlaması, zamanlama ve kapasite uygunluğunu değerlendiriyorsun.\n\nKRİTİK: Supabase tool'unu kullanırken MUTLAKA filtreleme yapmalısın! Tool'u çağırırken şu parametreleri kullan:\n- table: 'production_plans'\n- filters: { id: '{{ $json.body.plan_id }}' }\n\nTüm tabloyu çekme! Sadece bu plan_id'ye ait kaydı çek. Eğer tool filtreleme desteklemiyorsa, çektiğin verilerden bu plan_id'ye ait olanı bul.\n\nÖnce production_plans tablosundan bu plan_id'ye ait plan bilgilerini çek. Sonra bu planın order_id ve product_id'sini kullanarak ilgili orders ve finished_products kayıtlarını al. Kapasite için operators tablosundan sadece aktif operatörleri çek."
+          "systemMessage": "Sen Planning Agent'sın. Üretim planlaması, zamanlama ve kapasite uygunluğunu değerlendiriyorsun.\n\nÖNEMLİ: Prompt'ta zaten tüm gerekli veriler (plan, BOM, stok, kapasite) mevcut. Supabase tool'unu KULLANMA! Prompt'taki verileri analiz et ve karar ver.\n\nYanıtı JSON formatında ver: {\"decision\": \"approved\" | \"rejected\" | \"needs_review\", \"reasoning\": \"...\", \"confidence\": 0.0-1.0}"
         }
       },
       "id": "planning-agent",
@@ -58,26 +58,9 @@
     },
     {
       "parameters": {
-        "operation": "getAll",
-        "tableId": "={{ $json.toolInput?.table || 'production_plans' }}"
-      },
-      "type": "n8n-nodes-base.supabaseTool",
-      "typeVersion": 1,
-      "position": [500, 500],
-      "id": "planning-supabase-tool",
-      "name": "Supabase Tool (Planning)",
-      "credentials": {
-        "supabaseApi": {
-          "id": "supabase-credentials",
-          "name": "Supabase API"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "text": "={{ `Plan ID: ${$json.body.plan_id}\n\nBu plan için üretilebilirliği değerlendir. Supabase tool'unu kullanarak SADECE bu plan ile ilgili verileri çek:\n1. production_plans tablosundan id='${$json.body.plan_id}' olan planı çek\n2. operators tablosundan sadece aktif (status='active') operatörleri çek\n3. Bu planın product_id'sini kullanarak üretim süresi bilgilerini kontrol et\n\nÖNEMLİ: Tüm tabloyu çekme, sadece bu plan_id ile ilgili verileri filtrele!\n\nYanıtı JSON formatında ver: {\"decision\": \"approved\" | \"rejected\" | \"needs_review\", \"reasoning\": \"...\", \"confidence\": 0.0-1.0}` }}",
+        "text": "={{ $json.body.prompt }}",
         "options": {
-          "systemMessage": "Sen Production Agent'sın. Üretim hattı, operatör atama ve üretim süresini değerlendiriyorsun. Supabase tool'unu kullanırken MUTLAKA filtreleme yap: production_plans tablosunda id filtresi kullan, operators tablosunda status='active' filtresi kullan, tüm tabloyu çekme! Sadece belirtilen plan_id ile ilgili verileri çek."
+          "systemMessage": "Sen Production Agent'sın. Üretim hattı, operatör atama ve üretim süresini değerlendiriyorsun.\n\nÖNEMLİ: Prompt'ta zaten tüm gerekli veriler (plan, kapasite, operatörler) mevcut. Supabase tool'unu KULLANMA! Prompt'taki verileri analiz et ve karar ver.\n\nYanıtı JSON formatında ver: {\"decision\": \"approved\" | \"rejected\" | \"needs_review\", \"reasoning\": \"...\", \"confidence\": 0.0-1.0}"
         }
       },
       "id": "production-agent",
@@ -116,26 +99,9 @@
     },
     {
       "parameters": {
-        "operation": "getAll",
-        "tableId": "={{ $json.toolInput?.table || 'operators' }}"
-      },
-      "type": "n8n-nodes-base.supabaseTool",
-      "typeVersion": 1,
-      "position": [500, 900],
-      "id": "production-supabase-tool",
-      "name": "Supabase Tool (Production)",
-      "credentials": {
-        "supabaseApi": {
-          "id": "supabase-credentials",
-          "name": "Supabase API"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "text": "={{ `Plan ID: ${$json.body.plan_id}\n\nBu plan için stok ve malzeme yeterliliğini değerlendir. Supabase tool'unu kullanarak SADECE bu plan ile ilgili verileri çek:\n1. production_plans tablosundan id='${$json.body.plan_id}' olan planı çek\n2. Bu planın product_id'sini kullanarak bom tablosundan sadece bu ürüne ait malzeme listesini çek (product_id filtresi kullan)\n3. Her malzeme için raw_materials veya semi_finished_products tablolarından stok bilgilerini kontrol et (material_id filtresi kullan)\n\nÖNEMLİ: Tüm tabloyu çekme, sadece bu plan_id ve product_id ile ilgili verileri filtrele!\n\nYanıtı JSON formatında ver: {\"decision\": \"approved\" | \"rejected\" | \"needs_review\", \"reasoning\": \"...\", \"confidence\": 0.0-1.0}` }}",
+        "text": "={{ $json.body.prompt }}",
         "options": {
-          "systemMessage": "Sen Warehouse Agent'sın. Stok yeterliliği, malzeme rezervasyonu ve kritik seviyeleri değerlendiriyorsun. Supabase tool'unu kullanırken MUTLAKA filtreleme yap: production_plans tablosunda id filtresi kullan, bom tablosunda product_id filtresi kullan, raw_materials ve semi_finished_products tablolarında material_id filtresi kullan, tüm tabloyu çekme! Önce belirtilen plan_id ile production_plans'tan product_id'yi al, sonra bu product_id ile bom'dan malzeme listesini çek, her malzeme için stok bilgilerini kontrol et."
+          "systemMessage": "Sen Warehouse Agent'sın. Stok yeterliliği, malzeme rezervasyonu ve kritik seviyeleri değerlendiriyorsun.\n\nÖNEMLİ: Prompt'ta zaten tüm gerekli veriler (plan, BOM, stok durumu) mevcut. Supabase tool'unu KULLANMA! Prompt'taki verileri analiz et ve karar ver.\n\nYanıtı JSON formatında ver: {\"decision\": \"approved\" | \"rejected\" | \"needs_review\", \"reasoning\": \"...\", \"confidence\": 0.0-1.0}"
         }
       },
       "id": "warehouse-agent",
@@ -171,23 +137,6 @@
       "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
       "typeVersion": 1,
       "position": [500, 1200]
-    },
-    {
-      "parameters": {
-        "operation": "getAll",
-        "tableId": "={{ $json.toolInput?.table || 'bom' }}"
-      },
-      "type": "n8n-nodes-base.supabaseTool",
-      "typeVersion": 1,
-      "position": [500, 1300],
-      "id": "warehouse-supabase-tool",
-      "name": "Supabase Tool (Warehouse)",
-      "credentials": {
-        "supabaseApi": {
-          "id": "supabase-credentials",
-          "name": "Supabase API"
-        }
-      }
     },
     {
       "parameters": {
@@ -373,17 +322,6 @@
         ]
       ]
     },
-    "Supabase Tool (Planning)": {
-      "ai_tool": [
-        [
-          {
-            "node": "Planning Agent",
-            "type": "ai_tool",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "GPT-4o (Production)": {
       "ai_languageModel": [
         [
@@ -406,17 +344,6 @@
         ]
       ]
     },
-    "Supabase Tool (Production)": {
-      "ai_tool": [
-        [
-          {
-            "node": "Production Agent",
-            "type": "ai_tool",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "GPT-4o (Warehouse)": {
       "ai_languageModel": [
         [
@@ -434,17 +361,6 @@
           {
             "node": "Warehouse Agent",
             "type": "ai_memory",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Supabase Tool (Warehouse)": {
-      "ai_tool": [
-        [
-          {
-            "node": "Warehouse Agent",
-            "type": "ai_tool",
             "index": 0
           }
         ]
