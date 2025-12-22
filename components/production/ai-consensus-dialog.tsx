@@ -137,23 +137,40 @@ export function AiConsensusDialog({
         body.semi_order_id = semiOrder.id;
       }
 
+      logger.log('🚀 Starting AI consensus analysis...', { body });
+
       const response = await fetch('/api/ai/n8n-consensus-with-data', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
+      }).catch((fetchError) => {
+        logger.error('❌ Fetch error:', fetchError);
+        throw new Error(`Network hatası: ${fetchError.message || 'n8n webhook\'una erişilemedi. Lütfen n8n servisinin çalıştığından emin olun.'}`);
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'AI konsensüs analizi başarısız');
+        let errorMessage = 'AI konsensüs analizi başarısız';
+        try {
+          const error = await response.json();
+          errorMessage = error.message || error.error || errorMessage;
+          logger.error('❌ API error response:', error);
+        } catch (parseError) {
+          logger.error('❌ Failed to parse error response:', parseError);
+          errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+        }
+        throw new Error(errorMessage);
       }
 
       const data = await response.json();
+      logger.log('✅ AI consensus result:', data);
       setResult(data);
       toast.success('AI konsensüs analizi tamamlandı!');
     } catch (error: any) {
-      logger.error('AI consensus error:', error);
-      toast.error(error.message || 'AI konsensüs analizi başarısız');
+      logger.error('❌ AI consensus error:', error);
+      const errorMessage = error.message || 'AI konsensüs analizi başarısız';
+      toast.error(errorMessage);
+      // Re-throw to show in UI if needed
+      throw error;
     } finally {
       setLoading(false);
     }

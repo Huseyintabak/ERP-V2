@@ -270,35 +270,74 @@ export class N8nClient {
    */
   async runMultiAgentConsensus(prompt: string, agentRoles: string[], context?: any): Promise<N8nWorkflowResult> {
     agentLogger.log(`🔧 Running n8n Multi-Agent Consensus workflow with ${agentRoles.length} agents`);
+    agentLogger.log(`🔧 n8n Base URL: ${this.baseUrl}`);
+    agentLogger.log(`🔧 Webhook URL: ${this.baseUrl}/webhook/multi-agent-consensus`);
 
     try {
-      const response = await fetch(`${this.baseUrl}/webhook/multi-agent-consensus`, {
+      const webhookUrl = `${this.baseUrl}/webhook/multi-agent-consensus`;
+      const payload = {
+        prompt,
+        agentRoles,
+        ...context
+      };
+
+      agentLogger.log(`🔧 Payload:`, JSON.stringify(payload, null, 2));
+
+      const response = await fetch(webhookUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          prompt,
-          agentRoles,
-          ...context
-        })
+        body: JSON.stringify(payload),
+        // Timeout için signal ekle
+        signal: AbortSignal.timeout(120000), // 2 dakika timeout
+      }).catch((fetchError: any) => {
+        agentLogger.error(`❌ Fetch error details:`, {
+          message: fetchError.message,
+          name: fetchError.name,
+          cause: fetchError.cause,
+          webhookUrl,
+          baseUrl: this.baseUrl,
+        });
+        
+        // Daha açıklayıcı hata mesajı
+        if (fetchError.name === 'AbortError' || fetchError.name === 'TimeoutError') {
+          throw new Error('n8n webhook timeout: İstek 2 dakikadan uzun sürdü. Lütfen n8n servisinin çalıştığından ve erişilebilir olduğundan emin olun.');
+        } else if (fetchError.message?.includes('ECONNREFUSED') || fetchError.message?.includes('Failed to fetch')) {
+          throw new Error(`n8n webhook'una erişilemedi: ${this.baseUrl}. Lütfen n8n servisinin çalıştığından ve N8N_WEBHOOK_URL environment variable'ının doğru ayarlandığından emin olun.`);
+        } else {
+          throw new Error(`Network hatası: ${fetchError.message || 'Bilinmeyen hata'}`);
+        }
       });
 
       if (!response.ok) {
-        throw new Error(`n8n webhook returned ${response.status}`);
+        let errorMessage = `n8n webhook returned ${response.status}`;
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorData.error || errorMessage;
+        } catch (parseError) {
+          // JSON parse edilemezse status text kullan
+          errorMessage = `${response.status} ${response.statusText}`;
+        }
+        throw new Error(errorMessage);
       }
 
       const data = await response.json();
-      agentLogger.log(`✅ n8n Multi-Agent Consensus completed: ${data.finalDecision}`);
+      agentLogger.log(`✅ n8n Multi-Agent Consensus completed: ${data.finalDecision || 'N/A'}`);
 
       return {
         success: true,
         data
       };
     } catch (error: any) {
-      agentLogger.error(`❌ n8n Multi-Agent Consensus failed:`, error);
+      agentLogger.error(`❌ n8n Multi-Agent Consensus failed:`, {
+        error: error.message,
+        stack: error.stack,
+        baseUrl: this.baseUrl,
+        webhookUrl: `${this.baseUrl}/webhook/multi-agent-consensus`,
+      });
       return {
         success: false,
         data: null,
-        error: error.message
+        error: error.message || 'Bilinmeyen hata'
       };
     }
   }
