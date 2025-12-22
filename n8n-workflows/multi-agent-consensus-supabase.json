@@ -1,0 +1,523 @@
+{
+  "name": "Thunder Multi-Agent Consensus (Supabase)",
+  "nodes": [
+    {
+      "id": "webhook",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "multi-agent-consensus",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "webhookId": "multi-agent-consensus"
+    },
+    {
+      "id": "fetch-plan",
+      "name": "Fetch Plan & Order",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [450, 200],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.SUPABASE_URL }}/rest/v1/production_plans",
+        "queryParametersUi": {
+          "parameter": [
+            {
+              "name": "select",
+              "value": "*,orders!production_plans_order_id_fkey(*),finished_products!production_plans_product_id_fkey(*)"
+            },
+            {
+              "name": "id",
+              "value": "eq.{{$json.body.plan_id}}"
+            },
+            {
+              "name": "limit",
+              "value": "1"
+            }
+          ]
+        },
+        "headerParametersUi": {
+          "parameter": [
+            {
+              "name": "apikey",
+              "value": "={{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+            },
+            {
+              "name": "Authorization",
+              "value": "={{ `Bearer ${$env.SUPABASE_SERVICE_ROLE_KEY}` }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "responseFormat": "json"
+      }
+    },
+    {
+      "id": "fetch-bom",
+      "name": "Fetch BOM",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [450, 400],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.SUPABASE_URL }}/rest/v1/bom",
+        "queryParametersUi": {
+          "parameter": [
+            {
+              "name": "select",
+              "value": "*,raw_materials!bom_material_id_fkey(*),semi_finished_products!bom_material_id_fkey(*)"
+            },
+            {
+              "name": "finished_product_id",
+              "value": "eq.={{ $json[0].finished_products.id }}"
+            }
+          ]
+        },
+        "headerParametersUi": {
+          "parameter": [
+            {
+              "name": "apikey",
+              "value": "={{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+            },
+            {
+              "name": "Authorization",
+              "value": "={{ `Bearer ${$env.SUPABASE_SERVICE_ROLE_KEY}` }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "responseFormat": "json"
+      }
+    },
+    {
+      "id": "fetch-capacity",
+      "name": "Fetch Capacity",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [450, 600],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.SUPABASE_URL }}/rest/v1/operators",
+        "queryParametersUi": {
+          "parameter": [
+            {
+              "name": "select",
+              "value": "id,daily_capacity,is_active"
+            },
+            {
+              "name": "is_active",
+              "value": "eq.true"
+            }
+          ]
+        },
+        "headerParametersUi": {
+          "parameter": [
+            {
+              "name": "apikey",
+              "value": "={{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+            },
+            {
+              "name": "Authorization",
+              "value": "={{ `Bearer ${$env.SUPABASE_SERVICE_ROLE_KEY}` }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "responseFormat": "json"
+      }
+    },
+    {
+      "id": "fetch-active-plans",
+      "name": "Fetch Active Plans",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [450, 800],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.SUPABASE_URL }}/rest/v1/production_plans",
+        "queryParametersUi": {
+          "parameter": [
+            {
+              "name": "select",
+              "value": "id,planned_quantity,status"
+            },
+            {
+              "name": "status",
+              "value": "in.(devam_ediyor,planlandi)"
+            }
+          ]
+        },
+        "headerParametersUi": {
+          "parameter": [
+            {
+              "name": "apikey",
+              "value": "={{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+            },
+            {
+              "name": "Authorization",
+              "value": "={{ `Bearer ${$env.SUPABASE_SERVICE_ROLE_KEY}` }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "responseFormat": "json"
+      }
+    },
+    {
+      "id": "build-prompt",
+      "name": "Build Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [700, 500],
+      "parameters": {
+        "jsCode": "// Webhook body + Supabase responselarını al\nconst webhookBody = $node[\"Webhook Trigger\"].json.body;\nconst planData = $node[\"Fetch Plan & Order\"].json;\nconst bomData = $node[\"Fetch BOM\"].json;\nconst operatorsData = $node[\"Fetch Capacity\"].json;\nconst activePlansData = $node[\"Fetch Active Plans\"].json;\n\n// Plan / order / product\nconst plan = Array.isArray(planData) && planData.length > 0 ? planData[0] : planData;\nconst order = plan?.orders || plan?.order || null;\nconst product = plan?.finished_products || plan?.product || null;\n\nconst planId = plan?.id || webhookBody.plan_id || 'N/A';\nconst orderNumber = order?.order_number || 'N/A';\nconst customerName = order?.customer_name || 'N/A';\nconst deliveryDate = order?.delivery_date || 'N/A';\nconst priority = order?.priority || 'orta';\nconst plannedQuantity = plan?.planned_quantity || plan?.target_quantity || order?.planned_quantity || 0;\n\n// BOM + stok\nconst materials = (bomData || []).map((item) => {\n  const raw = item.raw_materials || null;\n  const semi = item.semi_finished_products || null;\n  const mat = raw || semi || {};\n\n  const currentStock = mat.quantity || 0;\n  const reservedStock = mat.reserved_quantity || 0;\n  const availableStock = currentStock - reservedStock;\n  const perUnit = item.quantity_needed || item.quantity || 0;\n  const requiredTotal = perUnit * plannedQuantity;\n\n  return {\n    material_type: item.material_type,\n    material_name: mat.name || 'Unknown',\n    material_code: mat.code || 'N/A',\n    quantity_needed_per_unit: perUnit,\n    required_quantity_total: requiredTotal,\n    current_stock: currentStock,\n    reserved_stock: reservedStock,\n    available_stock: availableStock,\n    is_sufficient: availableStock >= requiredTotal,\n    shortage: Math.max(0, requiredTotal - availableStock)\n  };\n});\n\nconst insufficient = materials.filter(m => !m.is_sufficient);\n\n// Kapasite hesaplama\nconst operators = Array.isArray(operatorsData) ? operatorsData : [];\nconst activePlans = Array.isArray(activePlansData) ? activePlansData : [];\n\nconst totalDailyCapacity = operators.reduce((sum, op) => sum + (op.daily_capacity || 0), 0);\nconst totalActiveQuantity = activePlans.reduce((sum, p) => sum + (p.planned_quantity || 0), 0);\n\nconst productionCapacity = {\n  total_operators: operators.length,\n  total_daily_capacity: totalDailyCapacity,\n  active_production_plans: activePlans.length,\n  total_active_quantity: totalActiveQuantity,\n  available_capacity: totalDailyCapacity - totalActiveQuantity,\n};\n\n// BOM özeti\nconst bomSummary = materials.map(m => `- ${m.material_name} (${m.material_code}): Gerekli: ${m.required_quantity_total}, Mevcut: ${m.available_stock} ${m.is_sufficient ? '✅ Yeterli' : `❌ Eksik: ${m.shortage}`}`).join(\"\\n\");\n\nconst insufficientSummary = insufficient.length > 0\n  ? `\\n⚠️ EKSİK MALZEMELER:\\n${insufficient.map(m => `- ${m.material_name}: ${m.shortage} eksik`).join(\"\\n\")}`\n  : \"\\n✅ Tüm malzemeler stokta yeterli\";\n\nconst prompt = `Sipariş ${orderNumber} için ${plannedQuantity} adet ${product?.name || 'Ürün'} (${product?.code || 'N/A'}) üretimi planlanacak.\\n\\nSİPARİŞ BİLGİLERİ:\\n- Sipariş No: ${orderNumber}\\n- Müşteri: ${customerName}\\n- Ürün: ${product?.name || 'Ürün'} (${product?.code || 'N/A'})\\n- Planlanan Miktar: ${plannedQuantity}\\n- Teslim Tarihi: ${deliveryDate}\\n- Öncelik: ${priority}\\n- Plan ID: ${planId}\\n\\nBOM ve STOK DURUMU:\\n${bomSummary}${insufficientSummary}\\n\\nÜRETİM KAPASİTESİ:\\n- Toplam Operatör: ${productionCapacity.total_operators}\\n- Toplam Günlük Kapasite: ${productionCapacity.total_daily_capacity}\\n- Aktif Plan Sayısı: ${productionCapacity.active_production_plans}\\n- Aktif Üretim Miktarı: ${productionCapacity.total_active_quantity}\\n- Kullanılabilir Kapasite: ${productionCapacity.available_capacity}\\n\\nSORU:\\nBu sipariş için üretim şimdi başlatılabilir mi? Tüm agentlar (Planning, Production, Warehouse, Manager) birlikte değerlendirip konsensüs kararı versin.\\n\\nHer agent kendi perspektifinden değerlendirsin:\\n- Planning Agent: Üretim planlaması, zamanlama, kapasite uygunluğu\\n- Production Agent: Üretilebilirlik, operatör atama, üretim süresi\\n- Warehouse Agent: Stok yeterliliği, malzeme rezervasyonu, kritik seviyeler`;\n\nreturn {\n  json: {\n    prompt,\n    planId,\n    orderNumber,\n    customerName,\n    deliveryDate,\n    priority,\n    plannedQuantity,\n    materials,\n    productionCapacity\n  }\n};"
+      }
+    },
+    {
+      "id": "planning-agent",
+      "name": "Planning Agent",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1,
+      "position": [950, 200],
+      "parameters": {
+        "resource": "text",
+        "operation": "message",
+        "modelId": "gpt-4o",
+        "messages": {
+          "values": [
+            {
+              "role": "system",
+              "content": "Sen Planning Agent'sın. Üretim planlamasını yap ve veri odaklı değerlendir. Yanıtı JSON formatında ver: {\"decision\": \"approved\" | \"rejected\" | \"needs_review\", \"reasoning\": \"...\", \"confidence\": 0.0-1.0}"
+            },
+            {
+              "role": "user",
+              "content": "={{ $json.prompt }}"
+            }
+          ]
+        },
+        "options": {
+          "temperature": 0.5,
+          "maxTokens": 512
+        },
+        "simplifyOutput": true
+      },
+      "credentials": {
+        "openAiApi": {
+          "id": "openai-credentials",
+          "name": "OpenAI API"
+        }
+      }
+    },
+    {
+      "id": "production-agent",
+      "name": "Production Agent",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1,
+      "position": [950, 400],
+      "parameters": {
+        "resource": "text",
+        "operation": "message",
+        "modelId": "gpt-4o",
+        "messages": {
+          "values": [
+            {
+              "role": "system",
+              "content": "Sen Production Agent'sın. Üretim hattı, operatör ve süre açısından üretilebilirliği değerlendir. Yanıtı JSON formatında ver: {\"decision\": \"approved\" | \"rejected\" | \"needs_review\", \"reasoning\": \"...\", \"confidence\": 0.0-1.0}"
+            },
+            {
+              "role": "user",
+              "content": "={{ $json.prompt }}"
+            }
+          ]
+        },
+        "options": {
+          "temperature": 0.5,
+          "maxTokens": 512
+        },
+        "simplifyOutput": true
+      },
+      "credentials": {
+        "openAiApi": {
+          "id": "openai-credentials",
+          "name": "OpenAI API"
+        }
+      }
+    },
+    {
+      "id": "warehouse-agent",
+      "name": "Warehouse Agent",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1,
+      "position": [950, 600],
+      "parameters": {
+        "resource": "text",
+        "operation": "message",
+        "modelId": "gpt-4o",
+        "messages": {
+          "values": [
+            {
+              "role": "system",
+              "content": "Sen Warehouse Agent'sın. Stok ve malzeme yeterliliğini, kritik seviyeleri ve rezervasyon ihtiyacını değerlendir. Yanıtı JSON formatında ver: {\"decision\": \"approved\" | \"rejected\" | \"needs_review\", \"reasoning\": \"...\", \"confidence\": 0.0-1.0}"
+            },
+            {
+              "role": "user",
+              "content": "={{ $json.prompt }}"
+            }
+          ]
+        },
+        "options": {
+          "temperature": 0.5,
+          "maxTokens": 512
+        },
+        "simplifyOutput": true
+      },
+      "credentials": {
+        "openAiApi": {
+          "id": "openai-credentials",
+          "name": "OpenAI API"
+        }
+      }
+    },
+    {
+      "id": "aggregate",
+      "name": "Aggregate Responses",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1200, 400],
+      "parameters": {
+        "jsCode": "const planning = $node[\"Planning Agent\"].json;\nconst production = $node[\"Production Agent\"].json;\nconst warehouse = $node[\"Warehouse Agent\"].json;\n\nfunction parseAgent(input, name) {\n  let content = '';\n  if (input.message && input.message.content) {\n    content = input.message.content;\n  } else if (input.content) {\n    content = input.content;\n  } else {\n    content = JSON.stringify(input);\n  }\n  try {\n    if (typeof content === 'string') return JSON.parse(content);\n    return content;\n  } catch (e) {\n    return {\n      decision: 'needs_review',\n      reasoning: `${name} agent cevabı parse edilemedi: ${content}`,\n      confidence: 0.5\n    };\n  }\n}\n\nconst p = parseAgent(planning, 'Planning');\nconst pr = parseAgent(production, 'Production');\nconst w = parseAgent(warehouse, 'Warehouse');\n\nconst agents = [\n  { name: 'Planning', ...p },\n  { name: 'Production', ...pr },\n  { name: 'Warehouse', ...w }\n];\n\nconst approveCount = agents.filter(a => a.decision === 'approved').length;\nconst rejectCount = agents.filter(a => a.decision === 'rejected').length;\nconst needsReviewCount = agents.filter(a => a.decision === 'needs_review').length;\n\nconst consensusPrompt = `3 agent'tan gelen cevaplar:\\n\\n${agents.map((a, i) => `${i+1}. ${a.name} Agent:\\n   Karar: ${a.decision}\\n   Güven: ${a.confidence}\\n   Gerekçe: ${a.reasoning}\\n`).join('\\n')}\\n\\nKonsensüs: ${approveCount} approve, ${rejectCount} reject, ${needsReviewCount} needs_review\\n\\nBu 3 agent'ın cevaplarını analiz et ve nihai karar ver.`;\n\nreturn {\n  json: {\n    agents,\n    consensus: {\n      approve: approveCount,\n      reject: rejectCount,\n      needs_review: needsReviewCount\n    },\n    consensusPrompt\n  }\n};"
+      }
+    },
+    {
+      "id": "manager-agent",
+      "name": "Manager Agent (Consensus)",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1,
+      "position": [1450, 400],
+      "parameters": {
+        "resource": "text",
+        "operation": "message",
+        "modelId": "gpt-4o",
+        "messages": {
+          "values": [
+            {
+              "role": "system",
+              "content": "Sen Manager Agent'sın. 3 agent'ın görüşlerini değerlendirerek nihai karar ver. Yanıtı JSON formatında ver: {\"finalDecision\": \"approved\" | \"rejected\" | \"needs_review\", \"reasoning\": \"...\", \"consensus\": {\"approve\": n, \"reject\": n, \"needs_review\": n}, \"confidence\": 0.0-1.0}"
+            },
+            {
+              "role": "user",
+              "content": "={{ $json.consensusPrompt }}"
+            }
+          ]
+        },
+        "options": {
+          "temperature": 0.4,
+          "maxTokens": 1024
+        },
+        "simplifyOutput": true
+      },
+      "credentials": {
+        "openAiApi": {
+          "id": "openai-credentials",
+          "name": "OpenAI API"
+        }
+      }
+    },
+    {
+      "id": "format-response",
+      "name": "Format Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1700, 400],
+      "parameters": {
+        "jsCode": "const managerRaw = $input.item.json;\nlet content = '';\nif (managerRaw.message && managerRaw.message.content) {\n  content = managerRaw.message.content;\n} else if (managerRaw.content) {\n  content = managerRaw.content;\n} else {\n  content = JSON.stringify(managerRaw);\n}\n\nlet parsed;\ntry {\n  parsed = typeof content === 'string' ? JSON.parse(content) : content;\n} catch (e) {\n  parsed = {\n    finalDecision: 'needs_review',\n    reasoning: 'Manager Agent cevabı parse edilemedi.',\n    confidence: 0.5\n  };\n}\n\nconst aggregate = $node[\"Aggregate Responses\"].json;\nconst promptNode = $node[\"Build Prompt\"].json;\n\nreturn {\n  json: {\n    success: true,\n    workflow: 'multi-agent-consensus-supabase',\n    finalDecision: parsed.finalDecision || 'needs_review',\n    consensus: parsed.consensus || aggregate.consensus,\n    agentResponses: aggregate.agents,\n    managerReasoning: parsed.reasoning || 'Gerekçe belirtilmedi.',\n    confidence: parsed.confidence || 0.5,\n    planId: promptNode.planId,\n    orderNumber: promptNode.orderNumber,\n    plannedQuantity: promptNode.plannedQuantity,\n    productionCapacity: promptNode.productionCapacity,\n    bomSummary: {\n      total_materials: promptNode.materials.length,\n      insufficient_materials: promptNode.materials.filter(m => !m.is_sufficient).length\n    }\n  }\n};"
+      }
+    },
+    {
+      "id": "respond",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1950, 400],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}"
+      }
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Fetch Plan & Order",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Plan & Order": {
+      "main": [
+        [
+          {
+            "node": "Fetch BOM",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Fetch Capacity",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Fetch Active Plans",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch BOM": {
+      "main": [
+        [
+          {
+            "node": "Build Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Capacity": {
+      "main": [
+        [
+          {
+            "node": "Build Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Active Plans": {
+      "main": [
+        [
+          {
+            "node": "Build Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Prompt": {
+      "main": [
+        [
+          {
+            "node": "Planning Agent",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Production Agent",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Warehouse Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Planning Agent": {
+      "main": [
+        [
+          {
+            "node": "Aggregate Responses",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Production Agent": {
+      "main": [
+        [
+          {
+            "node": "Aggregate Responses",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Warehouse Agent": {
+      "main": [
+        [
+          {
+            "node": "Aggregate Responses",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate Responses": {
+      "main": [
+        [
+          {
+            "node": "Manager Agent (Consensus)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manager Agent (Consensus)": {
+      "main": [
+        [
+          {
+            "node": "Format Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Response": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": []
+}
+
