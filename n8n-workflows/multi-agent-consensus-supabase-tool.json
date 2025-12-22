@@ -49,7 +49,9 @@
       }
     },
     {
-      "parameters": {},
+      "parameters": {
+        "sessionId": "={{ $json.body.plan_id || $json.body.order_id || 'default' }}"
+      },
       "id": "planning-memory",
       "name": "Simple Memory (Planning)",
       "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
@@ -90,7 +92,9 @@
       }
     },
     {
-      "parameters": {},
+      "parameters": {
+        "sessionId": "={{ $json.body.plan_id || $json.body.order_id || 'default' }}"
+      },
       "id": "production-memory",
       "name": "Simple Memory (Production)",
       "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
@@ -131,7 +135,9 @@
       }
     },
     {
-      "parameters": {},
+      "parameters": {
+        "sessionId": "={{ $json.body.plan_id || $json.body.order_id || 'default' }}"
+      },
       "id": "warehouse-memory",
       "name": "Simple Memory (Warehouse)",
       "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
@@ -182,7 +188,9 @@
       }
     },
     {
-      "parameters": {},
+      "parameters": {
+        "sessionId": "={{ $node[\"Aggregate Responses\"].json.planId || 'default' }}"
+      },
       "id": "manager-memory",
       "name": "Simple Memory (Manager)",
       "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
