@@ -17,6 +17,7 @@ if [ ! -f .env.local ]; then
 fi
 
 # .env.local dosyasından n8n değişkenlerini oku
+N8N_WEBHOOK_URL=$(grep "N8N_WEBHOOK_URL" .env.local | cut -d'=' -f2 | tr -d '"' | tr -d "'" | xargs)
 N8N_MCP_SERVER_URL=$(grep "N8N_MCP_SERVER_URL" .env.local | cut -d'=' -f2 | tr -d '"' | tr -d "'" | xargs)
 N8N_MCP_ACCESS_TOKEN=$(grep "N8N_MCP_ACCESS_TOKEN" .env.local | cut -d'=' -f2 | tr -d '"' | tr -d "'" | xargs)
 N8N_BASE_URL=$(grep "N8N_BASE_URL" .env.local | cut -d'=' -f2 | tr -d '"' | tr -d "'" | xargs)
@@ -55,10 +56,12 @@ module.exports = {
       SUPABASE_SERVICE_ROLE_KEY: '${SUPABASE_SERVICE_ROLE_KEY}',
       JWT_SECRET: '${JWT_SECRET}',
       OPENAI_API_KEY: '${OPENAI_API_KEY}',
+      N8N_WEBHOOK_URL: '${N8N_WEBHOOK_URL}',
       N8N_MCP_SERVER_URL: '${N8N_MCP_SERVER_URL}',
       N8N_MCP_ACCESS_TOKEN: '${N8N_MCP_ACCESS_TOKEN}',
       N8N_BASE_URL: '${N8N_BASE_URL}',
-      N8N_API_KEY: '${N8N_API_KEY}'
+      N8N_API_KEY: '${N8N_API_KEY}',
+      HOSTNAME: '0.0.0.0'
     },
     error_file: './logs/pm2-error.log',
     out_file: './logs/pm2-out.log',
@@ -78,10 +81,12 @@ echo "   - NEXT_PUBLIC_SUPABASE_ANON_KEY"
 echo "   - SUPABASE_SERVICE_ROLE_KEY"
 echo "   - JWT_SECRET"
 echo "   - OPENAI_API_KEY"
+echo "   - N8N_WEBHOOK_URL"
 echo "   - N8N_MCP_SERVER_URL"
 echo "   - N8N_MCP_ACCESS_TOKEN"
 echo "   - N8N_BASE_URL"
 echo "   - N8N_API_KEY"
+echo "   - HOSTNAME"
 echo ""
 echo "🔄 PM2'yi restart ediliyor..."
 pm2 restart thunder-erp
