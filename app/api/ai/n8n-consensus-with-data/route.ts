@@ -54,7 +54,9 @@ export async function POST(request: NextRequest) {
             customer_name,
             priority,
             delivery_date,
-            status
+            status,
+            quantity,
+            planned_quantity
           ),
           finished_products!production_plans_product_id_fkey (
             id,
@@ -81,7 +83,15 @@ export async function POST(request: NextRequest) {
       const { data: orderData, error: orderError } = await supabase
         .from('orders')
         .select(`
-          *,
+          id,
+          order_number,
+          customer_name,
+          priority,
+          delivery_date,
+          status,
+          quantity,
+          planned_quantity,
+          product_id,
           finished_products!orders_product_id_fkey (
             id,
             name,
@@ -200,15 +210,13 @@ export async function POST(request: NextRequest) {
     const { data: operators, error: operatorsError } = await supabase
       .from('operators')
       .select(`
-        *,
-        users!operators_user_id_fkey (
-          id,
-          name,
-          email,
-          is_active
-        )
+        id,
+        name,
+        daily_capacity,
+        status,
+        user_id
       `)
-      .eq('is_active', true);
+      .eq('status', 'active');
 
     const { data: activePlans, error: activePlansError } = await supabase
       .from('production_plans')
@@ -229,7 +237,16 @@ export async function POST(request: NextRequest) {
     };
 
     // 4. Prompt oluştur
-    const plannedQuantity = plan?.target_quantity || order?.planned_quantity || 0;
+    // Planned quantity: Önce plan'dan al, yoksa veya 0 ise order'dan al
+    let plannedQuantity = 0;
+    if (plan?.target_quantity && plan.target_quantity > 0) {
+      plannedQuantity = plan.target_quantity;
+    } else if (order?.planned_quantity && order.planned_quantity > 0) {
+      plannedQuantity = order.planned_quantity;
+    } else if (order?.quantity && order.quantity > 0) {
+      // Fallback: order.quantity kullan
+      plannedQuantity = order.quantity;
+    }
     const orderNumber = order?.order_number || 'N/A';
     const customerName = order?.customer_name || 'N/A';
     const deliveryDate = order?.delivery_date || 'N/A';
