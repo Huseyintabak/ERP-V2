@@ -21,8 +21,18 @@ export async function POST(request: NextRequest) {
 
     const { order_id, barcode_scanned, quantity_produced } = await request.json();
 
+    logger.log('📝 Semi production log request:', {
+      order_id,
+      barcode_scanned,
+      quantity_produced,
+      operatorId,
+    });
+
     if (!order_id || !barcode_scanned) {
-      return NextResponse.json({ error: 'order_id ve barcode_scanned gerekli' }, { status: 400 });
+      return NextResponse.json({ 
+        error: 'order_id ve barcode_scanned gerekli',
+        received: { order_id: !!order_id, barcode_scanned: !!barcode_scanned }
+      }, { status: 400 });
     }
 
     // Yarı mamul üretim siparişinin operatöre atanmış olduğunu kontrol et
@@ -33,15 +43,35 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (orderError || !order) {
-      return NextResponse.json({ error: 'Yarı mamul üretim siparişi bulunamadı' }, { status: 404 });
+      logger.error('Order fetch error:', orderError);
+      return NextResponse.json({ 
+        error: 'Yarı mamul üretim siparişi bulunamadı',
+        details: orderError?.message || 'Sipariş bulunamadı',
+        order_id 
+      }, { status: 404 });
     }
 
+    logger.log('📦 Order found:', {
+      id: order.id,
+      assigned_operator_id: order.assigned_operator_id,
+      current_operator_id: operatorId,
+      status: order.status,
+      planned_quantity: order.planned_quantity,
+      produced_quantity: order.produced_quantity,
+    });
+
     if (order.assigned_operator_id !== operatorId) {
-      return NextResponse.json({ error: 'Bu sipariş size atanmamış' }, { status: 403 });
+      return NextResponse.json({ 
+        error: 'Bu sipariş size atanmamış',
+        details: `Sipariş ${order.assigned_operator_id} operatörüne atanmış, siz ${operatorId}`
+      }, { status: 403 });
     }
 
     if (order.status !== 'devam_ediyor') {
-      return NextResponse.json({ error: 'Bu sipariş aktif değil' }, { status: 400 });
+      return NextResponse.json({ 
+        error: 'Bu sipariş aktif değil',
+        details: `Sipariş durumu: ${order.status} (gerekli: devam_ediyor)`
+      }, { status: 400 });
     }
 
     // Yeni üretim miktarını hesapla
@@ -68,7 +98,28 @@ export async function POST(request: NextRequest) {
 
     if (logError) {
       logger.error('Semi production log creation error:', logError);
-      return NextResponse.json({ error: 'Log oluşturulamadı' }, { status: 500 });
+      logger.error('Error details:', {
+        code: logError.code,
+        message: logError.message,
+        details: logError.details,
+        hint: logError.hint,
+      });
+      
+      // Daha açıklayıcı hata mesajı
+      let errorMessage = 'Log oluşturulamadı';
+      if (logError.code === '23503') {
+        errorMessage = 'Barkod veya operatör bilgisi geçersiz';
+      } else if (logError.code === '23505') {
+        errorMessage = 'Bu barkod zaten kullanılmış';
+      } else if (logError.message) {
+        errorMessage = `Log oluşturulamadı: ${logError.message}`;
+      }
+      
+      return NextResponse.json({ 
+        error: errorMessage,
+        details: logError.message,
+        code: logError.code 
+      }, { status: 500 });
     }
 
     // Yarı mamul üretim siparişinin üretilen miktarını güncelle

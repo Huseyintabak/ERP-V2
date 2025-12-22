@@ -313,7 +313,23 @@ export function TaskDetailPanel({ task, onRefresh }: TaskDetailPanelProps) {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || '❌ Üretim kaydı oluşturulamadı!\n\n🔍 Problem: Bilinmeyen hata\n💡 Çözüm: Lütfen sistem yöneticisi ile iletişime geçin.');
+        logger.error('Production log API error:', {
+          status: response.status,
+          statusText: response.statusText,
+          data,
+        });
+        
+        // Daha açıklayıcı hata mesajı
+        let errorMessage = data.error || '❌ Üretim kaydı oluşturulamadı!';
+        if (data.details) {
+          errorMessage += `\n\n🔍 Detay: ${data.details}`;
+        }
+        if (data.code) {
+          errorMessage += `\n📋 Hata Kodu: ${data.code}`;
+        }
+        errorMessage += '\n\n💡 Çözüm: Lütfen sistem yöneticisi ile iletişime geçin.';
+        
+        throw new Error(errorMessage);
       }
 
       // Response'dan stok bilgilerini al
