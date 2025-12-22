@@ -104,10 +104,13 @@ export async function POST(request: NextRequest) {
     });
 
     // 1. Önce BOM'u kontrol et ve eksik stokları bul
+    logger.log(`🔍 Fetching BOM for product_id: ${product_id}, planned_quantity: ${planned_quantity}`);
     const { data: bomItems, error: bomError } = await supabase
       .from('semi_bom')
       .select('*')
       .eq('semi_product_id', product_id);
+
+    logger.log(`📦 BOM fetch result: ${bomItems?.length || 0} items found`);
 
     if (bomError) {
       logger.error('BOM fetch error:', bomError);
@@ -156,8 +159,11 @@ export async function POST(request: NextRequest) {
     }> = [];
 
     for (const bomItem of bomItems) {
-      const quantityPerUnit = bomItem.quantity || 0;
+      // quantity numeric olarak gelebilir, parse et
+      const quantityPerUnit = parseFloat(bomItem.quantity) || 0;
       const requiredQuantity = quantityPerUnit * planned_quantity;
+      
+      logger.log(`🔍 Checking material: ${bomItem.material_id}, type: ${bomItem.material_type}, quantity_per_unit: ${quantityPerUnit}, required: ${requiredQuantity}`);
       
       let material: any = null;
       let availableStock = 0;
@@ -191,8 +197,8 @@ export async function POST(request: NextRequest) {
           materialName = rawMaterial.name || 'Bilinmeyen';
           materialCode = rawMaterial.code || 'N/A';
           materialUnit = rawMaterial.unit || 'kg';
-          const currentStock = rawMaterial.quantity || 0;
-          const reservedStock = rawMaterial.reserved_quantity || 0;
+          const currentStock = parseFloat(rawMaterial.quantity) || 0;
+          const reservedStock = parseFloat(rawMaterial.reserved_quantity) || 0;
           availableStock = currentStock - reservedStock;
         }
       } else if (bomItem.material_type === 'semi') {
@@ -220,26 +226,34 @@ export async function POST(request: NextRequest) {
           materialName = semiMaterial.name || 'Bilinmeyen';
           materialCode = semiMaterial.code || 'N/A';
           materialUnit = semiMaterial.unit || 'adet';
-          const currentStock = semiMaterial.quantity || 0;
-          const reservedStock = semiMaterial.reserved_quantity || 0;
+          const currentStock = parseFloat(semiMaterial.quantity) || 0;
+          const reservedStock = parseFloat(semiMaterial.reserved_quantity) || 0;
           availableStock = currentStock - reservedStock;
         }
       }
 
-      if (availableStock < requiredQuantity) {
+      // Numeric karşılaştırma yap
+      const availableStockNum = parseFloat(String(availableStock)) || 0;
+      const requiredQuantityNum = parseFloat(String(requiredQuantity)) || 0;
+      
+      logger.log(`📊 Material: ${materialName} (${materialCode}), Available: ${availableStockNum}, Required: ${requiredQuantityNum}, Sufficient: ${availableStockNum >= requiredQuantityNum}`);
+      
+      if (availableStockNum < requiredQuantityNum) {
+        logger.warn(`⚠️ Insufficient stock: ${materialName} - Available: ${availableStockNum}, Required: ${requiredQuantityNum}, Shortage: ${requiredQuantityNum - availableStockNum}`);
         insufficientMaterials.push({
           material_name: materialName,
           material_code: materialCode,
           material_type: bomItem.material_type === 'raw' ? 'Hammadde' : 'Yarı Mamul',
-          required_quantity: requiredQuantity,
-          available_stock: availableStock,
-          shortage: requiredQuantity - availableStock,
+          required_quantity: requiredQuantityNum,
+          available_stock: availableStockNum,
+          shortage: requiredQuantityNum - availableStockNum,
           unit: materialUnit,
         });
       }
     }
 
     // 3. Eğer eksik stok varsa, detaylı hata mesajı döndür
+    logger.log(`📊 Stock check complete: ${insufficientMaterials.length} insufficient materials found`);
     if (insufficientMaterials.length > 0) {
       const materialsList = insufficientMaterials.map(m => 
         `• ${m.material_name} (${m.material_code}) - ${m.material_type}\n` +
