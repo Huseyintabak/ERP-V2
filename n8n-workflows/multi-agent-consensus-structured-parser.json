@@ -37,7 +37,7 @@
     },
     {
       "parameters": {
-        "model": "gpt-4o",
+        "model": "gpt-4o-mini",
         "options": {
           "maxTokens": 512,
           "temperature": 0.5
@@ -101,7 +101,7 @@
     },
     {
       "parameters": {
-        "model": "gpt-4o",
+        "model": "gpt-4o-mini",
         "options": {
           "maxTokens": 512,
           "temperature": 0.5
@@ -165,7 +165,7 @@
     },
     {
       "parameters": {
-        "model": "gpt-4o",
+        "model": "gpt-4o-mini",
         "options": {
           "maxTokens": 512,
           "temperature": 0.5
@@ -242,7 +242,7 @@
     },
     {
       "parameters": {
-        "model": "gpt-4o",
+        "model": "gpt-4o-mini",
         "options": {
           "maxTokens": 1024,
           "temperature": 0.4
