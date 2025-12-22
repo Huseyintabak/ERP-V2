@@ -17,6 +17,7 @@
     },
     {
       "parameters": {
+        "agentType": "openAIFunctionsAgent",
         "text": "={{ $json.body.prompt }}",
         "options": {
           "systemMessage": "Sen Planning Agent'sın. Üretim planlaması, zamanlama ve kapasite uygunluğunu değerlendiriyorsun.\n\nÖNEMLİ: Prompt'ta zaten tüm gerekli veriler (plan, BOM, stok, kapasite) mevcut. Supabase tool'unu KULLANMA! Prompt'taki verileri analiz et ve karar ver.\n\n🚨 KRİTİK KURAL: Yanıtını SADECE ve SADECE JSON formatında ver. Hiçbir açıklama, metin veya ek bilgi ekleme. Sadece JSON object döndür.\n\nYanıt formatı (TAM OLARAK BU ŞEKİLDE):\n{\"decision\":\"approved\",\"reasoning\":\"Gerekçe buraya\",\"confidence\":0.8}\n\nÖrnek yanıtlar:\n- Onay için: {\"decision\":\"approved\",\"reasoning\":\"Kapasite yeterli\",\"confidence\":0.9}\n- Red için: {\"decision\":\"rejected\",\"reasoning\":\"Kapasite yetersiz\",\"confidence\":0.8}\n- İnceleme için: {\"decision\":\"needs_review\",\"reasoning\":\"Ek bilgi gerekli\",\"confidence\":0.6}\n\nSADECE JSON DÖNDÜR, BAŞKA HİÇBİR ŞEY YAZMA!"
@@ -70,9 +71,10 @@
     },
     {
       "parameters": {
+        "agentType": "openAIFunctionsAgent",
         "text": "={{ $json.body.prompt }}",
         "options": {
-          "systemMessage": "Sen Production Agent'sın. Üretim hattı, operatör atama ve üretim süresini değerlendiriyorsun.\n\nÖNEMLİ: Prompt'ta zaten tüm gerekli veriler (plan, kapasite, operatörler) mevcut. Supabase tool'unu KULLANMA! Prompt'taki verileri analiz et ve karar ver."
+          "systemMessage": "Sen Production Agent'sın. Üretim hattı, operatör atama ve üretim süresini değerlendiriyorsun.\n\nÖNEMLİ: Prompt'ta zaten tüm gerekli veriler (plan, kapasite, operatörler) mevcut. Supabase tool'unu KULLANMA! Prompt'taki verileri analiz et ve karar ver.\n\n🚨 KRİTİK KURAL: Yanıtını SADECE ve SADECE JSON formatında ver. Hiçbir açıklama, metin veya ek bilgi ekleme. Sadece JSON object döndür.\n\nYanıt formatı (TAM OLARAK BU ŞEKİLDE):\n{\"decision\":\"approved\",\"reasoning\":\"Gerekçe buraya\",\"confidence\":0.8}\n\nÖrnek yanıtlar:\n- Onay için: {\"decision\":\"approved\",\"reasoning\":\"Operatörler mevcut\",\"confidence\":0.9}\n- Red için: {\"decision\":\"rejected\",\"reasoning\":\"Operatör yetersiz\",\"confidence\":0.8}\n- İnceleme için: {\"decision\":\"needs_review\",\"reasoning\":\"Ek bilgi gerekli\",\"confidence\":0.6}\n\nSADECE JSON DÖNDÜR, BAŞKA HİÇBİR ŞEY YAZMA!"
         }
       },
       "id": "production-agent",
@@ -123,9 +125,10 @@
     },
     {
       "parameters": {
+        "agentType": "openAIFunctionsAgent",
         "text": "={{ $json.body.prompt }}",
         "options": {
-          "systemMessage": "Sen Warehouse Agent'sın. Stok yeterliliği, malzeme rezervasyonu ve kritik seviyeleri değerlendiriyorsun.\n\nÖNEMLİ: Prompt'ta zaten tüm gerekli veriler (plan, BOM, stok durumu) mevcut. Supabase tool'unu KULLANMA! Prompt'taki verileri analiz et ve karar ver."
+          "systemMessage": "Sen Warehouse Agent'sın. Stok yeterliliği, malzeme rezervasyonu ve kritik seviyeleri değerlendiriyorsun.\n\nÖNEMLİ: Prompt'ta zaten tüm gerekli veriler (plan, BOM, stok durumu) mevcut. Supabase tool'unu KULLANMA! Prompt'taki verileri analiz et ve karar ver.\n\n🚨 KRİTİK KURAL: Yanıtını SADECE ve SADECE JSON formatında ver. Hiçbir açıklama, metin veya ek bilgi ekleme. Sadece JSON object döndür.\n\nYanıt formatı (TAM OLARAK BU ŞEKİLDE):\n{\"decision\":\"approved\",\"reasoning\":\"Gerekçe buraya\",\"confidence\":0.8}\n\nÖrnek yanıtlar:\n- Onay için: {\"decision\":\"approved\",\"reasoning\":\"Stok yeterli\",\"confidence\":0.9}\n- Red için: {\"decision\":\"rejected\",\"reasoning\":\"Stok yetersiz\",\"confidence\":0.8}\n- İnceleme için: {\"decision\":\"needs_review\",\"reasoning\":\"Ek bilgi gerekli\",\"confidence\":0.6}\n\nSADECE JSON DÖNDÜR, BAŞKA HİÇBİR ŞEY YAZMA!"
         }
       },
       "id": "warehouse-agent",
@@ -186,9 +189,10 @@
     },
     {
       "parameters": {
+        "agentType": "openAIFunctionsAgent",
         "text": "={{ $json.consensusPrompt }}",
         "options": {
-          "systemMessage": "Sen Manager Agent'sın. 3 agent'ın görüşlerini değerlendirerek nihai karar veriyorsun."
+          "systemMessage": "Sen Manager Agent'sın. 3 agent'ın görüşlerini değerlendirerek nihai karar veriyorsun.\n\n🚨 KRİTİK KURAL: Yanıtını SADECE ve SADECE JSON formatında ver. Hiçbir açıklama, metin veya ek bilgi ekleme. Sadece JSON object döndür.\n\nYanıt formatı (TAM OLARAK BU ŞEKİLDE):\n{\"finalDecision\":\"approved\",\"reasoning\":\"Gerekçe buraya\",\"consensus\":{\"approve\":2,\"reject\":0,\"needs_review\":1},\"confidence\":0.9}\n\nÖrnek yanıtlar:\n- Onay için: {\"finalDecision\":\"approved\",\"reasoning\":\"2 agent onayladı\",\"consensus\":{\"approve\":2,\"reject\":0,\"needs_review\":1},\"confidence\":0.9}\n- Red için: {\"finalDecision\":\"rejected\",\"reasoning\":\"2 agent reddetti\",\"consensus\":{\"approve\":0,\"reject\":2,\"needs_review\":1},\"confidence\":0.8}\n- İnceleme için: {\"finalDecision\":\"needs_review\",\"reasoning\":\"Ek bilgi gerekli\",\"consensus\":{\"approve\":1,\"reject\":0,\"needs_review\":2},\"confidence\":0.6}\n\nSADECE JSON DÖNDÜR, BAŞKA HİÇBİR ŞEY YAZMA!"
         }
       },
       "id": "manager-agent",
