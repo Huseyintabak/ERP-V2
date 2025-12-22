@@ -191,22 +191,36 @@ export default function YariMamulUretimPage() {
         fetchProductionOrders();
       } else {
         // Debug: API response'unu logla
-        console.log('🔴 API Error Response:', JSON.stringify(data, null, 2));
+        console.log('🔴 API Error Response (raw):', data);
+        console.log('🔴 API Error Response (stringified):', JSON.stringify(data, null, 2));
         console.log('🔴 Insufficient Materials:', data.insufficient_materials);
+        console.log('🔴 Insufficient Materials Type:', typeof data.insufficient_materials);
+        console.log('🔴 Insufficient Materials Is Array:', Array.isArray(data.insufficient_materials));
         console.log('🔴 Details:', data.details);
         console.log('🔴 Error:', data.error);
+        
+        // Parse insufficient_materials if it's a string
+        let insufficientMaterials = data.insufficient_materials;
+        if (typeof insufficientMaterials === 'string') {
+          try {
+            insufficientMaterials = JSON.parse(insufficientMaterials);
+          } catch (e) {
+            console.error('Failed to parse insufficient_materials:', e);
+          }
+        }
         
         // Her durumda dialog aç (hata varsa)
         const dialogData: typeof stockErrorDialog = {
           isOpen: true,
           error: data.error || 'Yeterli stok bulunmuyor',
           details: data.details || undefined,
-          insufficientMaterials: (data.insufficient_materials && Array.isArray(data.insufficient_materials) && data.insufficient_materials.length > 0) 
-            ? data.insufficient_materials 
+          insufficientMaterials: (insufficientMaterials && Array.isArray(insufficientMaterials) && insufficientMaterials.length > 0) 
+            ? insufficientMaterials 
             : undefined,
         };
         
         console.log('🔴 Setting dialog state:', JSON.stringify(dialogData, null, 2));
+        console.log('🔴 Dialog state insufficientMaterials length:', dialogData.insufficientMaterials?.length || 0);
         setStockErrorDialog(dialogData);
       }
     } catch (error: any) {
@@ -811,86 +825,103 @@ export default function YariMamulUretimPage() {
             </DialogTitle>
           </DialogHeader>
 
-          {/* Debug: Show state info */}
-          {process.env.NODE_ENV === 'development' && (
-            <div className="text-xs bg-gray-100 p-2 rounded mb-4">
-              <div>Error: {stockErrorDialog.error}</div>
-              <div>Has Details: {stockErrorDialog.details ? 'YES' : 'NO'}</div>
-              <div>Has Materials: {stockErrorDialog.insufficientMaterials?.length || 0}</div>
-              {stockErrorDialog.details && <div className="mt-2">Details Preview: {stockErrorDialog.details.substring(0, 100)}...</div>}
-            </div>
-          )}
+          {/* Debug: Show state info - ALWAYS VISIBLE */}
+          <div className="text-xs bg-gray-100 p-2 rounded mb-4 border border-gray-300">
+            <div className="font-semibold mb-2">🔍 Debug Info:</div>
+            <div>Error: <strong>{stockErrorDialog.error || 'N/A'}</strong></div>
+            <div>Has Details: <strong>{stockErrorDialog.details ? `YES (${stockErrorDialog.details.length} chars)` : 'NO'}</strong></div>
+            <div>Has Materials: <strong>{stockErrorDialog.insufficientMaterials?.length || 0} items</strong></div>
+            <div>Materials Type: <strong>{Array.isArray(stockErrorDialog.insufficientMaterials) ? 'Array' : typeof stockErrorDialog.insufficientMaterials}</strong></div>
+            {stockErrorDialog.details && (
+              <div className="mt-2 border-t pt-2">
+                <div className="font-semibold">Details Preview:</div>
+                <pre className="text-xs mt-1 overflow-auto max-h-20 bg-white p-1 rounded">
+                  {stockErrorDialog.details.substring(0, 200)}...
+                </pre>
+              </div>
+            )}
+            {stockErrorDialog.insufficientMaterials && stockErrorDialog.insufficientMaterials.length > 0 && (
+              <div className="mt-2 border-t pt-2">
+                <div className="font-semibold">Materials Preview:</div>
+                <pre className="text-xs mt-1 overflow-auto max-h-20 bg-white p-1 rounded">
+                  {JSON.stringify(stockErrorDialog.insufficientMaterials.slice(0, 2), null, 2)}
+                </pre>
+              </div>
+            )}
+          </div>
 
           <div className="space-y-4">
             {/* Show insufficient materials if available */}
-            {stockErrorDialog.insufficientMaterials && Array.isArray(stockErrorDialog.insufficientMaterials) && stockErrorDialog.insufficientMaterials.length > 0 && (
-            <div className="space-y-4">
-              <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
-                <AlertTitle>Eksik Malzemeler</AlertTitle>
-                <AlertDescription>
-                  Aşağıdaki {stockErrorDialog.insufficientMaterials.length} malzemede stok yetersizliği var:
-                </AlertDescription>
-              </Alert>
+            {stockErrorDialog.insufficientMaterials && 
+             Array.isArray(stockErrorDialog.insufficientMaterials) && 
+             stockErrorDialog.insufficientMaterials.length > 0 ? (
+              <div className="space-y-4">
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>Eksik Malzemeler</AlertTitle>
+                  <AlertDescription>
+                    Aşağıdaki {stockErrorDialog.insufficientMaterials.length} malzemede stok yetersizliği var:
+                  </AlertDescription>
+                </Alert>
 
-              <ScrollArea className="max-h-[400px]">
-                <div className="space-y-3">
-                  {stockErrorDialog.insufficientMaterials.map((material, index) => (
-                    <Card key={index} className="border-red-200 bg-red-50">
-                      <CardContent className="pt-4">
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-2">
-                              <XCircle className="h-4 w-4 text-red-600" />
-                              <h4 className="font-semibold text-gray-900">
-                                {material.material_name}
-                              </h4>
-                              <Badge variant="outline" className="text-xs">
-                                {material.material_code}
-                              </Badge>
-                              <Badge variant="secondary" className="text-xs">
-                                {material.material_type}
-                              </Badge>
-                            </div>
-                            <div className="grid grid-cols-3 gap-4 mt-3 text-sm">
-                              <div>
-                                <span className="text-gray-600">Gerekli:</span>
-                                <span className="ml-2 font-semibold text-gray-900">
-                                  {material.required_quantity.toLocaleString('tr-TR')} {material.unit}
-                                </span>
+                <ScrollArea className="max-h-[400px]">
+                  <div className="space-y-3">
+                    {stockErrorDialog.insufficientMaterials.map((material, index) => (
+                      <Card key={index} className="border-red-200 bg-red-50">
+                        <CardContent className="pt-4">
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-2">
+                                <XCircle className="h-4 w-4 text-red-600" />
+                                <h4 className="font-semibold text-gray-900">
+                                  {material.material_name || 'Bilinmeyen Malzeme'}
+                                </h4>
+                                <Badge variant="outline" className="text-xs">
+                                  {material.material_code || 'N/A'}
+                                </Badge>
+                                <Badge variant="secondary" className="text-xs">
+                                  {material.material_type || 'N/A'}
+                                </Badge>
                               </div>
-                              <div>
-                                <span className="text-gray-600">Mevcut:</span>
-                                <span className="ml-2 font-semibold text-gray-900">
-                                  {material.available_stock.toLocaleString('tr-TR')} {material.unit}
-                                </span>
-                              </div>
-                              <div>
-                                <span className="text-red-600 font-medium">Eksik:</span>
-                                <span className="ml-2 font-bold text-red-700">
-                                  {material.shortage.toLocaleString('tr-TR')} {material.unit}
-                                </span>
+                              <div className="grid grid-cols-3 gap-4 mt-3 text-sm">
+                                <div>
+                                  <span className="text-gray-600">Gerekli:</span>
+                                  <span className="ml-2 font-semibold text-gray-900">
+                                    {material.required_quantity?.toLocaleString('tr-TR') || 0} {material.unit || 'adet'}
+                                  </span>
+                                </div>
+                                <div>
+                                  <span className="text-gray-600">Mevcut:</span>
+                                  <span className="ml-2 font-semibold text-gray-900">
+                                    {material.available_stock?.toLocaleString('tr-TR') || 0} {material.unit || 'adet'}
+                                  </span>
+                                </div>
+                                <div>
+                                  <span className="text-red-600 font-medium">Eksik:</span>
+                                  <span className="ml-2 font-bold text-red-700">
+                                    {material.shortage?.toLocaleString('tr-TR') || 0} {material.unit || 'adet'}
+                                  </span>
+                                </div>
                               </div>
                             </div>
                           </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </ScrollArea>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                </ScrollArea>
 
-              <Alert>
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>
-                  <strong>Çözüm:</strong> Stok yönetimi sayfasından bu malzemelerin stok miktarını artırın.
-                </AlertDescription>
-              </Alert>
-            </div>
-            )}
+                <Alert>
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    <strong>Çözüm:</strong> Stok yönetimi sayfasından bu malzemelerin stok miktarını artırın.
+                  </AlertDescription>
+                </Alert>
+              </div>
+            ) : null}
 
-            {/* Always show details if available (even if materials array exists) */}
-            {stockErrorDialog.details && (
+            {/* Always show details if available */}
+            {stockErrorDialog.details ? (
               <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />
                 <AlertTitle>Detaylar</AlertTitle>
@@ -898,10 +929,11 @@ export default function YariMamulUretimPage() {
                   {stockErrorDialog.details}
                 </AlertDescription>
               </Alert>
-            )}
+            ) : null}
 
             {/* Fallback if no details or materials */}
-            {!stockErrorDialog.details && (!stockErrorDialog.insufficientMaterials || stockErrorDialog.insufficientMaterials.length === 0) && (
+            {!stockErrorDialog.details && 
+             (!stockErrorDialog.insufficientMaterials || stockErrorDialog.insufficientMaterials.length === 0) ? (
               <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />
                 <AlertTitle>Stok Kontrolü Başarısız</AlertTitle>
@@ -914,7 +946,7 @@ export default function YariMamulUretimPage() {
                   )}
                 </AlertDescription>
               </Alert>
-            )}
+            ) : null}
           </div>
 
           <div className="flex justify-end gap-2 pt-4 border-t">
