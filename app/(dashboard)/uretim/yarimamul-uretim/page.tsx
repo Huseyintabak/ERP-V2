@@ -6,16 +6,18 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, Factory, Package, Users, Clock, CheckCircle, AlertCircle, Edit, Trash2, Check, Pencil, Brain } from 'lucide-react';
+import { Plus, Factory, Package, Users, Clock, CheckCircle, AlertCircle, Edit, Trash2, Check, Pencil, Brain, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatDate } from '@/lib/utils';
 import { useAuthStore } from '@/stores/auth-store';
 import { AiConsensusDialog } from '@/components/production/ai-consensus-dialog';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface SemiFinishedProduct {
   id: string;
@@ -66,6 +68,23 @@ export default function YariMamulUretimPage() {
   const [editingOrder, setEditingOrder] = useState<SemiProductionOrder | null>(null);
   const [selectedOrderForConsensus, setSelectedOrderForConsensus] = useState<SemiProductionOrder | null>(null);
   const [isConsensusDialogOpen, setIsConsensusDialogOpen] = useState(false);
+  const [stockErrorDialog, setStockErrorDialog] = useState<{
+    isOpen: boolean;
+    error: string;
+    details?: string;
+    insufficientMaterials?: Array<{
+      material_name: string;
+      material_code: string;
+      material_type: string;
+      required_quantity: number;
+      available_stock: number;
+      shortage: number;
+      unit: string;
+    }>;
+  }>({
+    isOpen: false,
+    error: '',
+  });
   const [formData, setFormData] = useState({
     product_id: '',
     planned_quantity: 0,
@@ -171,25 +190,22 @@ export default function YariMamulUretimPage() {
         });
         fetchProductionOrders();
       } else {
-        // Detaylı hata mesajını göster
-        if (data.details) {
-          // Eksik malzemeler varsa detaylı göster
-          if (data.insufficient_materials && data.insufficient_materials.length > 0) {
-            const materialsList = data.insufficient_materials.map((m: any) => 
-              `• ${m.material_name} (${m.material_code}) - ${m.material_type}\n` +
-              `  Gerekli: ${m.required_quantity} ${m.unit}\n` +
-              `  Mevcut: ${m.available_stock} ${m.unit}\n` +
-              `  Eksik: ${m.shortage} ${m.unit}`
-            ).join('\n\n');
-            
-            toast.error(`${data.error}\n\n${materialsList}`, {
-              duration: 10000, // 10 saniye göster
-            });
-          } else {
-            toast.error(`${data.error}\n\n${data.details}`, {
-              duration: 8000, // 8 saniye göster
-            });
-          }
+        // Detaylı hata mesajını dialog'da göster
+        if (data.insufficient_materials && data.insufficient_materials.length > 0) {
+          // Eksik malzemeler varsa dialog aç
+          setStockErrorDialog({
+            isOpen: true,
+            error: data.error || 'Yeterli stok bulunmuyor',
+            details: data.details,
+            insufficientMaterials: data.insufficient_materials,
+          });
+        } else if (data.details) {
+          // Diğer hatalar için de dialog aç
+          setStockErrorDialog({
+            isOpen: true,
+            error: data.error || 'Bir hata oluştu',
+            details: data.details,
+          });
         } else {
           toast.error(data.error || 'Bir hata oluştu');
         }
@@ -781,6 +797,110 @@ export default function YariMamulUretimPage() {
         }}
         semiOrder={selectedOrderForConsensus}
       />
+
+      {/* Stock Error Dialog */}
+      <Dialog open={stockErrorDialog.isOpen} onOpenChange={(open) => {
+        if (!open) {
+          setStockErrorDialog({ isOpen: false, error: '' });
+        }
+      }}>
+        <DialogContent className="max-w-3xl max-h-[90vh]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <AlertCircle className="h-5 w-5" />
+              {stockErrorDialog.error}
+            </DialogTitle>
+            {stockErrorDialog.details && (
+              <DialogDescription>
+                {stockErrorDialog.details}
+              </DialogDescription>
+            )}
+          </DialogHeader>
+
+          {stockErrorDialog.insufficientMaterials && stockErrorDialog.insufficientMaterials.length > 0 && (
+            <div className="space-y-4">
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Eksik Malzemeler</AlertTitle>
+                <AlertDescription>
+                  Aşağıdaki {stockErrorDialog.insufficientMaterials.length} malzemede stok yetersizliği var:
+                </AlertDescription>
+              </Alert>
+
+              <ScrollArea className="max-h-[400px]">
+                <div className="space-y-3">
+                  {stockErrorDialog.insufficientMaterials.map((material, index) => (
+                    <Card key={index} className="border-red-200 bg-red-50">
+                      <CardContent className="pt-4">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-2">
+                              <XCircle className="h-4 w-4 text-red-600" />
+                              <h4 className="font-semibold text-gray-900">
+                                {material.material_name}
+                              </h4>
+                              <Badge variant="outline" className="text-xs">
+                                {material.material_code}
+                              </Badge>
+                              <Badge variant="secondary" className="text-xs">
+                                {material.material_type}
+                              </Badge>
+                            </div>
+                            <div className="grid grid-cols-3 gap-4 mt-3 text-sm">
+                              <div>
+                                <span className="text-gray-600">Gerekli:</span>
+                                <span className="ml-2 font-semibold text-gray-900">
+                                  {material.required_quantity.toLocaleString('tr-TR')} {material.unit}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-gray-600">Mevcut:</span>
+                                <span className="ml-2 font-semibold text-gray-900">
+                                  {material.available_stock.toLocaleString('tr-TR')} {material.unit}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-red-600 font-medium">Eksik:</span>
+                                <span className="ml-2 font-bold text-red-700">
+                                  {material.shortage.toLocaleString('tr-TR')} {material.unit}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </ScrollArea>
+
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  <strong>Çözüm:</strong> Stok yönetimi sayfasından bu malzemelerin stok miktarını artırın.
+                </AlertDescription>
+              </Alert>
+            </div>
+          )}
+
+          {stockErrorDialog.details && !stockErrorDialog.insufficientMaterials && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription className="whitespace-pre-wrap">
+                {stockErrorDialog.details}
+              </AlertDescription>
+            </Alert>
+          )}
+
+          <div className="flex justify-end gap-2 pt-4 border-t">
+            <Button variant="outline" onClick={() => {
+              setStockErrorDialog({ isOpen: false, error: '' });
+            }}>
+              Kapat
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
