@@ -467,28 +467,29 @@ export default function UretimPlanlariPage() {
                     <TableCell>{plan.order?.delivery_date ? new Date(plan.order.delivery_date).toLocaleDateString('tr-TR') : 'N/A'}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
+                        {/* AI Konsensüs Analizi butonu - tüm durumlarda görünür */}
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setSelectedPlan(plan);
+                            setConsensusDialogOpen(true);
+                          }}
+                          title="AI Konsensüs Analizi"
+                          className="text-purple-600 hover:text-purple-700 hover:bg-purple-50"
+                        >
+                          <Brain className="h-4 w-4" />
+                        </Button>
+
+                        {/* Üretimi başlat butonu sadece planlandı durumunda */}
                         {plan.status === 'planlandi' && (
-                          <>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => {
-                                setSelectedPlan(plan);
-                                setConsensusDialogOpen(true);
-                              }}
-                              title="AI Konsensüs Analizi"
-                              className="text-purple-600 hover:text-purple-700 hover:bg-purple-50"
-                            >
-                              <Brain className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleStartProduction(plan.id)}
-                            >
-                              <Play className="h-4 w-4" />
-                            </Button>
-                          </>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleStartProduction(plan.id)}
+                          >
+                            <Play className="h-4 w-4" />
+                          </Button>
                         )}
                         
                         {plan.status === 'devam_ediyor' && (
