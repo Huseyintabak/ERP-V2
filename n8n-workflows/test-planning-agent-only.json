@@ -17,7 +17,7 @@
     },
     {
       "parameters": {
-        "agentType": "openAIFunctionsAgent",
+        "agent": "openAIFunctionsAgent",
         "text": "={{ $json.body.prompt }}",
         "options": {
           "systemMessage": "Sen Planning Agent'sın. Üretim planlaması, zamanlama ve kapasite uygunluğunu değerlendiriyorsun.\n\nÖNEMLİ: Prompt'ta zaten tüm gerekli veriler (plan, BOM, stok, kapasite) mevcut. Supabase tool'unu KULLANMA! Prompt'taki verileri analiz et ve karar ver.\n\nKRİTİK KURAL: Yanıtını MUTLAKA JSON formatında ver. Hiçbir açıklama, metin veya ek bilgi ekleme. Sadece JSON object döndür.\n\nYanıt formatı: JSON object olmalı ve şu alanları içermeli:\n- decision: approved, rejected veya needs_review değerlerinden biri\n- reasoning: Kararın gerekçesi (string)\n- confidence: 0.0 ile 1.0 arasında bir sayı\n\nSADECE JSON DÖNDÜR, BAŞKA HİÇBİR ŞEY YAZMA!"
