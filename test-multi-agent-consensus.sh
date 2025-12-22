@@ -15,57 +15,55 @@ echo "  Thunder API: $THUNDER_API"
 echo "  n8n Webhook: $N8N_WEBHOOK"
 echo ""
 
-# 1. Thunder ERP API'den prompt'u al
-echo "1️⃣ Fetching prompt and data from Thunder ERP API..."
+# 1. Thunder ERP API'den consensus sonucunu al
+# NOT: API endpoint'i zaten webhook'u çağırıyor, ayrıca webhook'a istek göndermeye gerek yok
+echo "1️⃣ Calling Thunder ERP API (which triggers n8n workflow)..."
 echo "   POST $THUNDER_API/api/ai/n8n-consensus-with-data"
-echo ""
-
-API_RESPONSE=$(curl -s -X POST "$THUNDER_API/api/ai/n8n-consensus-with-data" \
-  -H 'Content-Type: application/json' \
-  -H "Cookie: thunder_token=$TOKEN" \
-  -d "{\"plan_id\": \"$PLAN_ID\"}")
-
-if [ $? -ne 0 ]; then
-  echo "❌ Failed to connect to Thunder ERP API"
-  exit 1
-fi
-
-# API response'u kontrol et
-API_ERROR=$(echo "$API_RESPONSE" | jq -r '.error // empty')
-if [ -n "$API_ERROR" ]; then
-  echo "❌ API Error: $API_ERROR"
-  echo "$API_RESPONSE" | jq '.'
-  exit 1
-fi
-
-PROMPT=$(echo "$API_RESPONSE" | jq -r '.prompt_generated // empty')
-if [ -z "$PROMPT" ] || [ "$PROMPT" == "null" ]; then
-  echo "❌ Failed to fetch prompt from API"
-  echo "$API_RESPONSE" | jq '.'
-  exit 1
-fi
-
-echo "✅ Prompt fetched successfully"
-echo "   Prompt length: ${#PROMPT} characters"
-echo ""
-
-# 2. n8n webhook'una istek gönder
-echo "2️⃣ Calling n8n Multi-Agent Consensus Webhook..."
-echo "   POST $N8N_WEBHOOK/webhook/multi-agent-consensus"
 echo ""
 
 START_TIME=$(date +%s)
 
-WEBHOOK_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "$N8N_WEBHOOK/webhook/multi-agent-consensus" \
+API_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "$THUNDER_API/api/ai/n8n-consensus-with-data" \
   -H 'Content-Type: application/json' \
-  -d "{\"prompt\": $(echo "$PROMPT" | jq -Rs .), \"plan_id\": \"$PLAN_ID\"}")
+  -H "Cookie: thunder_token=$TOKEN" \
+  -d "{\"plan_id\": \"$PLAN_ID\"}")
 
 END_TIME=$(date +%s)
 DURATION=$((END_TIME - START_TIME))
 
 # HTTP status code'u ayır
-HTTP_CODE=$(echo "$WEBHOOK_RESPONSE" | tail -n1)
-RESPONSE_BODY=$(echo "$WEBHOOK_RESPONSE" | sed '$d')
+HTTP_CODE=$(echo "$API_RESPONSE" | tail -n1)
+RESPONSE_BODY=$(echo "$API_RESPONSE" | sed '$d')
+
+if [ "$HTTP_CODE" != "200" ]; then
+  echo "❌ API returned error status: $HTTP_CODE"
+  echo "$RESPONSE_BODY" | jq '.' 2>/dev/null || echo "$RESPONSE_BODY"
+  exit 1
+fi
+
+# API response'u kontrol et
+API_ERROR=$(echo "$RESPONSE_BODY" | jq -r '.error // empty')
+if [ -n "$API_ERROR" ]; then
+  echo "❌ API Error: $API_ERROR"
+  echo "$RESPONSE_BODY" | jq '.'
+  exit 1
+fi
+
+# Consensus result'u al (API zaten webhook'u çağırdı ve sonucu döndürdü)
+CONSENSUS_RESULT=$(echo "$RESPONSE_BODY" | jq -r '.consensus_result // empty')
+if [ -z "$CONSENSUS_RESULT" ] || [ "$CONSENSUS_RESULT" == "null" ]; then
+  echo "❌ Failed to get consensus result from API"
+  echo "$RESPONSE_BODY" | jq '.'
+  exit 1
+fi
+
+echo "✅ API call completed successfully"
+echo "   Execution time: ${DURATION}s"
+echo "   HTTP Status: $HTTP_CODE"
+echo ""
+
+# Response'u consensus_result'dan al
+RESPONSE_BODY=$(echo "$RESPONSE_BODY" | jq '.consensus_result')
 
 echo "⏱️  Execution time: ${DURATION}s"
 echo "📊 HTTP Status: $HTTP_CODE"
@@ -78,7 +76,7 @@ if [ "$HTTP_CODE" != "200" ]; then
 fi
 
 # Response'u parse et
-echo "3️⃣ Parsing Response..."
+echo "2️⃣ Parsing Response..."
 echo ""
 
 # JSON parse kontrolü
@@ -89,12 +87,12 @@ if ! echo "$RESPONSE_BODY" | jq empty 2>/dev/null; then
 fi
 
 # Response'u göster
-echo "📋 Full Response:"
+echo "📋 Full Consensus Result:"
 echo "$RESPONSE_BODY" | jq '.'
 echo ""
 
-# 4. Sonuçları analiz et
-echo "4️⃣ Analysis:"
+# 3. Sonuçları analiz et
+echo "3️⃣ Analysis:"
 echo "=========================================="
 echo ""
 
@@ -150,8 +148,8 @@ if [ "$AGENT_RESPONSES" != "[]" ] && [ "$AGENT_RESPONSES" != "null" ]; then
   echo ""
 fi
 
-# 5. Sonuç değerlendirmesi
-echo "5️⃣ Result Evaluation:"
+# 4. Sonuç değerlendirmesi
+echo "4️⃣ Result Evaluation:"
 echo "=========================================="
 echo ""
 
