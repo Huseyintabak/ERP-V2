@@ -22,27 +22,48 @@ export async function GET(request: NextRequest) {
 
     const supabase = await createClient();
 
-    // Tüm operatörleri çek
+    // Tüm operatörleri çek (users ile join)
     const { data: allOperators, error: allError } = await supabase
       .from('operators')
-      .select('id, name, status, daily_capacity, user_id')
+      .select(`
+        id,
+        series,
+        daily_capacity,
+        location,
+        hourly_rate,
+        user:users(id, name, email, is_active)
+      `)
       .limit(20);
 
-    // Active operatörleri çek
+    // Active operatörleri çek (users.is_active = true)
     const { data: activeOperators, error: activeError } = await supabase
       .from('operators')
-      .select('id, name, status, daily_capacity, user_id')
-      .eq('status', 'active');
+      .select(`
+        id,
+        series,
+        daily_capacity,
+        location,
+        hourly_rate,
+        user:users(id, name, email, is_active)
+      `)
+      .eq('user.is_active', true);
 
-    // Status dağılımını kontrol et
+    // Status dağılımını kontrol et (users.is_active kullanarak)
     const { data: statusCounts } = await supabase
       .from('operators')
-      .select('status')
+      .select('user:users(is_active)')
       .limit(100);
 
-    const statusDistribution: Record<string, number> = {};
+    const statusDistribution: Record<string, number> = {
+      active: 0,
+      inactive: 0
+    };
     statusCounts?.forEach(op => {
-      statusDistribution[op.status] = (statusDistribution[op.status] || 0) + 1;
+      if (op.user?.is_active) {
+        statusDistribution.active++;
+      } else {
+        statusDistribution.inactive++;
+      }
     });
 
     return NextResponse.json({

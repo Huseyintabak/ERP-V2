@@ -213,31 +213,32 @@ export async function POST(request: NextRequest) {
     }
 
     // 3. Üretim kapasitesini çek (operatörler ve aktif üretimler)
+    // operators tablosunda name ve status yok, users tablosu ile join yapmalıyız
     const { data: operators, error: operatorsError } = await supabase
       .from('operators')
       .select(`
         id,
-        name,
+        series,
         daily_capacity,
-        status,
-        user_id
+        location,
+        user:users(id, name, email, is_active)
       `)
-      .eq('status', 'active');
+      .eq('user.is_active', true);
 
     if (operatorsError) {
       logger.error('Operators fetch error:', operatorsError);
     } else {
       logger.log(`Found ${operators?.length || 0} active operators`);
       
-      // Debug: Tüm operatörleri kontrol et (status'e bakmadan)
+      // Debug: Tüm operatörleri kontrol et (is_active'e bakmadan)
       const { data: allOperators } = await supabase
         .from('operators')
-        .select('id, name, status, daily_capacity')
+        .select('id, series, daily_capacity, user:users(id, name, email, is_active)')
         .limit(10);
       
       if (allOperators && allOperators.length > 0) {
         logger.log(`Total operators in database: ${allOperators.length}`);
-        logger.log(`Operator statuses: ${allOperators.map(op => `${op.name}: ${op.status}`).join(', ')}`);
+        logger.log(`Operators: ${allOperators.map(op => `${op.user?.name || 'N/A'}: ${op.user?.is_active ? 'active' : 'inactive'}`).join(', ')}`);
       }
     }
 
