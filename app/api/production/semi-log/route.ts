@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { verifyJWT } from '@/lib/auth/jwt';
 
 import { logger } from '@/lib/utils/logger';
@@ -134,8 +134,9 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Production log oluştur
-    const { data: log, error: logError } = await supabase
+    // Production log oluştur (RLS bypass için admin client kullan)
+    const adminClient = createAdminClient();
+    const { data: log, error: logError } = await adminClient
       .from('semi_production_logs')
       .insert({
         order_id,
