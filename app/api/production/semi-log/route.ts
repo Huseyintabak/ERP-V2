@@ -38,7 +38,18 @@ export async function POST(request: NextRequest) {
     // Yarı mamul üretim siparişinin operatöre atanmış olduğunu kontrol et
     const { data: order, error: orderError } = await supabase
       .from('semi_production_orders')
-      .select('assigned_operator_id, status, planned_quantity, produced_quantity')
+      .select(`
+        assigned_operator_id, 
+        status, 
+        planned_quantity, 
+        produced_quantity,
+        product_id,
+        semi_finished_products!semi_production_orders_product_id_fkey (
+          id,
+          code,
+          barcode
+        )
+      `)
       .eq('id', order_id)
       .single();
 
@@ -67,11 +78,51 @@ export async function POST(request: NextRequest) {
       }, { status: 403 });
     }
 
+    // Eğer sipariş "planlandi" durumundaysa, "devam_ediyor"a geçir
+    if (order.status === 'planlandi') {
+      const { error: statusUpdateError } = await supabase
+        .from('semi_production_orders')
+        .update({ 
+          status: 'devam_ediyor',
+          started_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', order_id);
+      
+      if (statusUpdateError) {
+        logger.error('Status update error:', statusUpdateError);
+      } else {
+        order.status = 'devam_ediyor';
+        logger.log('✅ Order status updated to devam_ediyor');
+      }
+    }
+
     if (order.status !== 'devam_ediyor') {
       return NextResponse.json({ 
         error: 'Bu sipariş aktif değil',
-        details: `Sipariş durumu: ${order.status} (gerekli: devam_ediyor)`
+        details: `Sipariş durumu: ${order.status} (gerekli: devam_ediyor veya planlandi)`
       }, { status: 400 });
+    }
+
+    // Barkod doğrulaması
+    const product = order.semi_finished_products;
+    if (product) {
+      const expectedIdentifier = product.barcode || product.code;
+      if (barcode_scanned.trim() !== expectedIdentifier) {
+        const identifierType = product.barcode ? 'barkod' : 'ürün kodu';
+        logger.warn('Barcode mismatch:', {
+          expected: expectedIdentifier,
+          received: barcode_scanned,
+          product_id: order.product_id,
+        });
+        return NextResponse.json({ 
+          error: `❌ Üretim yapılamadı!\n\n🔍 Problem: Yanlış ${identifierType}\n• Beklenen: ${expectedIdentifier}\n• Girilen: ${barcode_scanned.trim()}\n\n💡 Çözüm: Doğru ${identifierType} ile tekrar deneyin.`,
+          expected: expectedIdentifier,
+          received: barcode_scanned.trim()
+        }, { status: 400 });
+      }
+    } else {
+      logger.warn('Product not found for order:', order_id);
     }
 
     // Yeni üretim miktarını hesapla
