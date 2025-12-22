@@ -17,9 +17,9 @@
     },
     {
       "parameters": {
-        "text": "={{ `Sipariş ${$json.body.plan_id} için üretim planlaması yap. Plan bilgilerini, BOM'u, stok durumunu ve kapasiteyi Supabase'den çekerek değerlendir. Yanıtı JSON formatında ver: {\"decision\": \"approved\" | \"rejected\" | \"needs_review\", \"reasoning\": \"...\", \"confidence\": 0.0-1.0}` }}",
+        "text": "={{ `Plan ID: ${$json.body.plan_id}\n\nBu plan için üretim planlaması yap. Supabase tool'unu kullanarak SADECE bu plan_id'ye ait verileri çek:\n1. production_plans tablosundan id='${$json.body.plan_id}' olan planı çek\n2. Bu planın order_id'sini kullanarak orders tablosundan sipariş bilgilerini al\n3. Bu planın product_id'sini kullanarak finished_products tablosundan ürün bilgilerini al\n4. operators tablosundan aktif operatörleri ve kapasite bilgilerini çek\n\nÖNEMLİ: Tüm tabloyu çekme, sadece bu plan_id ile ilgili verileri filtrele!\n\nYanıtı JSON formatında ver: {\"decision\": \"approved\" | \"rejected\" | \"needs_review\", \"reasoning\": \"...\", \"confidence\": 0.0-1.0}` }}",
         "options": {
-          "systemMessage": "Sen Planning Agent'sın. Üretim planlaması, zamanlama ve kapasite uygunluğunu değerlendiriyorsun. Supabase tool'unu kullanarak gerçek verileri çek ve analiz et. Önce production_plans tablosundan plan_id ile plan bilgilerini çek, sonra orders ve finished_products bilgilerini al. Kapasite için operators tablosunu kontrol et."
+          "systemMessage": "Sen Planning Agent'sın. Üretim planlaması, zamanlama ve kapasite uygunluğunu değerlendiriyorsun. Supabase tool'unu kullanırken MUTLAKA filtreleme yap: production_plans tablosunda id filtresi kullan, tüm tabloyu çekme! Önce belirtilen plan_id ile production_plans'tan plan bilgilerini çek, sonra bu planın order_id ve product_id'sini kullanarak ilgili orders ve finished_products kayıtlarını al. Kapasite için operators tablosundan sadece aktif (status='active') operatörleri çek."
         }
       },
       "id": "planning-agent",
@@ -75,9 +75,9 @@
     },
     {
       "parameters": {
-        "text": "={{ `Sipariş ${$json.body.plan_id} için üretilebilirliği değerlendir. Üretim hattı, operatör ve süre açısından analiz yap. Supabase'den gerçek verileri çek. Yanıtı JSON formatında ver: {\"decision\": \"approved\" | \"rejected\" | \"needs_review\", \"reasoning\": \"...\", \"confidence\": 0.0-1.0}` }}",
+        "text": "={{ `Plan ID: ${$json.body.plan_id}\n\nBu plan için üretilebilirliği değerlendir. Supabase tool'unu kullanarak SADECE bu plan ile ilgili verileri çek:\n1. production_plans tablosundan id='${$json.body.plan_id}' olan planı çek\n2. operators tablosundan sadece aktif (status='active') operatörleri çek\n3. Bu planın product_id'sini kullanarak üretim süresi bilgilerini kontrol et\n\nÖNEMLİ: Tüm tabloyu çekme, sadece bu plan_id ile ilgili verileri filtrele!\n\nYanıtı JSON formatında ver: {\"decision\": \"approved\" | \"rejected\" | \"needs_review\", \"reasoning\": \"...\", \"confidence\": 0.0-1.0}` }}",
         "options": {
-          "systemMessage": "Sen Production Agent'sın. Üretim hattı, operatör atama ve üretim süresini değerlendiriyorsun. Supabase tool'unu kullanarak operators tablosundan aktif operatörleri ve daily_capacity bilgilerini çek. Ayrıca production_plans tablosundan aktif planları kontrol et."
+          "systemMessage": "Sen Production Agent'sın. Üretim hattı, operatör atama ve üretim süresini değerlendiriyorsun. Supabase tool'unu kullanırken MUTLAKA filtreleme yap: production_plans tablosunda id filtresi kullan, operators tablosunda status='active' filtresi kullan, tüm tabloyu çekme! Sadece belirtilen plan_id ile ilgili verileri çek."
         }
       },
       "id": "production-agent",
@@ -133,9 +133,9 @@
     },
     {
       "parameters": {
-        "text": "={{ `Sipariş ${$json.body.plan_id} için stok ve malzeme yeterliliğini değerlendir. BOM ve stok durumunu Supabase'den çek. Yanıtı JSON formatında ver: {\"decision\": \"approved\" | \"rejected\" | \"needs_review\", \"reasoning\": \"...\", \"confidence\": 0.0-1.0}` }}",
+        "text": "={{ `Plan ID: ${$json.body.plan_id}\n\nBu plan için stok ve malzeme yeterliliğini değerlendir. Supabase tool'unu kullanarak SADECE bu plan ile ilgili verileri çek:\n1. production_plans tablosundan id='${$json.body.plan_id}' olan planı çek\n2. Bu planın product_id'sini kullanarak bom tablosundan sadece bu ürüne ait malzeme listesini çek (product_id filtresi kullan)\n3. Her malzeme için raw_materials veya semi_finished_products tablolarından stok bilgilerini kontrol et (material_id filtresi kullan)\n\nÖNEMLİ: Tüm tabloyu çekme, sadece bu plan_id ve product_id ile ilgili verileri filtrele!\n\nYanıtı JSON formatında ver: {\"decision\": \"approved\" | \"rejected\" | \"needs_review\", \"reasoning\": \"...\", \"confidence\": 0.0-1.0}` }}",
         "options": {
-          "systemMessage": "Sen Warehouse Agent'sın. Stok yeterliliği, malzeme rezervasyonu ve kritik seviyeleri değerlendiriyorsun. Supabase tool'unu kullanarak önce production_plans'tan product_id'yi al, sonra bom tablosundan malzeme listesini çek. Her malzeme için raw_materials veya semi_finished_products tablolarından stok bilgilerini kontrol et."
+          "systemMessage": "Sen Warehouse Agent'sın. Stok yeterliliği, malzeme rezervasyonu ve kritik seviyeleri değerlendiriyorsun. Supabase tool'unu kullanırken MUTLAKA filtreleme yap: production_plans tablosunda id filtresi kullan, bom tablosunda product_id filtresi kullan, raw_materials ve semi_finished_products tablolarında material_id filtresi kullan, tüm tabloyu çekme! Önce belirtilen plan_id ile production_plans'tan product_id'yi al, sonra bu product_id ile bom'dan malzeme listesini çek, her malzeme için stok bilgilerini kontrol et."
         }
       },
       "id": "warehouse-agent",
