@@ -190,9 +190,15 @@ export default function YariMamulUretimPage() {
         });
         fetchProductionOrders();
       } else {
+        // Debug: API response'unu logla
+        console.log('API Error Response:', data);
+        console.log('Insufficient Materials:', data.insufficient_materials);
+        console.log('Details:', data.details);
+        
         // Detaylı hata mesajını dialog'da göster
-        if (data.insufficient_materials && data.insufficient_materials.length > 0) {
+        if (data.insufficient_materials && Array.isArray(data.insufficient_materials) && data.insufficient_materials.length > 0) {
           // Eksik malzemeler varsa dialog aç
+          console.log('Opening dialog with insufficient materials:', data.insufficient_materials.length);
           setStockErrorDialog({
             isOpen: true,
             error: data.error || 'Yeterli stok bulunmuyor',
@@ -201,12 +207,14 @@ export default function YariMamulUretimPage() {
           });
         } else if (data.details) {
           // Diğer hatalar için de dialog aç
+          console.log('Opening dialog with details only');
           setStockErrorDialog({
             isOpen: true,
             error: data.error || 'Bir hata oluştu',
             details: data.details,
           });
         } else {
+          console.log('Showing toast error');
           toast.error(data.error || 'Bir hata oluştu');
         }
       }
@@ -817,7 +825,14 @@ export default function YariMamulUretimPage() {
             )}
           </DialogHeader>
 
-          {stockErrorDialog.insufficientMaterials && stockErrorDialog.insufficientMaterials.length > 0 && (
+          {/* Debug info */}
+          {process.env.NODE_ENV === 'development' && (
+            <div className="text-xs text-gray-500 p-2 bg-gray-100 rounded">
+              Debug: insufficientMaterials length: {stockErrorDialog.insufficientMaterials?.length || 0}
+            </div>
+          )}
+
+          {stockErrorDialog.insufficientMaterials && Array.isArray(stockErrorDialog.insufficientMaterials) && stockErrorDialog.insufficientMaterials.length > 0 ? (
             <div className="space-y-4">
               <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />
@@ -881,13 +896,18 @@ export default function YariMamulUretimPage() {
                 </AlertDescription>
               </Alert>
             </div>
-          )}
-
-          {stockErrorDialog.details && !stockErrorDialog.insufficientMaterials && (
+          ) : stockErrorDialog.details ? (
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
               <AlertDescription className="whitespace-pre-wrap">
                 {stockErrorDialog.details}
+              </AlertDescription>
+            </Alert>
+          ) : (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                Stok kontrolü yapılamadı. Lütfen tekrar deneyin veya stok durumunu kontrol edin.
               </AlertDescription>
             </Alert>
           )}
