@@ -224,6 +224,23 @@ export async function POST(request: NextRequest) {
       `)
       .eq('status', 'active');
 
+    if (operatorsError) {
+      logger.error('Operators fetch error:', operatorsError);
+    } else {
+      logger.log(`Found ${operators?.length || 0} active operators`);
+      
+      // Debug: Tüm operatörleri kontrol et (status'e bakmadan)
+      const { data: allOperators } = await supabase
+        .from('operators')
+        .select('id, name, status, daily_capacity')
+        .limit(10);
+      
+      if (allOperators && allOperators.length > 0) {
+        logger.log(`Total operators in database: ${allOperators.length}`);
+        logger.log(`Operator statuses: ${allOperators.map(op => `${op.name}: ${op.status}`).join(', ')}`);
+      }
+    }
+
     const { data: activePlans, error: activePlansError } = await supabase
       .from('production_plans')
       .select('id, planned_quantity, produced_quantity, status, assigned_operator_id')
