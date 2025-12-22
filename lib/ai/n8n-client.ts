@@ -29,7 +29,7 @@ export class N8nClient {
     agentLogger.log(`🔧 Running n8n Planning Agent workflow`);
 
     try {
-      const response = await fetch(`${this.baseUrl}/webhook/planning-agent-advanced`, {
+      const response = await fetch(`${this.baseUrl}/webhook/planning-agent`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
