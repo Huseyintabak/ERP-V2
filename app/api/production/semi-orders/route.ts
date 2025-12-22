@@ -254,6 +254,8 @@ export async function POST(request: NextRequest) {
 
     // 3. Eğer eksik stok varsa, detaylı hata mesajı döndür
     logger.log(`📊 Stock check complete: ${insufficientMaterials.length} insufficient materials found`);
+    logger.log(`📊 Insufficient materials data:`, JSON.stringify(insufficientMaterials, null, 2));
+    
     if (insufficientMaterials.length > 0) {
       const materialsList = insufficientMaterials.map(m => 
         `• ${m.material_name} (${m.material_code}) - ${m.material_type}\n` +
@@ -262,11 +264,15 @@ export async function POST(request: NextRequest) {
         `  Eksik: ${m.shortage} ${m.unit}`
       ).join('\n\n');
 
-      return NextResponse.json({ 
+      const responseData = { 
         error: 'Yeterli stok bulunmuyor',
         details: `Aşağıdaki malzemelerde stok yetersizliği var:\n\n${materialsList}\n\nLütfen stok yönetimi sayfasından bu malzemelerin stok miktarını artırın.`,
         insufficient_materials: insufficientMaterials
-      }, { status: 400 });
+      };
+      
+      logger.log(`📤 Sending error response:`, JSON.stringify(responseData, null, 2));
+      
+      return NextResponse.json(responseData, { status: 400 });
     }
 
     // 4. Stoklar yeterliyse siparişi oluştur
