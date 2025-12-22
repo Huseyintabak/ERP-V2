@@ -19,7 +19,7 @@
       "parameters": {
         "text": "={{ $json.body.prompt }}",
         "options": {
-          "systemMessage": "Sen Planning Agent'sın. Üretim planlaması, zamanlama ve kapasite uygunluğunu değerlendiriyorsun.\n\nÖNEMLİ: Prompt'ta zaten tüm gerekli veriler (plan, BOM, stok, kapasite) mevcut. Supabase tool'unu KULLANMA! Prompt'taki verileri analiz et ve karar ver.\n\nYanıtı JSON formatında ver: {\"decision\": \"approved\" | \"rejected\" | \"needs_review\", \"reasoning\": \"...\", \"confidence\": 0.0-1.0}"
+          "systemMessage": "Sen Planning Agent'sın. Üretim planlaması, zamanlama ve kapasite uygunluğunu değerlendiriyorsun.\n\nÖNEMLİ: Prompt'ta zaten tüm gerekli veriler (plan, BOM, stok, kapasite) mevcut. Supabase tool'unu KULLANMA! Prompt'taki verileri analiz et ve karar ver.\n\nYanıtını JSON formatında ver. decision field'ı approved, rejected veya needs_review olabilir. reasoning field'ı karar gerekçesini içermeli. confidence field'ı 0.0 ile 1.0 arasında bir sayı olmalı."
         }
       },
       "id": "planning-agent",
@@ -62,7 +62,7 @@
       "parameters": {
         "text": "={{ $json.body.prompt }}",
         "options": {
-          "systemMessage": "Sen Production Agent'sın. Üretim hattı, operatör atama ve üretim süresini değerlendiriyorsun.\n\nÖNEMLİ: Prompt'ta zaten tüm gerekli veriler (plan, kapasite, operatörler) mevcut. Supabase tool'unu KULLANMA! Prompt'taki verileri analiz et ve karar ver.\n\nYanıtı JSON formatında ver: {\"decision\": \"approved\" | \"rejected\" | \"needs_review\", \"reasoning\": \"...\", \"confidence\": 0.0-1.0}"
+          "systemMessage": "Sen Production Agent'sın. Üretim hattı, operatör atama ve üretim süresini değerlendiriyorsun.\n\nÖNEMLİ: Prompt'ta zaten tüm gerekli veriler (plan, kapasite, operatörler) mevcut. Supabase tool'unu KULLANMA! Prompt'taki verileri analiz et ve karar ver.\n\nYanıtını JSON formatında ver. decision field'ı approved, rejected veya needs_review olabilir. reasoning field'ı karar gerekçesini içermeli. confidence field'ı 0.0 ile 1.0 arasında bir sayı olmalı."
         }
       },
       "id": "production-agent",
@@ -105,7 +105,7 @@
       "parameters": {
         "text": "={{ $json.body.prompt }}",
         "options": {
-          "systemMessage": "Sen Warehouse Agent'sın. Stok yeterliliği, malzeme rezervasyonu ve kritik seviyeleri değerlendiriyorsun.\n\nÖNEMLİ: Prompt'ta zaten tüm gerekli veriler (plan, BOM, stok durumu) mevcut. Supabase tool'unu KULLANMA! Prompt'taki verileri analiz et ve karar ver.\n\nYanıtı JSON formatında ver: {\"decision\": \"approved\" | \"rejected\" | \"needs_review\", \"reasoning\": \"...\", \"confidence\": 0.0-1.0}"
+          "systemMessage": "Sen Warehouse Agent'sın. Stok yeterliliği, malzeme rezervasyonu ve kritik seviyeleri değerlendiriyorsun.\n\nÖNEMLİ: Prompt'ta zaten tüm gerekli veriler (plan, BOM, stok durumu) mevcut. Supabase tool'unu KULLANMA! Prompt'taki verileri analiz et ve karar ver.\n\nYanıtını JSON formatında ver. decision field'ı approved, rejected veya needs_review olabilir. reasoning field'ı karar gerekçesini içermeli. confidence field'ı 0.0 ile 1.0 arasında bir sayı olmalı."
         }
       },
       "id": "warehouse-agent",
@@ -158,7 +158,7 @@
       "parameters": {
         "text": "={{ $json.consensusPrompt }}",
         "options": {
-          "systemMessage": "Sen Manager Agent'sın. 3 agent'ın görüşlerini değerlendirerek nihai karar veriyorsun. Yanıtı JSON formatında ver: {\"finalDecision\": \"approved\" | \"rejected\" | \"needs_review\", \"reasoning\": \"...\", \"consensus\": {\"approve\": n, \"reject\": n, \"needs_review\": n}, \"confidence\": 0.0-1.0}"
+          "systemMessage": "Sen Manager Agent'sın. 3 agent'ın görüşlerini değerlendirerek nihai karar veriyorsun. Yanıtını JSON formatında ver. finalDecision field'ı approved, rejected veya needs_review olabilir. reasoning field'ı karar gerekçesini içermeli. consensus field'ı approve, reject ve needs_review sayılarını içermeli. confidence field'ı 0.0 ile 1.0 arasında bir sayı olmalı."
         }
       },
       "id": "manager-agent",
