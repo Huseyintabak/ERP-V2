@@ -60,24 +60,13 @@
     },
     {
       "parameters": {
-        "jsCode": "// Agent output'unu parse et ve text'e çevir\nconst agentOutput = $input.item.json;\n\n// Agent node output formatı: [{\"output\": \"...\"}]\nlet content = '';\n\nif (Array.isArray(agentOutput) && agentOutput.length > 0) {\n  if (agentOutput[0].output && typeof agentOutput[0].output === 'string') {\n    content = agentOutput[0].output;\n  } else if (agentOutput[0].text) {\n    content = agentOutput[0].text;\n  } else {\n    content = JSON.stringify(agentOutput[0]);\n  }\n} else if (agentOutput.output && typeof agentOutput.output === 'string') {\n  content = agentOutput.output;\n} else if (agentOutput.text) {\n  content = agentOutput.text;\n} else if (typeof agentOutput === 'string') {\n  content = agentOutput;\n} else {\n  content = JSON.stringify(agentOutput);\n}\n\n// Eğer content zaten JSON ise, direkt döndür\n// Değilse, Structured Output Parser'ın parse edebilmesi için text olarak döndür\nreturn {\n  json: {\n    text: content\n  }\n};"
+        "jsCode": "// Agent output'unu parse et ve JSON Schema'ya göre validate et\nconst agentOutput = $input.item.json;\n\n// Agent node output formatı: [{\"output\": \"...\"}]\nlet content = '';\n\nif (Array.isArray(agentOutput) && agentOutput.length > 0) {\n  if (agentOutput[0].output && typeof agentOutput[0].output === 'string') {\n    content = agentOutput[0].output;\n  } else if (agentOutput[0].text) {\n    content = agentOutput[0].text;\n  } else {\n    content = JSON.stringify(agentOutput[0]);\n  }\n} else if (agentOutput.output && typeof agentOutput.output === 'string') {\n  content = agentOutput.output;\n} else if (agentOutput.text) {\n  content = agentOutput.text;\n} else if (typeof agentOutput === 'string') {\n  content = agentOutput;\n} else {\n  content = JSON.stringify(agentOutput);\n}\n\n// JSON parse etmeyi dene\nlet parsed = null;\ntry {\n  parsed = typeof content === 'string' ? JSON.parse(content) : content;\n} catch (e) {\n  // JSON parse edilemezse, text içinde JSON aramayı dene\n  const jsonMatch = content.match(/\\{[\\s\\S]*\\}/);\n  if (jsonMatch) {\n    try {\n      parsed = JSON.parse(jsonMatch[0]);\n    } catch (e2) {\n      // JSON bulunamazsa, default değerler döndür\n      parsed = {\n        decision: 'needs_review',\n        reasoning: content.substring(0, 500),\n        confidence: 0.5\n      };\n    }\n  } else {\n    // JSON bulunamazsa, default değerler döndür\n    parsed = {\n      decision: 'needs_review',\n      reasoning: content.substring(0, 500),\n      confidence: 0.5\n    };\n  }\n}\n\n// JSON Schema validation\nconst schema = {\n  type: 'object',\n  properties: {\n    decision: { type: 'string', enum: ['approved', 'rejected', 'needs_review'] },\n    reasoning: { type: 'string' },\n    confidence: { type: 'number', minimum: 0, maximum: 1 }\n  },\n  required: ['decision', 'reasoning', 'confidence']\n};\n\n// Validate ve normalize\nconst result = {\n  decision: parsed.decision && ['approved', 'rejected', 'needs_review'].includes(parsed.decision) ? parsed.decision : 'needs_review',\n  reasoning: parsed.reasoning && typeof parsed.reasoning === 'string' ? parsed.reasoning : (parsed.reasoning || 'Gerekçe belirtilmedi'),\n  confidence: typeof parsed.confidence === 'number' && parsed.confidence >= 0 && parsed.confidence <= 1 ? parsed.confidence : 0.5\n};\n\nreturn {\n  json: result\n};"
       },
       "id": "planning-extract",
-      "name": "Extract Planning Output",
+      "name": "Parse Planning Output",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [700, 300]
-    },
-    {
-      "parameters": {
-        "schemaType": "jsonSchema",
-        "jsonSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"decision\": {\n      \"type\": \"string\",\n      \"enum\": [\"approved\", \"rejected\", \"needs_review\"]\n    },\n    \"reasoning\": {\n      \"type\": \"string\"\n    },\n    \"confidence\": {\n      \"type\": \"number\",\n      \"minimum\": 0,\n      \"maximum\": 1\n    }\n  },\n  \"required\": [\"decision\", \"reasoning\", \"confidence\"]\n}"
-      },
-      "id": "planning-parser",
-      "name": "Structured Output Parser (Planning)",
-      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
-      "typeVersion": 1,
-      "position": [900, 300]
     },
     {
       "parameters": {
@@ -124,24 +113,13 @@
     },
     {
       "parameters": {
-        "jsCode": "// Agent output'unu parse et ve text'e çevir\nconst agentOutput = $input.item.json;\n\n// Agent node output formatı: [{\"output\": \"...\"}]\nlet content = '';\n\nif (Array.isArray(agentOutput) && agentOutput.length > 0) {\n  if (agentOutput[0].output && typeof agentOutput[0].output === 'string') {\n    content = agentOutput[0].output;\n  } else if (agentOutput[0].text) {\n    content = agentOutput[0].text;\n  } else {\n    content = JSON.stringify(agentOutput[0]);\n  }\n} else if (agentOutput.output && typeof agentOutput.output === 'string') {\n  content = agentOutput.output;\n} else if (agentOutput.text) {\n  content = agentOutput.text;\n} else if (typeof agentOutput === 'string') {\n  content = agentOutput;\n} else {\n  content = JSON.stringify(agentOutput);\n}\n\n// Eğer content zaten JSON ise, direkt döndür\n// Değilse, Structured Output Parser'ın parse edebilmesi için text olarak döndür\nreturn {\n  json: {\n    text: content\n  }\n};"
+        "jsCode": "// Agent output'unu parse et ve JSON Schema'ya göre validate et\nconst agentOutput = $input.item.json;\n\n// Agent node output formatı: [{\"output\": \"...\"}]\nlet content = '';\n\nif (Array.isArray(agentOutput) && agentOutput.length > 0) {\n  if (agentOutput[0].output && typeof agentOutput[0].output === 'string') {\n    content = agentOutput[0].output;\n  } else if (agentOutput[0].text) {\n    content = agentOutput[0].text;\n  } else {\n    content = JSON.stringify(agentOutput[0]);\n  }\n} else if (agentOutput.output && typeof agentOutput.output === 'string') {\n  content = agentOutput.output;\n} else if (agentOutput.text) {\n  content = agentOutput.text;\n} else if (typeof agentOutput === 'string') {\n  content = agentOutput;\n} else {\n  content = JSON.stringify(agentOutput);\n}\n\n// JSON parse etmeyi dene\nlet parsed = null;\ntry {\n  parsed = typeof content === 'string' ? JSON.parse(content) : content;\n} catch (e) {\n  // JSON parse edilemezse, text içinde JSON aramayı dene\n  const jsonMatch = content.match(/\\{[\\s\\S]*\\}/);\n  if (jsonMatch) {\n    try {\n      parsed = JSON.parse(jsonMatch[0]);\n    } catch (e2) {\n      // JSON bulunamazsa, default değerler döndür\n      parsed = {\n        decision: 'needs_review',\n        reasoning: content.substring(0, 500),\n        confidence: 0.5\n      };\n    }\n  } else {\n    // JSON bulunamazsa, default değerler döndür\n    parsed = {\n      decision: 'needs_review',\n      reasoning: content.substring(0, 500),\n      confidence: 0.5\n    };\n  }\n}\n\n// JSON Schema validation\nconst schema = {\n  type: 'object',\n  properties: {\n    decision: { type: 'string', enum: ['approved', 'rejected', 'needs_review'] },\n    reasoning: { type: 'string' },\n    confidence: { type: 'number', minimum: 0, maximum: 1 }\n  },\n  required: ['decision', 'reasoning', 'confidence']\n};\n\n// Validate ve normalize\nconst result = {\n  decision: parsed.decision && ['approved', 'rejected', 'needs_review'].includes(parsed.decision) ? parsed.decision : 'needs_review',\n  reasoning: parsed.reasoning && typeof parsed.reasoning === 'string' ? parsed.reasoning : (parsed.reasoning || 'Gerekçe belirtilmedi'),\n  confidence: typeof parsed.confidence === 'number' && parsed.confidence >= 0 && parsed.confidence <= 1 ? parsed.confidence : 0.5\n};\n\nreturn {\n  json: result\n};"
       },
       "id": "production-extract",
-      "name": "Extract Production Output",
+      "name": "Parse Production Output",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [700, 700]
-    },
-    {
-      "parameters": {
-        "schemaType": "jsonSchema",
-        "jsonSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"decision\": {\n      \"type\": \"string\",\n      \"enum\": [\"approved\", \"rejected\", \"needs_review\"]\n    },\n    \"reasoning\": {\n      \"type\": \"string\"\n    },\n    \"confidence\": {\n      \"type\": \"number\",\n      \"minimum\": 0,\n      \"maximum\": 1\n    }\n  },\n  \"required\": [\"decision\", \"reasoning\", \"confidence\"]\n}"
-      },
-      "id": "production-parser",
-      "name": "Structured Output Parser (Production)",
-      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
-      "typeVersion": 1,
-      "position": [900, 700]
     },
     {
       "parameters": {
@@ -188,24 +166,13 @@
     },
     {
       "parameters": {
-        "jsCode": "// Agent output'unu parse et ve text'e çevir\nconst agentOutput = $input.item.json;\n\n// Agent node output formatı: [{\"output\": \"...\"}]\nlet content = '';\n\nif (Array.isArray(agentOutput) && agentOutput.length > 0) {\n  if (agentOutput[0].output && typeof agentOutput[0].output === 'string') {\n    content = agentOutput[0].output;\n  } else if (agentOutput[0].text) {\n    content = agentOutput[0].text;\n  } else {\n    content = JSON.stringify(agentOutput[0]);\n  }\n} else if (agentOutput.output && typeof agentOutput.output === 'string') {\n  content = agentOutput.output;\n} else if (agentOutput.text) {\n  content = agentOutput.text;\n} else if (typeof agentOutput === 'string') {\n  content = agentOutput;\n} else {\n  content = JSON.stringify(agentOutput);\n}\n\n// Eğer content zaten JSON ise, direkt döndür\n// Değilse, Structured Output Parser'ın parse edebilmesi için text olarak döndür\nreturn {\n  json: {\n    text: content\n  }\n};"
+        "jsCode": "// Agent output'unu parse et ve JSON Schema'ya göre validate et\nconst agentOutput = $input.item.json;\n\n// Agent node output formatı: [{\"output\": \"...\"}]\nlet content = '';\n\nif (Array.isArray(agentOutput) && agentOutput.length > 0) {\n  if (agentOutput[0].output && typeof agentOutput[0].output === 'string') {\n    content = agentOutput[0].output;\n  } else if (agentOutput[0].text) {\n    content = agentOutput[0].text;\n  } else {\n    content = JSON.stringify(agentOutput[0]);\n  }\n} else if (agentOutput.output && typeof agentOutput.output === 'string') {\n  content = agentOutput.output;\n} else if (agentOutput.text) {\n  content = agentOutput.text;\n} else if (typeof agentOutput === 'string') {\n  content = agentOutput;\n} else {\n  content = JSON.stringify(agentOutput);\n}\n\n// JSON parse etmeyi dene\nlet parsed = null;\ntry {\n  parsed = typeof content === 'string' ? JSON.parse(content) : content;\n} catch (e) {\n  // JSON parse edilemezse, text içinde JSON aramayı dene\n  const jsonMatch = content.match(/\\{[\\s\\S]*\\}/);\n  if (jsonMatch) {\n    try {\n      parsed = JSON.parse(jsonMatch[0]);\n    } catch (e2) {\n      // JSON bulunamazsa, default değerler döndür\n      parsed = {\n        decision: 'needs_review',\n        reasoning: content.substring(0, 500),\n        confidence: 0.5\n      };\n    }\n  } else {\n    // JSON bulunamazsa, default değerler döndür\n    parsed = {\n      decision: 'needs_review',\n      reasoning: content.substring(0, 500),\n      confidence: 0.5\n    };\n  }\n}\n\n// JSON Schema validation\nconst schema = {\n  type: 'object',\n  properties: {\n    decision: { type: 'string', enum: ['approved', 'rejected', 'needs_review'] },\n    reasoning: { type: 'string' },\n    confidence: { type: 'number', minimum: 0, maximum: 1 }\n  },\n  required: ['decision', 'reasoning', 'confidence']\n};\n\n// Validate ve normalize\nconst result = {\n  decision: parsed.decision && ['approved', 'rejected', 'needs_review'].includes(parsed.decision) ? parsed.decision : 'needs_review',\n  reasoning: parsed.reasoning && typeof parsed.reasoning === 'string' ? parsed.reasoning : (parsed.reasoning || 'Gerekçe belirtilmedi'),\n  confidence: typeof parsed.confidence === 'number' && parsed.confidence >= 0 && parsed.confidence <= 1 ? parsed.confidence : 0.5\n};\n\nreturn {\n  json: result\n};"
       },
       "id": "warehouse-extract",
-      "name": "Extract Warehouse Output",
+      "name": "Parse Warehouse Output",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [700, 1100]
-    },
-    {
-      "parameters": {
-        "schemaType": "jsonSchema",
-        "jsonSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"decision\": {\n      \"type\": \"string\",\n      \"enum\": [\"approved\", \"rejected\", \"needs_review\"]\n    },\n    \"reasoning\": {\n      \"type\": \"string\"\n    },\n    \"confidence\": {\n      \"type\": \"number\",\n      \"minimum\": 0,\n      \"maximum\": 1\n    }\n  },\n  \"required\": [\"decision\", \"reasoning\", \"confidence\"]\n}"
-      },
-      "id": "warehouse-parser",
-      "name": "Structured Output Parser (Warehouse)",
-      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
-      "typeVersion": 1,
-      "position": [900, 1100]
     },
     {
       "parameters": {
@@ -215,7 +182,7 @@
       "name": "Aggregate Responses",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1100, 700]
+      "position": [900, 700]
     },
     {
       "parameters": {
@@ -228,7 +195,7 @@
       "name": "Manager Agent (Consensus)",
       "type": "@n8n/n8n-nodes-langchain.agent",
       "typeVersion": 1,
-      "position": [1300, 700]
+      "position": [1100, 700]
     },
     {
       "parameters": {
@@ -242,7 +209,7 @@
       "name": "GPT-4o (Manager)",
       "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
       "typeVersion": 1,
-      "position": [1300, 600],
+      "position": [1100, 600],
       "credentials": {
         "openAiApi": {
           "id": "openai-credentials",
@@ -258,28 +225,17 @@
       "name": "Simple Memory (Manager)",
       "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
       "typeVersion": 1,
-      "position": [1300, 800]
+      "position": [1100, 800]
     },
     {
       "parameters": {
-        "jsCode": "// Agent output'unu parse et ve text'e çevir\nconst agentOutput = $input.item.json;\n\n// Agent node output formatı: [{\"output\": \"...\"}]\nlet content = '';\n\nif (Array.isArray(agentOutput) && agentOutput.length > 0) {\n  if (agentOutput[0].output && typeof agentOutput[0].output === 'string') {\n    content = agentOutput[0].output;\n  } else if (agentOutput[0].text) {\n    content = agentOutput[0].text;\n  } else {\n    content = JSON.stringify(agentOutput[0]);\n  }\n} else if (agentOutput.output && typeof agentOutput.output === 'string') {\n  content = agentOutput.output;\n} else if (agentOutput.text) {\n  content = agentOutput.text;\n} else if (typeof agentOutput === 'string') {\n  content = agentOutput;\n} else {\n  content = JSON.stringify(agentOutput);\n}\n\n// Eğer content zaten JSON ise, direkt döndür\n// Değilse, Structured Output Parser'ın parse edebilmesi için text olarak döndür\nreturn {\n  json: {\n    text: content\n  }\n};"
+        "jsCode": "// Agent output'unu parse et ve JSON Schema'ya göre validate et\nconst agentOutput = $input.item.json;\nconst aggregate = $node[\"Aggregate Responses\"].json;\n\n// Agent node output formatı: [{\"output\": \"...\"}]\nlet content = '';\n\nif (Array.isArray(agentOutput) && agentOutput.length > 0) {\n  if (agentOutput[0].output && typeof agentOutput[0].output === 'string') {\n    content = agentOutput[0].output;\n  } else if (agentOutput[0].text) {\n    content = agentOutput[0].text;\n  } else {\n    content = JSON.stringify(agentOutput[0]);\n  }\n} else if (agentOutput.output && typeof agentOutput.output === 'string') {\n  content = agentOutput.output;\n} else if (agentOutput.text) {\n  content = agentOutput.text;\n} else if (typeof agentOutput === 'string') {\n  content = agentOutput;\n} else {\n  content = JSON.stringify(agentOutput);\n}\n\n// JSON parse etmeyi dene\nlet parsed = null;\ntry {\n  parsed = typeof content === 'string' ? JSON.parse(content) : content;\n} catch (e) {\n  // JSON parse edilemezse, text içinde JSON aramayı dene\n  const jsonMatch = content.match(/\\{[\\s\\S]*\\}/);\n  if (jsonMatch) {\n    try {\n      parsed = JSON.parse(jsonMatch[0]);\n    } catch (e2) {\n      // JSON bulunamazsa, default değerler döndür\n      parsed = {\n        finalDecision: 'needs_review',\n        reasoning: content.substring(0, 500),\n        consensus: aggregate.consensus || { approve: 0, reject: 0, needs_review: 0 },\n        confidence: 0.5\n      };\n    }\n  } else {\n    // JSON bulunamazsa, default değerler döndür\n    parsed = {\n      finalDecision: 'needs_review',\n      reasoning: content.substring(0, 500),\n      consensus: aggregate.consensus || { approve: 0, reject: 0, needs_review: 0 },\n      confidence: 0.5\n    };\n  }\n}\n\n// JSON Schema validation ve normalize\nconst result = {\n  finalDecision: parsed.finalDecision && ['approved', 'rejected', 'needs_review'].includes(parsed.finalDecision) ? parsed.finalDecision : 'needs_review',\n  reasoning: parsed.reasoning && typeof parsed.reasoning === 'string' ? parsed.reasoning : (parsed.reasoning || 'Gerekçe belirtilmedi'),\n  consensus: parsed.consensus && typeof parsed.consensus === 'object' ? {\n    approve: typeof parsed.consensus.approve === 'number' ? parsed.consensus.approve : (aggregate.consensus?.approve || 0),\n    reject: typeof parsed.consensus.reject === 'number' ? parsed.consensus.reject : (aggregate.consensus?.reject || 0),\n    needs_review: typeof parsed.consensus.needs_review === 'number' ? parsed.consensus.needs_review : (aggregate.consensus?.needs_review || 0)\n  } : (aggregate.consensus || { approve: 0, reject: 0, needs_review: 0 }),\n  confidence: typeof parsed.confidence === 'number' && parsed.confidence >= 0 && parsed.confidence <= 1 ? parsed.confidence : 0.5\n};\n\nreturn {\n  json: result\n};"
       },
       "id": "manager-extract",
-      "name": "Extract Manager Output",
+      "name": "Parse Manager Output",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1400, 700]
-    },
-    {
-      "parameters": {
-        "schemaType": "jsonSchema",
-        "jsonSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"finalDecision\": {\n      \"type\": \"string\",\n      \"enum\": [\"approved\", \"rejected\", \"needs_review\"]\n    },\n    \"reasoning\": {\n      \"type\": \"string\"\n    },\n    \"consensus\": {\n      \"type\": \"object\",\n      \"properties\": {\n        \"approve\": {\n          \"type\": \"number\"\n        },\n        \"reject\": {\n          \"type\": \"number\"\n        },\n        \"needs_review\": {\n          \"type\": \"number\"\n        }\n      },\n      \"required\": [\"approve\", \"reject\", \"needs_review\"]\n    },\n    \"confidence\": {\n      \"type\": \"number\",\n      \"minimum\": 0,\n      \"maximum\": 1\n    }\n  },\n  \"required\": [\"finalDecision\", \"reasoning\", \"consensus\", \"confidence\"]\n}"
-      },
-      "id": "manager-parser",
-      "name": "Structured Output Parser (Manager)",
-      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
-      "typeVersion": 1,
-      "position": [1600, 700]
+      "position": [1500, 700]
     },
     {
       "parameters": {
@@ -289,7 +245,7 @@
       "name": "Format Response",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1800, 700]
+      "position": [1700, 700]
     },
     {
       "parameters": {
@@ -301,7 +257,7 @@
       "name": "Respond to Webhook",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
-      "position": [2000, 700]
+      "position": [1900, 700]
     }
   ],
   "connections": {
@@ -330,25 +286,14 @@
       "main": [
         [
           {
-            "node": "Extract Planning Output",
+            "node": "Parse Planning Output",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Extract Planning Output": {
-      "main": [
-        [
-          {
-            "node": "Structured Output Parser (Planning)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Structured Output Parser (Planning)": {
+    "Parse Planning Output": {
       "main": [
         [
           {
@@ -363,25 +308,14 @@
       "main": [
         [
           {
-            "node": "Extract Production Output",
+            "node": "Parse Production Output",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Extract Production Output": {
-      "main": [
-        [
-          {
-            "node": "Structured Output Parser (Production)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Structured Output Parser (Production)": {
+    "Parse Production Output": {
       "main": [
         [
           {
@@ -396,25 +330,14 @@
       "main": [
         [
           {
-            "node": "Extract Warehouse Output",
+            "node": "Parse Warehouse Output",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Extract Warehouse Output": {
-      "main": [
-        [
-          {
-            "node": "Structured Output Parser (Warehouse)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Structured Output Parser (Warehouse)": {
+    "Parse Warehouse Output": {
       "main": [
         [
           {
@@ -440,25 +363,14 @@
       "main": [
         [
           {
-            "node": "Extract Manager Output",
+            "node": "Parse Manager Output",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Extract Manager Output": {
-      "main": [
-        [
-          {
-            "node": "Structured Output Parser (Manager)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Structured Output Parser (Manager)": {
+    "Parse Manager Output": {
       "main": [
         [
           {
