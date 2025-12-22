@@ -55,8 +55,7 @@ export async function POST(request: NextRequest) {
             priority,
             delivery_date,
             status,
-            quantity,
-            planned_quantity
+            total_quantity
           ),
           finished_products!production_plans_product_id_fkey (
             id,
@@ -89,8 +88,7 @@ export async function POST(request: NextRequest) {
           priority,
           delivery_date,
           status,
-          quantity,
-          planned_quantity,
+          total_quantity,
           product_id,
           finished_products!orders_product_id_fkey (
             id,
@@ -157,6 +155,16 @@ export async function POST(request: NextRequest) {
       `)
       .eq('finished_product_id', product.id);
 
+    // Planned quantity'yi önce hesapla (BOM hesaplamasında kullanılacak)
+    let plannedQuantity = 0;
+    if (plan?.planned_quantity && plan.planned_quantity > 0) {
+      plannedQuantity = plan.planned_quantity;
+    } else if (order?.total_quantity && order.total_quantity > 0) {
+      plannedQuantity = order.total_quantity;
+    } else if (order?.quantity && order.quantity > 0) {
+      plannedQuantity = order.quantity;
+    }
+
     if (bomError) {
       logger.error('BOM fetch error:', bomError);
     } else if (bomData) {
@@ -182,8 +190,6 @@ export async function POST(request: NextRequest) {
             criticalLevel = material.critical_level || 0;
             unitPrice = material.unit_cost || 0;
           }
-
-          const plannedQuantity = plan?.target_quantity || order?.planned_quantity || 0;
           const requiredQuantity = (item.quantity_needed || 0) * plannedQuantity;
           const availableStock = currentStock - reservedStock;
 
@@ -220,13 +226,13 @@ export async function POST(request: NextRequest) {
 
     const { data: activePlans, error: activePlansError } = await supabase
       .from('production_plans')
-      .select('id, target_quantity, produced_quantity, status, assigned_operator_id')
+      .select('id, planned_quantity, produced_quantity, status, assigned_operator_id')
       .in('status', ['devam_ediyor', 'planlandi']);
 
     // Kapasite hesaplama
     const totalDailyCapacity = operators?.reduce((sum, op) => sum + (op.daily_capacity || 0), 0) || 0;
     const activeProductionCount = activePlans?.length || 0;
-    const totalActiveQuantity = activePlans?.reduce((sum, p) => sum + (p.target_quantity || 0), 0) || 0;
+    const totalActiveQuantity = activePlans?.reduce((sum, p) => sum + (p.planned_quantity || 0), 0) || 0;
 
     productionCapacity = {
       total_operators: operators?.length || 0,
@@ -237,16 +243,7 @@ export async function POST(request: NextRequest) {
     };
 
     // 4. Prompt oluştur
-    // Planned quantity: Önce plan'dan al, yoksa veya 0 ise order'dan al
-    let plannedQuantity = 0;
-    if (plan?.target_quantity && plan.target_quantity > 0) {
-      plannedQuantity = plan.target_quantity;
-    } else if (order?.planned_quantity && order.planned_quantity > 0) {
-      plannedQuantity = order.planned_quantity;
-    } else if (order?.quantity && order.quantity > 0) {
-      // Fallback: order.quantity kullan
-      plannedQuantity = order.quantity;
-    }
+    // plannedQuantity zaten yukarıda hesaplandı (BOM hesaplamasında kullanıldı)
     const orderNumber = order?.order_number || 'N/A';
     const customerName = order?.customer_name || 'N/A';
     const deliveryDate = order?.delivery_date || 'N/A';
