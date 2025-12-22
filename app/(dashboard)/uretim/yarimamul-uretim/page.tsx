@@ -823,7 +823,7 @@ export default function YariMamulUretimPage() {
 
           <div className="space-y-4">
             {/* Show insufficient materials if available */}
-            {stockErrorDialog.insufficientMaterials && Array.isArray(stockErrorDialog.insufficientMaterials) && stockErrorDialog.insufficientMaterials.length > 0 ? (
+            {stockErrorDialog.insufficientMaterials && Array.isArray(stockErrorDialog.insufficientMaterials) && stockErrorDialog.insufficientMaterials.length > 0 && (
             <div className="space-y-4">
               <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />
