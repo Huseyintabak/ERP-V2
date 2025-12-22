@@ -2,46 +2,45 @@
   "name": "Thunder Multi-Agent Consensus (Supabase Native Tool)",
   "nodes": [
     {
-      "id": "webhook",
-      "name": "Webhook Trigger",
-      "type": "n8n-nodes-base.webhook",
-      "typeVersion": 1,
-      "position": [250, 500],
       "parameters": {
         "httpMethod": "POST",
         "path": "multi-agent-consensus",
         "responseMode": "responseNode",
         "options": {}
       },
+      "id": "webhook",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 500],
       "webhookId": "multi-agent-consensus"
     },
     {
-      "id": "planning-agent",
-      "name": "Planning Agent",
-      "type": "@n8n/n8n-nodes-langchain.agent",
-      "typeVersion": 1,
-      "position": [500, 300],
       "parameters": {
-        "promptType": "define",
         "text": "={{ `Sipariş ${$json.body.plan_id} için üretim planlaması yap. Plan bilgilerini, BOM'u, stok durumunu ve kapasiteyi Supabase'den çekerek değerlendir. Yanıtı JSON formatında ver: {\"decision\": \"approved\" | \"rejected\" | \"needs_review\", \"reasoning\": \"...\", \"confidence\": 0.0-1.0}` }}",
         "options": {
           "systemMessage": "Sen Planning Agent'sın. Üretim planlaması, zamanlama ve kapasite uygunluğunu değerlendiriyorsun. Supabase tool'unu kullanarak gerçek verileri çek ve analiz et. Önce production_plans tablosundan plan_id ile plan bilgilerini çek, sonra orders ve finished_products bilgilerini al. Kapasite için operators tablosunu kontrol et."
         }
-      }
+      },
+      "id": "planning-agent",
+      "name": "Planning Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1,
+      "position": [500, 300]
     },
     {
+      "parameters": {
+        "model": "gpt-4o",
+        "options": {
+          "maxTokens": 512,
+          "temperature": 0.5
+        }
+      },
       "id": "planning-model",
       "name": "GPT-4o (Planning)",
       "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
       "typeVersion": 1,
       "position": [500, 200],
-      "parameters": {
-        "model": "gpt-4o",
-        "options": {
-          "temperature": 0.5,
-          "maxTokens": 512
-        }
-      },
       "credentials": {
         "openAiApi": {
           "id": "openai-credentials",
@@ -50,42 +49,23 @@
       }
     },
     {
+      "parameters": {},
       "id": "planning-memory",
       "name": "Simple Memory (Planning)",
       "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
       "typeVersion": 1,
-      "position": [500, 400],
-      "parameters": {
-        "sessionId": "={{ $json.body.plan_id }}",
-        "sessionKeyType": "custom",
-        "windowSize": 5
-      }
+      "position": [500, 400]
     },
     {
-      "id": "planning-supabase-tool",
-      "name": "Supabase Tool (Planning)",
-      "type": "n8n-nodes-base.supabase",
-      "typeVersion": 1,
-      "position": [500, 500],
       "parameters": {
         "operation": "getAll",
-        "tableId": {
-          "__rl": true,
-          "value": "={{ $json.toolInput?.table || 'production_plans' }}",
-          "mode": "id"
-        },
-        "options": {
-          "select": "={{ $json.toolInput?.select || '*' }}",
-          "filter": {
-            "id": {
-              "condition": {
-                "type": "equals",
-                "value": "={{ $json.toolInput?.id || $json.body.plan_id }}"
-              }
-            }
-          }
-        }
+        "tableId": "={{ $json.toolInput?.table || 'production_plans' }}"
       },
+      "type": "n8n-nodes-base.supabaseTool",
+      "typeVersion": 1,
+      "position": [500, 500],
+      "id": "planning-supabase-tool",
+      "name": "Supabase Tool (Planning)",
       "credentials": {
         "supabaseApi": {
           "id": "supabase-credentials",
@@ -94,32 +74,31 @@
       }
     },
     {
-      "id": "production-agent",
-      "name": "Production Agent",
-      "type": "@n8n/n8n-nodes-langchain.agent",
-      "typeVersion": 1,
-      "position": [500, 700],
       "parameters": {
-        "promptType": "define",
         "text": "={{ `Sipariş ${$json.body.plan_id} için üretilebilirliği değerlendir. Üretim hattı, operatör ve süre açısından analiz yap. Supabase'den gerçek verileri çek. Yanıtı JSON formatında ver: {\"decision\": \"approved\" | \"rejected\" | \"needs_review\", \"reasoning\": \"...\", \"confidence\": 0.0-1.0}` }}",
         "options": {
           "systemMessage": "Sen Production Agent'sın. Üretim hattı, operatör atama ve üretim süresini değerlendiriyorsun. Supabase tool'unu kullanarak operators tablosundan aktif operatörleri ve daily_capacity bilgilerini çek. Ayrıca production_plans tablosundan aktif planları kontrol et."
         }
-      }
+      },
+      "id": "production-agent",
+      "name": "Production Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1,
+      "position": [500, 700]
     },
     {
+      "parameters": {
+        "model": "gpt-4o",
+        "options": {
+          "maxTokens": 512,
+          "temperature": 0.5
+        }
+      },
       "id": "production-model",
       "name": "GPT-4o (Production)",
       "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
       "typeVersion": 1,
       "position": [500, 600],
-      "parameters": {
-        "model": "gpt-4o",
-        "options": {
-          "temperature": 0.5,
-          "maxTokens": 512
-        }
-      },
       "credentials": {
         "openAiApi": {
           "id": "openai-credentials",
@@ -128,42 +107,23 @@
       }
     },
     {
+      "parameters": {},
       "id": "production-memory",
       "name": "Simple Memory (Production)",
       "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
       "typeVersion": 1,
-      "position": [500, 800],
-      "parameters": {
-        "sessionId": "={{ $json.body.plan_id }}",
-        "sessionKeyType": "custom",
-        "windowSize": 5
-      }
+      "position": [500, 800]
     },
     {
-      "id": "production-supabase-tool",
-      "name": "Supabase Tool (Production)",
-      "type": "n8n-nodes-base.supabase",
-      "typeVersion": 1,
-      "position": [500, 900],
       "parameters": {
         "operation": "getAll",
-        "tableId": {
-          "__rl": true,
-          "value": "={{ $json.toolInput?.table || 'operators' }}",
-          "mode": "id"
-        },
-        "options": {
-          "select": "={{ $json.toolInput?.select || '*' }}",
-          "filter": {
-            "is_active": {
-              "condition": {
-                "type": "equals",
-                "value": true
-              }
-            }
-          }
-        }
+        "tableId": "={{ $json.toolInput?.table || 'operators' }}"
       },
+      "type": "n8n-nodes-base.supabaseTool",
+      "typeVersion": 1,
+      "position": [500, 900],
+      "id": "production-supabase-tool",
+      "name": "Supabase Tool (Production)",
       "credentials": {
         "supabaseApi": {
           "id": "supabase-credentials",
@@ -172,32 +132,31 @@
       }
     },
     {
-      "id": "warehouse-agent",
-      "name": "Warehouse Agent",
-      "type": "@n8n/n8n-nodes-langchain.agent",
-      "typeVersion": 1,
-      "position": [500, 1100],
       "parameters": {
-        "promptType": "define",
         "text": "={{ `Sipariş ${$json.body.plan_id} için stok ve malzeme yeterliliğini değerlendir. BOM ve stok durumunu Supabase'den çek. Yanıtı JSON formatında ver: {\"decision\": \"approved\" | \"rejected\" | \"needs_review\", \"reasoning\": \"...\", \"confidence\": 0.0-1.0}` }}",
         "options": {
           "systemMessage": "Sen Warehouse Agent'sın. Stok yeterliliği, malzeme rezervasyonu ve kritik seviyeleri değerlendiriyorsun. Supabase tool'unu kullanarak önce production_plans'tan product_id'yi al, sonra bom tablosundan malzeme listesini çek. Her malzeme için raw_materials veya semi_finished_products tablolarından stok bilgilerini kontrol et."
         }
-      }
+      },
+      "id": "warehouse-agent",
+      "name": "Warehouse Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1,
+      "position": [500, 1100]
     },
     {
+      "parameters": {
+        "model": "gpt-4o",
+        "options": {
+          "maxTokens": 512,
+          "temperature": 0.5
+        }
+      },
       "id": "warehouse-model",
       "name": "GPT-4o (Warehouse)",
       "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
       "typeVersion": 1,
       "position": [500, 1000],
-      "parameters": {
-        "model": "gpt-4o",
-        "options": {
-          "temperature": 0.5,
-          "maxTokens": 512
-        }
-      },
       "credentials": {
         "openAiApi": {
           "id": "openai-credentials",
@@ -206,34 +165,23 @@
       }
     },
     {
+      "parameters": {},
       "id": "warehouse-memory",
       "name": "Simple Memory (Warehouse)",
       "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
       "typeVersion": 1,
-      "position": [500, 1200],
-      "parameters": {
-        "sessionId": "={{ $json.body.plan_id }}",
-        "sessionKeyType": "custom",
-        "windowSize": 5
-      }
+      "position": [500, 1200]
     },
     {
-      "id": "warehouse-supabase-tool",
-      "name": "Supabase Tool (Warehouse)",
-      "type": "n8n-nodes-base.supabase",
-      "typeVersion": 1,
-      "position": [500, 1300],
       "parameters": {
         "operation": "getAll",
-        "tableId": {
-          "__rl": true,
-          "value": "={{ $json.toolInput?.table || 'bom' }}",
-          "mode": "id"
-        },
-        "options": {
-          "select": "={{ $json.toolInput?.select || '*' }}"
-        }
+        "tableId": "={{ $json.toolInput?.table || 'bom' }}"
       },
+      "type": "n8n-nodes-base.supabaseTool",
+      "typeVersion": 1,
+      "position": [500, 1300],
+      "id": "warehouse-supabase-tool",
+      "name": "Supabase Tool (Warehouse)",
       "credentials": {
         "supabaseApi": {
           "id": "supabase-credentials",
@@ -242,42 +190,41 @@
       }
     },
     {
+      "parameters": {
+        "jsCode": "const planning = $node[\"Planning Agent\"].json;\nconst production = $node[\"Production Agent\"].json;\nconst warehouse = $node[\"Warehouse Agent\"].json;\n\nfunction parseAgent(input, name) {\n  let content = '';\n  if (input.output && typeof input.output === 'string') {\n    content = input.output;\n  } else if (input.text) {\n    content = input.text;\n  } else if (typeof input === 'string') {\n    content = input;\n  } else {\n    content = JSON.stringify(input);\n  }\n  \n  try {\n    if (typeof content === 'string') {\n      const parsed = JSON.parse(content);\n      return parsed;\n    }\n    return content;\n  } catch (e) {\n    return {\n      decision: 'needs_review',\n      reasoning: `${name} agent cevabı: ${content}`,\n      confidence: 0.5\n    };\n  }\n}\n\nconst p = parseAgent(planning, 'Planning');\nconst pr = parseAgent(production, 'Production');\nconst w = parseAgent(warehouse, 'Warehouse');\n\nconst agents = [\n  { name: 'Planning', decision: p.decision || 'needs_review', reasoning: p.reasoning || '', confidence: p.confidence || 0.5 },\n  { name: 'Production', decision: pr.decision || 'needs_review', reasoning: pr.reasoning || '', confidence: pr.confidence || 0.5 },\n  { name: 'Warehouse', decision: w.decision || 'needs_review', reasoning: w.reasoning || '', confidence: w.confidence || 0.5 }\n];\n\nconst approveCount = agents.filter(a => a.decision === 'approved').length;\nconst rejectCount = agents.filter(a => a.decision === 'rejected').length;\nconst needsReviewCount = agents.filter(a => a.decision === 'needs_review').length;\n\nconst consensusPrompt = `3 agent'tan gelen cevaplar:\\n\\n${agents.map((a, i) => `${i+1}. ${a.name} Agent:\\n   Karar: ${a.decision}\\n   Güven: ${a.confidence}\\n   Gerekçe: ${a.reasoning}\\n`).join('\\n')}\\n\\nKonsensüs: ${approveCount} approve, ${rejectCount} reject, ${needsReviewCount} needs_review\\n\\nBu 3 agent'ın cevaplarını analiz et ve nihai karar ver.`;\n\nreturn {\n  json: {\n    agents,\n    consensus: {\n      approve: approveCount,\n      reject: rejectCount,\n      needs_review: needsReviewCount\n    },\n    consensusPrompt,\n    planId: $node[\"Webhook Trigger\"].json.body.plan_id\n  }\n};"
+      },
       "id": "aggregate",
       "name": "Aggregate Responses",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [800, 500],
-      "parameters": {
-        "jsCode": "const planning = $node[\"Planning Agent\"].json;\nconst production = $node[\"Production Agent\"].json;\nconst warehouse = $node[\"Warehouse Agent\"].json;\n\nfunction parseAgent(input, name) {\n  let content = '';\n  if (input.output && typeof input.output === 'string') {\n    content = input.output;\n  } else if (input.text) {\n    content = input.text;\n  } else if (typeof input === 'string') {\n    content = input;\n  } else {\n    content = JSON.stringify(input);\n  }\n  \n  try {\n    if (typeof content === 'string') {\n      // JSON parse dene\n      const parsed = JSON.parse(content);\n      return parsed;\n    }\n    return content;\n  } catch (e) {\n    // JSON değilse, basit bir object oluştur\n    return {\n      decision: 'needs_review',\n      reasoning: `${name} agent cevabı: ${content}`,\n      confidence: 0.5\n    };\n  }\n}\n\nconst p = parseAgent(planning, 'Planning');\nconst pr = parseAgent(production, 'Production');\nconst w = parseAgent(warehouse, 'Warehouse');\n\nconst agents = [\n  { name: 'Planning', decision: p.decision || 'needs_review', reasoning: p.reasoning || '', confidence: p.confidence || 0.5 },\n  { name: 'Production', decision: pr.decision || 'needs_review', reasoning: pr.reasoning || '', confidence: pr.confidence || 0.5 },\n  { name: 'Warehouse', decision: w.decision || 'needs_review', reasoning: w.reasoning || '', confidence: w.confidence || 0.5 }\n];\n\nconst approveCount = agents.filter(a => a.decision === 'approved').length;\nconst rejectCount = agents.filter(a => a.decision === 'rejected').length;\nconst needsReviewCount = agents.filter(a => a.decision === 'needs_review').length;\n\nconst consensusPrompt = `3 agent'tan gelen cevaplar:\\n\\n${agents.map((a, i) => `${i+1}. ${a.name} Agent:\\n   Karar: ${a.decision}\\n   Güven: ${a.confidence}\\n   Gerekçe: ${a.reasoning}\\n`).join('\\n')}\\n\\nKonsensüs: ${approveCount} approve, ${rejectCount} reject, ${needsReviewCount} needs_review\\n\\nBu 3 agent'ın cevaplarını analiz et ve nihai karar ver.`;\n\nreturn {\n  json: {\n    agents,\n    consensus: {\n      approve: approveCount,\n      reject: rejectCount,\n      needs_review: needsReviewCount\n    },\n    consensusPrompt,\n    planId: $node[\"Webhook Trigger\"].json.body.plan_id\n  }\n};"
-      }
+      "position": [800, 500]
     },
     {
-      "id": "manager-agent",
-      "name": "Manager Agent (Consensus)",
-      "type": "@n8n/n8n-nodes-langchain.agent",
-      "typeVersion": 1,
-      "position": [1100, 500],
       "parameters": {
-        "promptType": "define",
         "text": "={{ $json.consensusPrompt }}",
         "options": {
           "systemMessage": "Sen Manager Agent'sın. 3 agent'ın görüşlerini değerlendirerek nihai karar veriyorsun. Yanıtı JSON formatında ver: {\"finalDecision\": \"approved\" | \"rejected\" | \"needs_review\", \"reasoning\": \"...\", \"consensus\": {\"approve\": n, \"reject\": n, \"needs_review\": n}, \"confidence\": 0.0-1.0}"
         }
-      }
+      },
+      "id": "manager-agent",
+      "name": "Manager Agent (Consensus)",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1,
+      "position": [1100, 500]
     },
     {
+      "parameters": {
+        "model": "gpt-4o",
+        "options": {
+          "maxTokens": 1024,
+          "temperature": 0.4
+        }
+      },
       "id": "manager-model",
       "name": "GPT-4o (Manager)",
       "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
       "typeVersion": 1,
       "position": [1100, 400],
-      "parameters": {
-        "model": "gpt-4o",
-        "options": {
-          "temperature": 0.4,
-          "maxTokens": 1024
-        }
-      },
       "credentials": {
         "openAiApi": {
           "id": "openai-credentials",
@@ -286,37 +233,34 @@
       }
     },
     {
+      "parameters": {},
       "id": "manager-memory",
       "name": "Simple Memory (Manager)",
       "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
       "typeVersion": 1,
-      "position": [1100, 600],
-      "parameters": {
-        "sessionId": "={{ $json.planId }}",
-        "sessionKeyType": "custom",
-        "windowSize": 5
-      }
+      "position": [1100, 600]
     },
     {
+      "parameters": {
+        "jsCode": "const managerRaw = $input.item.json;\nconst aggregate = $node[\"Aggregate Responses\"].json;\n\nlet content = '';\nif (managerRaw.output && typeof managerRaw.output === 'string') {\n  content = managerRaw.output;\n} else if (managerRaw.text) {\n  content = managerRaw.text;\n} else if (typeof managerRaw === 'string') {\n  content = managerRaw;\n} else {\n  content = JSON.stringify(managerRaw);\n}\n\nlet parsed;\ntry {\n  parsed = typeof content === 'string' ? JSON.parse(content) : content;\n} catch (e) {\n  parsed = {\n    finalDecision: 'needs_review',\n    reasoning: 'Manager Agent cevabı parse edilemedi.',\n    confidence: 0.5\n  };\n}\n\nreturn {\n  json: {\n    success: true,\n    workflow: 'multi-agent-consensus-supabase-tool',\n    finalDecision: parsed.finalDecision || 'needs_review',\n    consensus: parsed.consensus || aggregate.consensus,\n    agentResponses: aggregate.agents,\n    managerReasoning: parsed.reasoning || 'Gerekçe belirtilmedi.',\n    confidence: parsed.confidence || 0.5,\n    planId: aggregate.planId\n  }\n};"
+      },
       "id": "format-response",
       "name": "Format Response",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1400, 500],
-      "parameters": {
-        "jsCode": "const managerRaw = $input.item.json;\nconst aggregate = $node[\"Aggregate Responses\"].json;\n\nlet content = '';\nif (managerRaw.output && typeof managerRaw.output === 'string') {\n  content = managerRaw.output;\n} else if (managerRaw.text) {\n  content = managerRaw.text;\n} else if (typeof managerRaw === 'string') {\n  content = managerRaw;\n} else {\n  content = JSON.stringify(managerRaw);\n}\n\nlet parsed;\ntry {\n  parsed = typeof content === 'string' ? JSON.parse(content) : content;\n} catch (e) {\n  parsed = {\n    finalDecision: 'needs_review',\n    reasoning: 'Manager Agent cevabı parse edilemedi.',\n    confidence: 0.5\n  };\n}\n\nreturn {\n  json: {\n    success: true,\n    workflow: 'multi-agent-consensus-supabase-tool',\n    finalDecision: parsed.finalDecision || 'needs_review',\n    consensus: parsed.consensus || aggregate.consensus,\n    agentResponses: aggregate.agents,\n    managerReasoning: parsed.reasoning || 'Gerekçe belirtilmedi.',\n    confidence: parsed.confidence || 0.5,\n    planId: aggregate.planId\n  }\n};"
-      }
+      "position": [1400, 500]
     },
     {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
       "id": "respond",
       "name": "Respond to Webhook",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
-      "position": [1700, 500],
-      "parameters": {
-        "respondWith": "json",
-        "responseBody": "={{ $json }}"
-      }
+      "position": [1700, 500]
     }
   ],
   "connections": {
@@ -534,4 +478,3 @@
   },
   "tags": []
 }
-
