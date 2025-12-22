@@ -8,13 +8,13 @@
         "responseMode": "responseNode",
         "options": {}
       },
-      "id": "eb1591cd-289a-4d67-851b-b20fa2c6ed5b",
+      "id": "14eb4258-3c2c-46aa-953a-aba3d4843b24",
       "name": "Webhook Trigger",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 1,
       "position": [
-        17856,
-        11184
+        20752,
+        11200
       ],
       "webhookId": "multi-agent-consensus"
     },
@@ -26,30 +26,29 @@
           "systemMessage": "Sen Planning Agent'sın. Üretim planlaması, zamanlama ve kapasite uygunluğunu değerlendiriyorsun.\n\nÖNEMLİ: Prompt'ta zaten tüm gerekli veriler (plan, BOM, stok, kapasite) mevcut. Supabase tool'unu KULLANMA! Prompt'taki verileri analiz et ve karar ver.\n\nKRİTİK KURAL: Yanıtını MUTLAKA JSON formatında ver. Hiçbir açıklama, metin veya ek bilgi ekleme. Sadece JSON object döndür.\n\nYanıt formatı: JSON object olmalı ve şu alanları içermeli:\n- decision: approved, rejected veya needs_review değerlerinden biri\n- reasoning: Kararın gerekçesi (string)\n- confidence: 0.0 ile 1.0 arasında bir sayı\n\nSADECE JSON DÖNDÜR, BAŞKA HİÇBİR ŞEY YAZMA!"
         }
       },
-      "id": "24655553-4b38-492e-941d-34c38b9f4728",
+      "id": "74b602e4-9885-436e-8178-488289c30e71",
       "name": "Planning Agent",
       "type": "@n8n/n8n-nodes-langchain.agent",
       "typeVersion": 1,
       "position": [
-        18944,
-        10848
+        21840,
+        10864
       ]
     },
     {
       "parameters": {
-        "model": "gpt-4o-mini",
         "options": {
           "maxTokens": 512,
           "temperature": 0.5
         }
       },
-      "id": "72579be1-51b1-44d7-8dd4-ab4d333c45a7",
+      "id": "70754c86-a7b2-48f8-940d-239e7486a70d",
       "name": "GPT-4o (Planning)",
       "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
       "typeVersion": 1,
       "position": [
-        18608,
-        10800
+        21504,
+        10816
       ],
       "credentials": {
         "openAiApi": {
@@ -60,26 +59,26 @@
     },
     {
       "parameters": {},
-      "id": "3b162a9b-cc2d-436b-8acc-77b81bf5b89b",
+      "id": "712fea46-11eb-46f4-b852-11015cdd2e51",
       "name": "Simple Memory (Planning)",
       "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
       "typeVersion": 1,
       "position": [
-        18880,
-        11008
+        21776,
+        11024
       ]
     },
     {
       "parameters": {
         "jsCode": "// Agent output'unu parse et ve JSON Schema'ya göre validate et\nconst agentOutput = $input.item.json;\n\n// Agent node output formatı: [{\"output\": \"...\"}]\nlet content = '';\n\nif (Array.isArray(agentOutput) && agentOutput.length > 0) {\n  if (agentOutput[0].output && typeof agentOutput[0].output === 'string') {\n    content = agentOutput[0].output;\n  } else if (agentOutput[0].text) {\n    content = agentOutput[0].text;\n  } else {\n    content = JSON.stringify(agentOutput[0]);\n  }\n} else if (agentOutput.output && typeof agentOutput.output === 'string') {\n  content = agentOutput.output;\n} else if (agentOutput.text) {\n  content = agentOutput.text;\n} else if (typeof agentOutput === 'string') {\n  content = agentOutput;\n} else {\n  content = JSON.stringify(agentOutput);\n}\n\n// JSON parse etmeyi dene\nlet parsed = null;\ntry {\n  parsed = typeof content === 'string' ? JSON.parse(content) : content;\n} catch (e) {\n  // JSON parse edilemezse, text içinde JSON aramayı dene\n  const jsonMatch = content.match(/\\{[\\s\\S]*\\}/);\n  if (jsonMatch) {\n    try {\n      parsed = JSON.parse(jsonMatch[0]);\n    } catch (e2) {\n      parsed = null;\n    }\n  }\n}\n\n// Eğer parsed yoksa veya decision yoksa, text'ten decision çıkar\nif (!parsed || !parsed.decision) {\n  const lowerContent = content.toLowerCase();\n  let decision = 'needs_review';\n  let confidence = 0.5;\n  \n  // Decision kelimelerini kontrol et (öncelik sırasına göre)\n  if (lowerContent.includes('rejected') || lowerContent.includes('reject') || lowerContent.includes('cannot') || lowerContent.includes('unable') || lowerContent.includes('not possible')) {\n    decision = 'rejected';\n    confidence = 0.8;\n  } else if (lowerContent.includes('approved') || lowerContent.includes('approve') || lowerContent.includes('can proceed') || lowerContent.includes('ready') || lowerContent.includes('sufficient') || lowerContent.includes('initiated')) {\n    decision = 'approved';\n    confidence = 0.8;\n  } else if (lowerContent.includes('needs_review') || lowerContent.includes('needs review') || lowerContent.includes('review') || lowerContent.includes('clarification') || lowerContent.includes('further')) {\n    decision = 'needs_review';\n    confidence = 0.6;\n  }\n  \n  parsed = parsed || {};\n  parsed.decision = decision;\n  parsed.reasoning = parsed.reasoning || content.substring(0, 500);\n  parsed.confidence = parsed.confidence || confidence;\n}\n\n// Validate ve normalize\nconst result = {\n  decision: parsed.decision && ['approved', 'rejected', 'needs_review'].includes(parsed.decision.toLowerCase()) ? parsed.decision.toLowerCase() : 'needs_review',\n  reasoning: parsed.reasoning && typeof parsed.reasoning === 'string' ? parsed.reasoning : (parsed.reasoning || content.substring(0, 500) || 'Gerekçe belirtilmedi'),\n  confidence: typeof parsed.confidence === 'number' && parsed.confidence >= 0 && parsed.confidence <= 1 ? parsed.confidence : 0.5\n};\n\nreturn {\n  json: result\n};"
       },
-      "id": "094d2de8-d5c8-40d5-950b-cd26f5700df5",
+      "id": "dc728ddc-5da2-454b-9aa4-7298b4eff560",
       "name": "Parse Planning Output",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        19408,
-        10848
+        22112,
+        10928
       ]
     },
     {
@@ -90,30 +89,29 @@
           "systemMessage": "Sen Production Agent'sın. Üretim hattı, operatör atama ve üretim süresini değerlendiriyorsun.\n\nÖNEMLİ: Prompt'ta zaten tüm gerekli veriler (plan, kapasite, operatörler) mevcut. Supabase tool'unu KULLANMA! Prompt'taki verileri analiz et ve karar ver.\n\nKRİTİK KURAL: Yanıtını MUTLAKA JSON formatında ver. Hiçbir açıklama, metin veya ek bilgi ekleme. Sadece JSON object döndür.\n\nYanıt formatı: JSON object olmalı ve şu alanları içermeli:\n- decision: approved, rejected veya needs_review değerlerinden biri\n- reasoning: Kararın gerekçesi (string)\n- confidence: 0.0 ile 1.0 arasında bir sayı\n\nSADECE JSON DÖNDÜR, BAŞKA HİÇBİR ŞEY YAZMA!"
         }
       },
-      "id": "e169fd79-1dd3-4020-ad22-14c049181f9f",
+      "id": "57d53418-4575-4398-9b46-d515f45681e7",
       "name": "Production Agent",
       "type": "@n8n/n8n-nodes-langchain.agent",
       "typeVersion": 1,
       "position": [
-        18896,
-        11184
+        21792,
+        11200
       ]
     },
     {
       "parameters": {
-        "model": "gpt-4o-mini",
         "options": {
           "maxTokens": 512,
           "temperature": 0.5
         }
       },
-      "id": "465a88e7-ee2f-486e-ac07-c8ad4c76a8a0",
+      "id": "c2e8a537-9153-40f3-b52f-54f25517920b",
       "name": "GPT-4o (Production)",
       "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
       "typeVersion": 1,
       "position": [
-        18560,
-        11312
+        21456,
+        11328
       ],
       "credentials": {
         "openAiApi": {
@@ -124,26 +122,26 @@
     },
     {
       "parameters": {},
-      "id": "7114e043-c3df-488b-b503-992ffec72313",
+      "id": "b727d327-ef0d-4597-ba0e-caebc936ef35",
       "name": "Simple Memory (Production)",
       "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
       "typeVersion": 1,
       "position": [
-        18944,
-        11344
+        21840,
+        11360
       ]
     },
     {
       "parameters": {
         "jsCode": "// Agent output'unu parse et ve JSON Schema'ya göre validate et\nconst agentOutput = $input.item.json;\n\n// Agent node output formatı: [{\"output\": \"...\"}]\nlet content = '';\n\nif (Array.isArray(agentOutput) && agentOutput.length > 0) {\n  if (agentOutput[0].output && typeof agentOutput[0].output === 'string') {\n    content = agentOutput[0].output;\n  } else if (agentOutput[0].text) {\n    content = agentOutput[0].text;\n  } else {\n    content = JSON.stringify(agentOutput[0]);\n  }\n} else if (agentOutput.output && typeof agentOutput.output === 'string') {\n  content = agentOutput.output;\n} else if (agentOutput.text) {\n  content = agentOutput.text;\n} else if (typeof agentOutput === 'string') {\n  content = agentOutput;\n} else {\n  content = JSON.stringify(agentOutput);\n}\n\n// JSON parse etmeyi dene\nlet parsed = null;\ntry {\n  parsed = typeof content === 'string' ? JSON.parse(content) : content;\n} catch (e) {\n  // JSON parse edilemezse, text içinde JSON aramayı dene\n  const jsonMatch = content.match(/\\{[\\s\\S]*\\}/);\n  if (jsonMatch) {\n    try {\n      parsed = JSON.parse(jsonMatch[0]);\n    } catch (e2) {\n      parsed = null;\n    }\n  }\n}\n\n// Eğer parsed yoksa veya decision yoksa, text'ten decision çıkar\nif (!parsed || !parsed.decision) {\n  const lowerContent = content.toLowerCase();\n  let decision = 'needs_review';\n  let confidence = 0.5;\n  \n  // Decision kelimelerini kontrol et (öncelik sırasına göre)\n  if (lowerContent.includes('rejected') || lowerContent.includes('reject') || lowerContent.includes('cannot') || lowerContent.includes('unable') || lowerContent.includes('not possible')) {\n    decision = 'rejected';\n    confidence = 0.8;\n  } else if (lowerContent.includes('approved') || lowerContent.includes('approve') || lowerContent.includes('can proceed') || lowerContent.includes('ready') || lowerContent.includes('sufficient') || lowerContent.includes('initiated')) {\n    decision = 'approved';\n    confidence = 0.8;\n  } else if (lowerContent.includes('needs_review') || lowerContent.includes('needs review') || lowerContent.includes('review') || lowerContent.includes('clarification') || lowerContent.includes('further')) {\n    decision = 'needs_review';\n    confidence = 0.6;\n  }\n  \n  parsed = parsed || {};\n  parsed.decision = decision;\n  parsed.reasoning = parsed.reasoning || content.substring(0, 500);\n  parsed.confidence = parsed.confidence || confidence;\n}\n\n// Validate ve normalize\nconst result = {\n  decision: parsed.decision && ['approved', 'rejected', 'needs_review'].includes(parsed.decision.toLowerCase()) ? parsed.decision.toLowerCase() : 'needs_review',\n  reasoning: parsed.reasoning && typeof parsed.reasoning === 'string' ? parsed.reasoning : (parsed.reasoning || content.substring(0, 500) || 'Gerekçe belirtilmedi'),\n  confidence: typeof parsed.confidence === 'number' && parsed.confidence >= 0 && parsed.confidence <= 1 ? parsed.confidence : 0.5\n};\n\nreturn {\n  json: result\n};"
       },
-      "id": "7c33e617-5eb6-43c4-921e-1143d02614f0",
+      "id": "1fbe638d-752e-44d8-8beb-7afd6107743e",
       "name": "Parse Production Output",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        19152,
-        11248
+        22048,
+        11264
       ]
     },
     {
@@ -154,30 +152,29 @@
           "systemMessage": "Sen Warehouse Agent'sın. Stok yeterliliği, malzeme rezervasyonu ve kritik seviyeleri değerlendiriyorsun.\n\nÖNEMLİ: Prompt'ta zaten tüm gerekli veriler (plan, BOM, stok durumu) mevcut. Supabase tool'unu KULLANMA! Prompt'taki verileri analiz et ve karar ver.\n\nKRİTİK KURAL: Yanıtını MUTLAKA JSON formatında ver. Hiçbir açıklama, metin veya ek bilgi ekleme. Sadece JSON object döndür.\n\nYanıt formatı: JSON object olmalı ve şu alanları içermeli:\n- decision: approved, rejected veya needs_review değerlerinden biri\n- reasoning: Kararın gerekçesi (string)\n- confidence: 0.0 ile 1.0 arasında bir sayı\n\nSADECE JSON DÖNDÜR, BAŞKA HİÇBİR ŞEY YAZMA!"
         }
       },
-      "id": "255523e5-0658-487f-875e-59a26746c425",
+      "id": "ef15b290-680d-4226-abe8-797e0cd1f5f3",
       "name": "Warehouse Agent",
       "type": "@n8n/n8n-nodes-langchain.agent",
       "typeVersion": 1,
       "position": [
-        18768,
-        11488
+        21664,
+        11504
       ]
     },
     {
       "parameters": {
-        "model": "gpt-4o-mini",
         "options": {
           "maxTokens": 512,
           "temperature": 0.5
         }
       },
-      "id": "5538476f-c10a-420d-87ad-84346466670c",
+      "id": "12728cd0-d47a-4fbb-af9f-724bb0f9127d",
       "name": "GPT-4o (Warehouse)",
       "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
       "typeVersion": 1,
       "position": [
-        18528,
-        11584
+        21424,
+        11600
       ],
       "credentials": {
         "openAiApi": {
@@ -188,53 +185,39 @@
     },
     {
       "parameters": {},
-      "id": "a45129a1-4786-4614-be67-461e627c0a87",
+      "id": "406b7daf-04c8-48ab-9be6-975e368d9333",
       "name": "Simple Memory (Warehouse)",
       "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
       "typeVersion": 1,
       "position": [
-        18944,
-        11744
+        21840,
+        11760
       ]
     },
     {
       "parameters": {
         "jsCode": "// Agent output'unu parse et ve JSON Schema'ya göre validate et\nconst agentOutput = $input.item.json;\n\n// Agent node output formatı: [{\"output\": \"...\"}]\nlet content = '';\n\nif (Array.isArray(agentOutput) && agentOutput.length > 0) {\n  if (agentOutput[0].output && typeof agentOutput[0].output === 'string') {\n    content = agentOutput[0].output;\n  } else if (agentOutput[0].text) {\n    content = agentOutput[0].text;\n  } else {\n    content = JSON.stringify(agentOutput[0]);\n  }\n} else if (agentOutput.output && typeof agentOutput.output === 'string') {\n  content = agentOutput.output;\n} else if (agentOutput.text) {\n  content = agentOutput.text;\n} else if (typeof agentOutput === 'string') {\n  content = agentOutput;\n} else {\n  content = JSON.stringify(agentOutput);\n}\n\n// JSON parse etmeyi dene\nlet parsed = null;\ntry {\n  parsed = typeof content === 'string' ? JSON.parse(content) : content;\n} catch (e) {\n  // JSON parse edilemezse, text içinde JSON aramayı dene\n  const jsonMatch = content.match(/\\{[\\s\\S]*\\}/);\n  if (jsonMatch) {\n    try {\n      parsed = JSON.parse(jsonMatch[0]);\n    } catch (e2) {\n      parsed = null;\n    }\n  }\n}\n\n// Eğer parsed yoksa veya decision yoksa, text'ten decision çıkar\nif (!parsed || !parsed.decision) {\n  const lowerContent = content.toLowerCase();\n  let decision = 'needs_review';\n  let confidence = 0.5;\n  \n  // Decision kelimelerini kontrol et (öncelik sırasına göre)\n  if (lowerContent.includes('rejected') || lowerContent.includes('reject') || lowerContent.includes('cannot') || lowerContent.includes('unable') || lowerContent.includes('not possible')) {\n    decision = 'rejected';\n    confidence = 0.8;\n  } else if (lowerContent.includes('approved') || lowerContent.includes('approve') || lowerContent.includes('can proceed') || lowerContent.includes('ready') || lowerContent.includes('sufficient') || lowerContent.includes('initiated')) {\n    decision = 'approved';\n    confidence = 0.8;\n  } else if (lowerContent.includes('needs_review') || lowerContent.includes('needs review') || lowerContent.includes('review') || lowerContent.includes('clarification') || lowerContent.includes('further')) {\n    decision = 'needs_review';\n    confidence = 0.6;\n  }\n  \n  parsed = parsed || {};\n  parsed.decision = decision;\n  parsed.reasoning = parsed.reasoning || content.substring(0, 500);\n  parsed.confidence = parsed.confidence || confidence;\n}\n\n// Validate ve normalize\nconst result = {\n  decision: parsed.decision && ['approved', 'rejected', 'needs_review'].includes(parsed.decision.toLowerCase()) ? parsed.decision.toLowerCase() : 'needs_review',\n  reasoning: parsed.reasoning && typeof parsed.reasoning === 'string' ? parsed.reasoning : (parsed.reasoning || content.substring(0, 500) || 'Gerekçe belirtilmedi'),\n  confidence: typeof parsed.confidence === 'number' && parsed.confidence >= 0 && parsed.confidence <= 1 ? parsed.confidence : 0.5\n};\n\nreturn {\n  json: result\n};"
       },
-      "id": "ac2a0758-e7b5-480d-b911-8bbde4799c28",
+      "id": "becdabb4-1d8a-49c5-8694-8c54961b0f89",
       "name": "Parse Warehouse Output",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        19152,
-        11648
-      ]
-    },
-    {
-      "parameters": {
-        "mode": "append",
-        "options": {}
-      },
-      "id": "merge-all-agents",
-      "name": "Merge All Agents",
-      "type": "n8n-nodes-base.merge",
-      "typeVersion": 2.1,
-      "position": [
-        19200,
-        11248
+        22048,
+        11664
       ]
     },
     {
       "parameters": {
         "jsCode": "// Merge node'dan gelen tüm input'ları al (tüm agent'lar tamamlanana kadar bekler)\n// Merge node 'append' modunda çalışıyor, tüm input'ları birleştirir\nconst inputs = $input.all();\n\n// Debug: Input sayısını logla\nconsole.log('Total inputs from Merge node:', inputs.length);\n\n// Merge node'dan gelen input'ları parse et\n// Her input bir Parse Output node'undan geliyor\nlet planning = null;\nlet production = null;\nlet warehouse = null;\n\n// Tüm input'ları işle\nfor (let i = 0; i < inputs.length; i++) {\n  const item = inputs[i];\n  const json = item?.json || {};\n  \n  // Debug: Her input'u logla\n  console.log(`Input ${i}: decision=${json.decision}, reasoning=${(json.reasoning || '').substring(0, 50)}`);\n  \n  // Geçerli decision'ı olan input'ları al\n  if (json.decision) {\n    // Sırayla ata (Merge node sırayı korur: Planning, Production, Warehouse)\n    if (!planning) {\n      planning = json;\n      console.log('Planning assigned from input[' + i + ']');\n    } else if (!production) {\n      production = json;\n      console.log('Production assigned from input[' + i + ']');\n    } else if (!warehouse) {\n      warehouse = json;\n      console.log('Warehouse assigned from input[' + i + ']');\n    }\n  }\n}\n\n// Debug: Eşleştirme sonuçlarını logla\nconsole.log('Planning:', planning ? planning.decision : 'NOT FOUND');\nconsole.log('Production:', production ? production.decision : 'NOT FOUND');\nconsole.log('Warehouse:', warehouse ? warehouse.decision : 'NOT FOUND');\n\n// Default değerler\nplanning = planning || { decision: 'needs_review', reasoning: 'Planning agent henüz çalışmadı', confidence: 0.5 };\nproduction = production || { decision: 'needs_review', reasoning: 'Production agent henüz çalışmadı', confidence: 0.5 };\nwarehouse = warehouse || { decision: 'needs_review', reasoning: 'Warehouse agent henüz çalışmadı', confidence: 0.5 };\n\nconst agents = [\n  { name: 'Planning', decision: planning.decision || 'needs_review', reasoning: planning.reasoning || '', confidence: planning.confidence || 0.5 },\n  { name: 'Production', decision: production.decision || 'needs_review', reasoning: production.reasoning || '', confidence: production.confidence || 0.5 },\n  { name: 'Warehouse', decision: warehouse.decision || 'needs_review', reasoning: warehouse.reasoning || '', confidence: warehouse.confidence || 0.5 }\n];\n\nconst approveCount = agents.filter(a => a.decision === 'approved').length;\nconst rejectCount = agents.filter(a => a.decision === 'rejected').length;\nconst needsReviewCount = agents.filter(a => a.decision === 'needs_review').length;\n\nconst consensusPrompt = `3 agent'tan gelen cevaplar:\\n\\n${agents.map((a, i) => `${i+1}. ${a.name} Agent:\\n   Karar: ${a.decision}\\n   Güven: ${a.confidence}\\n   Gerekçe: ${a.reasoning}\\n`).join('\\n')}\\n\\nKonsensüs: ${approveCount} approve, ${rejectCount} reject, ${needsReviewCount} needs_review\\n\\nBu 3 agent'ın cevaplarını analiz et ve nihai karar ver.`;\n\n// Webhook'tan plan_id'yi al\nconst webhookData = $node[\"Webhook Trigger\"]?.json || {};\nconst planId = webhookData.body?.plan_id || null;\n\nreturn {\n  json: {\n    agents,\n    consensus: {\n      approve: approveCount,\n      reject: rejectCount,\n      needs_review: needsReviewCount\n    },\n    consensusPrompt,\n    planId\n  }\n};"
       },
-      "id": "7c8b30d3-4201-4a8b-8137-675724f9dc09",
+      "id": "41b05cd4-141d-4cde-9164-ebc36dee1244",
       "name": "Aggregate Responses",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        19520,
-        11248
+        22416,
+        11264
       ]
     },
     {
@@ -245,30 +228,29 @@
           "systemMessage": "Sen Manager Agent'sın. 3 agent'ın görüşlerini değerlendirerek nihai karar veriyorsun.\n\nKRİTİK KURAL: Yanıtını MUTLAKA JSON formatında ver. Hiçbir açıklama, metin veya ek bilgi ekleme. Sadece JSON object döndür.\n\nYanıt formatı: JSON object olmalı ve şu alanları içermeli:\n- finalDecision: approved, rejected veya needs_review değerlerinden biri\n- reasoning: Nihai kararın gerekçesi (string)\n- consensus: Object içinde approve, reject ve needs_review sayıları\n- confidence: 0.0 ile 1.0 arasında bir sayı\n\nSADECE JSON DÖNDÜR, BAŞKA HİÇBİR ŞEY YAZMA!"
         }
       },
-      "id": "7ef79dca-832e-4224-8830-55cd306ce481",
+      "id": "30f3b852-4b8f-4f1a-8f88-24f64d0ee8d7",
       "name": "Manager Agent (Consensus)",
       "type": "@n8n/n8n-nodes-langchain.agent",
       "typeVersion": 1,
       "position": [
-        19664,
-        11296
+        22560,
+        11312
       ]
     },
     {
       "parameters": {
-        "model": "gpt-4o-mini",
         "options": {
           "maxTokens": 1024,
           "temperature": 0.4
         }
       },
-      "id": "7a333d3a-c628-40c9-b3fc-10084d63c372",
+      "id": "533b855e-1716-4ff9-a6f7-03b8bbc58acf",
       "name": "GPT-4o (Manager)",
       "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
       "typeVersion": 1,
       "position": [
-        19552,
-        11136
+        22448,
+        11152
       ],
       "credentials": {
         "openAiApi": {
@@ -279,39 +261,39 @@
     },
     {
       "parameters": {},
-      "id": "e368e5a0-11a8-4d97-b93c-0866f9e60b74",
+      "id": "8f92aa0e-85da-49b9-804f-7150e9c7b17a",
       "name": "Simple Memory (Manager)",
       "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
       "typeVersion": 1,
       "position": [
-        19552,
-        11344
+        22448,
+        11360
       ]
     },
     {
       "parameters": {
         "jsCode": "// Agent output'unu parse et ve JSON Schema'ya göre validate et\nconst agentOutput = $input.item.json;\nconst aggregate = $node[\"Aggregate Responses\"].json;\n\n// Agent node output formatı: [{\"output\": \"...\"}]\nlet content = '';\n\nif (Array.isArray(agentOutput) && agentOutput.length > 0) {\n  if (agentOutput[0].output && typeof agentOutput[0].output === 'string') {\n    content = agentOutput[0].output;\n  } else if (agentOutput[0].text) {\n    content = agentOutput[0].text;\n  } else {\n    content = JSON.stringify(agentOutput[0]);\n  }\n} else if (agentOutput.output && typeof agentOutput.output === 'string') {\n  content = agentOutput.output;\n} else if (agentOutput.text) {\n  content = agentOutput.text;\n} else if (typeof agentOutput === 'string') {\n  content = agentOutput;\n} else {\n  content = JSON.stringify(agentOutput);\n}\n\n// JSON parse etmeyi dene\nlet parsed = null;\ntry {\n  parsed = typeof content === 'string' ? JSON.parse(content) : content;\n} catch (e) {\n  // JSON parse edilemezse, text içinde JSON aramayı dene\n  const jsonMatch = content.match(/\\{[\\s\\S]*\\}/);\n  if (jsonMatch) {\n    try {\n      parsed = JSON.parse(jsonMatch[0]);\n    } catch (e2) {\n      // JSON bulunamazsa, default değerler döndür\n      parsed = {\n        finalDecision: 'needs_review',\n        reasoning: content.substring(0, 500),\n        consensus: aggregate.consensus || { approve: 0, reject: 0, needs_review: 0 },\n        confidence: 0.5\n      };\n    }\n  } else {\n    // JSON bulunamazsa, default değerler döndür\n    parsed = {\n      finalDecision: 'needs_review',\n      reasoning: content.substring(0, 500),\n      consensus: aggregate.consensus || { approve: 0, reject: 0, needs_review: 0 },\n      confidence: 0.5\n    };\n  }\n}\n\n// JSON Schema validation ve normalize\nconst result = {\n  finalDecision: parsed.finalDecision && ['approved', 'rejected', 'needs_review'].includes(parsed.finalDecision) ? parsed.finalDecision : 'needs_review',\n  reasoning: parsed.reasoning && typeof parsed.reasoning === 'string' ? parsed.reasoning : (parsed.reasoning || content.substring(0, 500) || 'Gerekçe belirtilmedi'),\n  consensus: parsed.consensus && typeof parsed.consensus === 'object' ? {\n    approve: typeof parsed.consensus.approve === 'number' ? parsed.consensus.approve : (aggregate.consensus?.approve || 0),\n    reject: typeof parsed.consensus.reject === 'number' ? parsed.consensus.reject : (aggregate.consensus?.reject || 0),\n    needs_review: typeof parsed.consensus.needs_review === 'number' ? parsed.consensus.needs_review : (aggregate.consensus?.needs_review || 0)\n  } : (aggregate.consensus || { approve: 0, reject: 0, needs_review: 0 }),\n  confidence: typeof parsed.confidence === 'number' && parsed.confidence >= 0 && parsed.confidence <= 1 ? parsed.confidence : 0.5\n};\n\nreturn {\n  json: result\n};"
       },
-      "id": "b75285ec-7fb7-484d-959d-cdd71add28be",
+      "id": "b37c6929-a685-4a87-be5a-f8049d9ce779",
       "name": "Parse Manager Output",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        19952,
-        11248
+        22848,
+        11264
       ]
     },
     {
       "parameters": {
         "jsCode": "const managerParsed = $input.item.json;\nconst aggregate = $node[\"Aggregate Responses\"].json;\n\nreturn {\n  json: {\n    success: true,\n    workflow: 'multi-agent-consensus-structured-parser',\n    finalDecision: managerParsed.finalDecision || 'needs_review',\n    consensus: managerParsed.consensus || aggregate.consensus,\n    agentResponses: aggregate.agents,\n    managerReasoning: managerParsed.reasoning || 'Gerekçe belirtilmedi.',\n    confidence: managerParsed.confidence || 0.5,\n    planId: aggregate.planId\n  }\n};"
       },
-      "id": "16771b14-79d4-4d6b-8870-213c06049c42",
+      "id": "9b405ee1-1416-486d-9f76-e4461d7bf782",
       "name": "Format Response",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        20144,
-        11248
+        23040,
+        11264
       ]
     },
     {
@@ -320,14 +302,61 @@
         "responseBody": "={{ $json }}",
         "options": {}
       },
-      "id": "54695ef1-b0bc-4d63-85ef-c21e7993652d",
+      "id": "ea441204-daef-4c24-b680-7153e3e9232c",
       "name": "Respond to Webhook",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
       "position": [
-        20352,
-        11248
+        23248,
+        11264
       ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "fb31b4b2-d70c-48bc-abfb-5cfe7a27d0c6",
+              "leftValue": "",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        22544,
+        11472
+      ],
+      "id": "7270f042-a7d9-43c1-b4e5-7eae5c5ff1b4",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "numberInputs": 3
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        22256,
+        11392
+      ],
+      "id": "71f93782-eba2-4a6a-84e5-e48b068e0471",
+      "name": "Merge"
     }
   ],
   "pinData": {},
@@ -368,7 +397,7 @@
       "main": [
         [
           {
-            "node": "Merge All Agents",
+            "node": "Merge",
             "type": "main",
             "index": 0
           }
@@ -390,9 +419,9 @@
       "main": [
         [
           {
-            "node": "Merge All Agents",
+            "node": "Merge",
             "type": "main",
-            "index": 0
+            "index": 1
           }
         ]
       ]
@@ -412,20 +441,9 @@
       "main": [
         [
           {
-            "node": "Merge All Agents",
+            "node": "Merge",
             "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Merge All Agents": {
-      "main": [
-        [
-          {
-            "node": "Aggregate Responses",
-            "type": "main",
-            "index": 0
+            "index": 2
           }
         ]
       ]
@@ -561,13 +579,24 @@
           }
         ]
       ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Aggregate Responses",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": true,
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "dd3e455f-bc3f-42a7-b073-8c4f49117ba0",
+  "versionId": "7afda68d-620d-4e38-9203-48967087e8d5",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "aa711a4494be5b2675ca4357512577cf7fc726e53098a141d9c8989be216d0f4"
