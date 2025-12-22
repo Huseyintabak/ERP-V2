@@ -103,8 +103,114 @@ export async function POST(request: NextRequest) {
       created_by: payload.userId,
     });
 
-    // Try to create order directly
+    // 1. Önce BOM'u kontrol et ve eksik stokları bul
+    const { data: bomItems, error: bomError } = await supabase
+      .from('semi_bom')
+      .select(`
+        *,
+        raw_material:raw_materials!semi_bom_material_id_fkey(
+          id,
+          name,
+          code,
+          quantity,
+          reserved_quantity,
+          unit
+        ),
+        semi_finished_product:semi_finished_products!semi_bom_material_id_fkey(
+          id,
+          name,
+          code,
+          quantity,
+          reserved_quantity,
+          unit
+        )
+      `)
+      .eq('semi_product_id', product_id);
 
+    if (bomError) {
+      logger.error('BOM fetch error:', bomError);
+      return NextResponse.json({ 
+        error: 'BOM bilgileri alınamadı',
+        details: bomError.message 
+      }, { status: 500 });
+    }
+
+    if (!bomItems || bomItems.length === 0) {
+      return NextResponse.json({ 
+        error: 'Bu ürün için BOM tanımlı değil. Önce BOM oluşturun.',
+        details: 'semi_bom tablosunda bu ürün için kayıt bulunamadı'
+      }, { status: 400 });
+    }
+
+    // 2. Her malzeme için stok kontrolü yap
+    const insufficientMaterials: Array<{
+      material_name: string;
+      material_code: string;
+      material_type: string;
+      required_quantity: number;
+      available_stock: number;
+      shortage: number;
+      unit: string;
+    }> = [];
+
+    for (const bomItem of bomItems) {
+      const quantityPerUnit = bomItem.quantity || 0;
+      const requiredQuantity = quantityPerUnit * planned_quantity;
+      
+      let material: any = null;
+      let availableStock = 0;
+      let materialName = '';
+      let materialCode = '';
+      let materialUnit = '';
+
+      if (bomItem.material_type === 'raw' && bomItem.raw_material) {
+        material = bomItem.raw_material;
+        materialName = material.name || 'Bilinmeyen';
+        materialCode = material.code || 'N/A';
+        materialUnit = material.unit || 'kg';
+        const currentStock = material.quantity || 0;
+        const reservedStock = material.reserved_quantity || 0;
+        availableStock = currentStock - reservedStock;
+      } else if (bomItem.material_type === 'semi' && bomItem.semi_finished_product) {
+        material = bomItem.semi_finished_product;
+        materialName = material.name || 'Bilinmeyen';
+        materialCode = material.code || 'N/A';
+        materialUnit = material.unit || 'adet';
+        const currentStock = material.quantity || 0;
+        const reservedStock = material.reserved_quantity || 0;
+        availableStock = currentStock - reservedStock;
+      }
+
+      if (availableStock < requiredQuantity) {
+        insufficientMaterials.push({
+          material_name: materialName,
+          material_code: materialCode,
+          material_type: bomItem.material_type === 'raw' ? 'Hammadde' : 'Yarı Mamul',
+          required_quantity: requiredQuantity,
+          available_stock: availableStock,
+          shortage: requiredQuantity - availableStock,
+          unit: materialUnit,
+        });
+      }
+    }
+
+    // 3. Eğer eksik stok varsa, detaylı hata mesajı döndür
+    if (insufficientMaterials.length > 0) {
+      const materialsList = insufficientMaterials.map(m => 
+        `• ${m.material_name} (${m.material_code}) - ${m.material_type}\n` +
+        `  Gerekli: ${m.required_quantity} ${m.unit}\n` +
+        `  Mevcut: ${m.available_stock} ${m.unit}\n` +
+        `  Eksik: ${m.shortage} ${m.unit}`
+      ).join('\n\n');
+
+      return NextResponse.json({ 
+        error: 'Yeterli stok bulunmuyor',
+        details: `Aşağıdaki malzemelerde stok yetersizliği var:\n\n${materialsList}\n\nLütfen stok yönetimi sayfasından bu malzemelerin stok miktarını artırın.`,
+        insufficient_materials: insufficientMaterials
+      }, { status: 400 });
+    }
+
+    // 4. Stoklar yeterliyse siparişi oluştur
     // Generate order number
     const { data: lastOrder } = await supabase
       .from('semi_production_orders')
@@ -150,9 +256,14 @@ export async function POST(request: NextRequest) {
     if (error) {
       logger.error('Error creating semi production order:', error);
       if (error.code === '23514') {
-        return NextResponse.json({ error: 'Yeterli stok bulunmuyor. Lütfen hammadde/semi stoklarını kontrol edin.' }, { status: 400 });
+        // Fallback: Eğer constraint hatası alırsak, BOM kontrolünden gelen bilgileri kullan
+        return NextResponse.json({ 
+          error: 'Yeterli stok bulunmuyor',
+          details: 'Database constraint hatası. Lütfen stok durumunu kontrol edin.',
+          insufficient_materials: insufficientMaterials.length > 0 ? insufficientMaterials : undefined
+        }, { status: 400 });
       }
-      return NextResponse.json({ error: 'Failed to create order' }, { status: 500 });
+      return NextResponse.json({ error: 'Failed to create order', details: error.message }, { status: 500 });
     }
 
     return NextResponse.json({ data: order }, { status: 201 });

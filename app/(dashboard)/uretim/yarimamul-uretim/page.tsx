@@ -171,10 +171,31 @@ export default function YariMamulUretimPage() {
         });
         fetchProductionOrders();
       } else {
-        throw new Error(data.error);
+        // Detaylı hata mesajını göster
+        if (data.details) {
+          // Eksik malzemeler varsa detaylı göster
+          if (data.insufficient_materials && data.insufficient_materials.length > 0) {
+            const materialsList = data.insufficient_materials.map((m: any) => 
+              `• ${m.material_name} (${m.material_code}) - ${m.material_type}\n` +
+              `  Gerekli: ${m.required_quantity} ${m.unit}\n` +
+              `  Mevcut: ${m.available_stock} ${m.unit}\n` +
+              `  Eksik: ${m.shortage} ${m.unit}`
+            ).join('\n\n');
+            
+            toast.error(`${data.error}\n\n${materialsList}`, {
+              duration: 10000, // 10 saniye göster
+            });
+          } else {
+            toast.error(`${data.error}\n\n${data.details}`, {
+              duration: 8000, // 8 saniye göster
+            });
+          }
+        } else {
+          toast.error(data.error || 'Bir hata oluştu');
+        }
       }
     } catch (error: any) {
-      toast.error(error.message);
+      toast.error(error.message || 'Bir hata oluştu');
     }
   };
 
