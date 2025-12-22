@@ -7,7 +7,7 @@ import { agentLogger } from '@/lib/ai/utils/logger';
  * 
  * POST /api/ai/n8n
  * Body: {
- *   workflow: "planning" | "production" | "multi-agent" | "custom",
+ *   workflow: "planning" | "production" | "warehouse" | "purchase" | "manager" | "developer" | "multi-agent" | "custom",
  *   prompt: string,
  *   context?: any
  * }
@@ -49,6 +49,22 @@ export async function POST(request: NextRequest) {
         result = await client.runProductionAgent(prompt, context);
         break;
 
+      case 'warehouse':
+        result = await client.runWarehouseAgent(prompt, context);
+        break;
+
+      case 'purchase':
+        result = await client.runPurchaseAgent(prompt, context);
+        break;
+
+      case 'manager':
+        result = await client.runManagerAgent(prompt, context);
+        break;
+
+      case 'developer':
+        result = await client.runDeveloperAgent(prompt, context);
+        break;
+
       case 'multi-agent':
         if (!agentRoles || !Array.isArray(agentRoles)) {
           return NextResponse.json(
@@ -71,7 +87,7 @@ export async function POST(request: NextRequest) {
 
       default:
         return NextResponse.json(
-          { error: `Unknown workflow: ${workflow}. Must be one of: planning, production, multi-agent, custom` },
+          { error: `Unknown workflow: ${workflow}. Must be one of: planning, production, warehouse, purchase, manager, developer, multi-agent, custom` },
           { status: 400 }
         );
     }
@@ -125,6 +141,10 @@ export async function GET() {
       availableWorkflows: [
         'planning',
         'production',
+        'warehouse',
+        'purchase',
+        'manager',
+        'developer',
         'multi-agent',
         'custom'
       ],

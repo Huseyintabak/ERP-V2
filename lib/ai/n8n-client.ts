@@ -102,6 +102,170 @@ export class N8nClient {
   }
 
   /**
+   * Warehouse Agent workflow'unu çalıştır
+   */
+  async runWarehouseAgent(prompt: string, context?: {
+    zone_id?: string;
+    material_id?: string;
+    stock_movement_id?: string;
+  }): Promise<N8nWorkflowResult> {
+    agentLogger.log(`🔧 Running n8n Warehouse Agent workflow`);
+
+    try {
+      const response = await fetch(`${this.baseUrl}/webhook/warehouse-agent`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt,
+          ...context
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`n8n webhook returned ${response.status}`);
+      }
+
+      const data = await response.json();
+      agentLogger.log(`✅ n8n Warehouse Agent completed`);
+
+      return {
+        success: true,
+        data
+      };
+    } catch (error: any) {
+      agentLogger.error(`❌ n8n Warehouse Agent failed:`, error);
+      return {
+        success: false,
+        data: null,
+        error: error.message
+      };
+    }
+  }
+
+  /**
+   * Purchase Agent workflow'unu çalıştır
+   */
+  async runPurchaseAgent(prompt: string, context?: {
+    purchase_order_id?: string;
+    supplier_id?: string;
+    material_id?: string;
+  }): Promise<N8nWorkflowResult> {
+    agentLogger.log(`🔧 Running n8n Purchase Agent workflow`);
+
+    try {
+      const response = await fetch(`${this.baseUrl}/webhook/purchase-agent`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt,
+          ...context
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`n8n webhook returned ${response.status}`);
+      }
+
+      const data = await response.json();
+      agentLogger.log(`✅ n8n Purchase Agent completed`);
+
+      return {
+        success: true,
+        data
+      };
+    } catch (error: any) {
+      agentLogger.error(`❌ n8n Purchase Agent failed:`, error);
+      return {
+        success: false,
+        data: null,
+        error: error.message
+      };
+    }
+  }
+
+  /**
+   * Manager Agent workflow'unu çalıştır
+   */
+  async runManagerAgent(prompt: string, context?: {
+    approval_id?: string;
+    decision_type?: string;
+    priority?: string;
+  }): Promise<N8nWorkflowResult> {
+    agentLogger.log(`🔧 Running n8n Manager Agent workflow`);
+
+    try {
+      const response = await fetch(`${this.baseUrl}/webhook/manager-agent`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt,
+          ...context
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`n8n webhook returned ${response.status}`);
+      }
+
+      const data = await response.json();
+      agentLogger.log(`✅ n8n Manager Agent completed`);
+
+      return {
+        success: true,
+        data
+      };
+    } catch (error: any) {
+      agentLogger.error(`❌ n8n Manager Agent failed:`, error);
+      return {
+        success: false,
+        data: null,
+        error: error.message
+      };
+    }
+  }
+
+  /**
+   * Developer Agent workflow'unu çalıştır
+   */
+  async runDeveloperAgent(prompt: string, context?: {
+    system_metric?: string;
+    error_id?: string;
+    optimization_area?: string;
+  }): Promise<N8nWorkflowResult> {
+    agentLogger.log(`🔧 Running n8n Developer Agent workflow`);
+
+    try {
+      const response = await fetch(`${this.baseUrl}/webhook/developer-agent`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt,
+          ...context
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`n8n webhook returned ${response.status}`);
+      }
+
+      const data = await response.json();
+      agentLogger.log(`✅ n8n Developer Agent completed`);
+
+      return {
+        success: true,
+        data
+      };
+    } catch (error: any) {
+      agentLogger.error(`❌ n8n Developer Agent failed:`, error);
+      return {
+        success: false,
+        data: null,
+        error: error.message
+      };
+    }
+  }
+
+  /**
    * Multi-Agent Consensus workflow'unu çalıştır
    */
   async runMultiAgentConsensus(prompt: string, agentRoles: string[], context?: any): Promise<N8nWorkflowResult> {

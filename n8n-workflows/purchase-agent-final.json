@@ -1,0 +1,96 @@
+{
+  "name": "Thunder Purchase Agent (Final)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "purchase-agent",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "webhookId": "purchase-agent"
+    },
+    {
+      "parameters": {
+        "resource": "text",
+        "operation": "message",
+        "modelId": "gpt-4o",
+        "messages": {
+          "values": [
+            {
+              "role": "system",
+              "content": "Sen Thunder ERP'nin satın alma yönetimi agent'ısın.\n\nGörevlerin:\n1. Tedarikçi analizi yap\n2. Satın alma taleplerini değerlendir\n3. Fiyat karşılaştırması yap\n4. Satın alma siparişlerini optimize et\n5. Tedarik sürelerini yönet\n\nYanıt formatı JSON:\n{\n  \"decision\": \"approved\" | \"rejected\" | \"needs_review\",\n  \"reasoning\": \"Karar gerekçesi\",\n  \"purchase_analysis\": {\n    \"supplier_recommendations\": [],\n    \"price_comparison\": {},\n    \"delivery_times\": {},\n    \"recommendations\": []\n  },\n  \"confidence\": 0.95\n}"
+            },
+            {
+              "role": "user",
+              "content": "={{ $json.body.prompt }}"
+            }
+          ]
+        },
+        "options": {
+          "temperature": 0.7,
+          "maxTokens": 2048
+        },
+        "simplifyOutput": true
+      },
+      "id": "openai-agent",
+      "name": "Purchase Agent (GPT-4o)",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1,
+      "position": [450, 300],
+      "credentials": {
+        "openAiApi": {
+          "id": "openai-credentials",
+          "name": "OpenAI API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// OpenAI node'dan gelen response'u al\nconst input = $input.item.json;\n\n// Response formatını kontrol et ve content'i çıkar\nlet content = '';\n\n// Input bir object ise (simplifyOutput: true olduğunda)\nif (input.message && input.message.content) {\n  content = input.message.content;\n}\n// Input bir array ise\nelse if (Array.isArray(input) && input.length > 0) {\n  if (input[0].message && input[0].message.content) {\n    content = input[0].message.content;\n  } else if (input[0].content) {\n    content = input[0].content;\n  } else {\n    content = JSON.stringify(input[0]);\n  }\n}\n// Diğer formatlar\nelse if (input.content) {\n  content = input.content;\n} else {\n  // Fallback: tüm input'u string'e çevir\n  content = JSON.stringify(input);\n}\n\n// Response oluştur\nconst response = {\n  success: true,\n  agent: \"purchase\",\n  response: content\n};\n\nreturn {\n  json: response\n};"
+      },
+      "id": "code-node",
+      "name": "Format Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}"
+      },
+      "id": "response",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [850, 300]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [[{ "node": "Purchase Agent (GPT-4o)", "type": "main", "index": 0 }]]
+    },
+    "Purchase Agent (GPT-4o)": {
+      "main": [[{ "node": "Format Response", "type": "main", "index": 0 }]]
+    },
+    "Format Response": {
+      "main": [[{ "node": "Respond to Webhook", "type": "main", "index": 0 }]]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0,
+  "updatedAt": "2025-01-27T00:00:00.000Z",
+  "versionId": "1"
+}
+
