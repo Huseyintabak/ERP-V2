@@ -150,14 +150,36 @@ export function AiConsensusDialog({
 
       if (!response.ok) {
         let errorMessage = 'AI konsensüs analizi başarısız';
+        let errorData: any = {};
+        
         try {
-          const error = await response.json();
-          errorMessage = error.message || error.error || errorMessage;
-          logger.error('❌ API error response:', error);
+          const responseText = await response.text();
+          logger.log('🔍 Raw error response:', responseText);
+          
+          if (responseText) {
+            try {
+              errorData = JSON.parse(responseText);
+            } catch (parseError) {
+              // JSON değilse, text olarak kullan
+              errorMessage = responseText || `HTTP ${response.status}: ${response.statusText}`;
+              logger.error('❌ Error response is not JSON:', parseError);
+            }
+          }
+          
+          // Error data'dan mesaj çıkar
+          if (errorData && Object.keys(errorData).length > 0) {
+            errorMessage = errorData.message || errorData.error || errorMessage;
+            logger.error('❌ API error response:', errorData);
+          } else {
+            // Boş obje ise, status ve statusText kullan
+            errorMessage = `HTTP ${response.status}: ${response.statusText || 'Unknown error'}`;
+            logger.error('❌ API returned empty error object');
+          }
         } catch (parseError) {
           logger.error('❌ Failed to parse error response:', parseError);
-          errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+          errorMessage = `HTTP ${response.status}: ${response.statusText || 'Unknown error'}`;
         }
+        
         throw new Error(errorMessage);
       }
 

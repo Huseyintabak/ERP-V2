@@ -422,10 +422,12 @@ Her agent kendi perspektifinden değerlendirsin:
     );
 
     if (!consensusResult.success) {
+      logger.error('❌ Consensus result failed:', consensusResult);
       return NextResponse.json(
         {
           error: 'Multi-agent consensus failed',
-          message: consensusResult.error,
+          message: consensusResult.error || 'n8n workflow başarısız oldu',
+          details: process.env.NODE_ENV === 'development' ? JSON.stringify(consensusResult, null, 2) : undefined,
         },
         { status: 500 }
       );
