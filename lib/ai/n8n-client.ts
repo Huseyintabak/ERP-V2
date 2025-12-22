@@ -15,7 +15,8 @@ export class N8nClient {
   private baseUrl: string;
 
   constructor() {
-    this.baseUrl = process.env.N8N_WEBHOOK_URL || 'http://localhost:5678';
+    // N8N_WEBHOOK_URL veya N8N_BASE_URL kullan
+    this.baseUrl = process.env.N8N_WEBHOOK_URL || process.env.N8N_BASE_URL || 'http://localhost:5678';
   }
 
   /**
