@@ -228,8 +228,8 @@ export function AiConsensusDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh]">
-        <DialogHeader>
+      <DialogContent className="max-w-6xl w-[95vw] max-h-[95vh] flex flex-col p-0">
+        <DialogHeader className="px-6 pt-6 pb-4 border-b flex-shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <Users className="h-5 w-5" />
             AI Multi-Agent Konsensüs Analizi
@@ -243,7 +243,8 @@ export function AiConsensusDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <ScrollArea className="flex-1 px-6">
+          <div className="space-y-4 py-4">
           {!result && !loading && (
             <div className="text-center py-8">
               <p className="text-gray-500 mb-4">
@@ -268,8 +269,7 @@ export function AiConsensusDialog({
           )}
 
           {result && (
-            <ScrollArea className="max-h-[60vh]">
-              <div className="space-y-4">
+            <div className="space-y-4">
                 {/* Final Decision */}
                 <Card>
                   <CardHeader>
@@ -462,30 +462,31 @@ export function AiConsensusDialog({
                   </CardContent>
                 </Card>
               </div>
-            </ScrollArea>
           )}
+          </div>
+        </ScrollArea>
 
-          {result && (
-            <div className="flex justify-end gap-2 pt-4 border-t">
-              <Button variant="outline" onClick={onClose}>
-                Kapat
-              </Button>
-              <Button onClick={handleRunConsensus} disabled={loading}>
-                {loading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Analiz Ediliyor...
-                  </>
-                ) : (
-                  <>
-                    <TrendingUp className="h-4 w-4 mr-2" />
-                    Yeniden Analiz Et
-                  </>
-                )}
-              </Button>
-            </div>
-          )}
-        </div>
+        {/* Footer - Fixed at bottom */}
+        {result && (
+          <div className="flex justify-end gap-2 pt-4 px-6 pb-6 border-t flex-shrink-0">
+            <Button variant="outline" onClick={onClose}>
+              Kapat
+            </Button>
+            <Button onClick={handleRunConsensus} disabled={loading}>
+              {loading ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Analiz Ediliyor...
+                </>
+              ) : (
+                <>
+                  <TrendingUp className="h-4 w-4 mr-2" />
+                  Yeniden Analiz Et
+                </>
+              )}
+            </Button>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );
