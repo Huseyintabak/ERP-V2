@@ -8,13 +8,35 @@ import { agentLogger } from '@/lib/ai/utils/logger';
  */
 export async function GET(request: NextRequest) {
   try {
+    // Debug: Environment variables kontrolü
+    const debug = request.nextUrl.searchParams.get('debug') === 'true';
+    if (debug) {
+      return NextResponse.json({
+        debug: true,
+        env: {
+          N8N_MCP_SERVER_URL: process.env.N8N_MCP_SERVER_URL || 'NOT SET',
+          N8N_MCP_ACCESS_TOKEN: process.env.N8N_MCP_ACCESS_TOKEN ? 'SET (hidden)' : 'NOT SET',
+          N8N_BASE_URL: process.env.N8N_BASE_URL || 'NOT SET',
+          N8N_API_KEY: process.env.N8N_API_KEY ? 'SET (hidden)' : 'NOT SET',
+        },
+        processEnv: Object.keys(process.env).filter(key => key.startsWith('N8N_')),
+      });
+    }
+
     const mcpClient = getN8nMCPClient();
 
     // Health check
     const isHealthy = await mcpClient.healthCheck();
     if (!isHealthy) {
       return NextResponse.json(
-        { error: 'MCP Server is not accessible', message: 'Check N8N_MCP_SERVER_URL and N8N_MCP_ACCESS_TOKEN' },
+        { 
+          error: 'MCP Server is not accessible', 
+          message: 'Check N8N_MCP_SERVER_URL and N8N_MCP_ACCESS_TOKEN',
+          debug: {
+            N8N_MCP_SERVER_URL: process.env.N8N_MCP_SERVER_URL || 'NOT SET',
+            N8N_MCP_ACCESS_TOKEN: process.env.N8N_MCP_ACCESS_TOKEN ? 'SET' : 'NOT SET',
+          }
+        },
         { status: 503 }
       );
     }
