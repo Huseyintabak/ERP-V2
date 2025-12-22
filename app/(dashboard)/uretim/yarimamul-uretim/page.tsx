@@ -887,9 +887,9 @@ export default function YariMamulUretimPage() {
                 </AlertDescription>
               </Alert>
             </div>
-            ) : null}
+            )}
 
-            {/* Always show details if available */}
+            {/* Always show details if available (even if materials array exists) */}
             {stockErrorDialog.details && (
               <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />
@@ -904,9 +904,14 @@ export default function YariMamulUretimPage() {
             {!stockErrorDialog.details && (!stockErrorDialog.insufficientMaterials || stockErrorDialog.insufficientMaterials.length === 0) && (
               <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Stok Kontrolü Başarısız</AlertTitle>
                 <AlertDescription>
                   Stok kontrolü yapılamadı. Lütfen tekrar deneyin veya stok durumunu kontrol edin.
-                  {stockErrorDialog.error && ` (${stockErrorDialog.error})`}
+                  {stockErrorDialog.error && (
+                    <div className="mt-2 font-semibold">
+                      Hata: {stockErrorDialog.error}
+                    </div>
+                  )}
                 </AlertDescription>
               </Alert>
             )}
