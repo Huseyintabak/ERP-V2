@@ -825,11 +825,14 @@ export default function YariMamulUretimPage() {
             )}
           </DialogHeader>
 
-          {/* Debug info */}
-          {process.env.NODE_ENV === 'development' && (
-            <div className="text-xs text-gray-500 p-2 bg-gray-100 rounded">
-              Debug: insufficientMaterials length: {stockErrorDialog.insufficientMaterials?.length || 0}
-            </div>
+          {/* Always show details if available, even if insufficientMaterials is empty */}
+          {stockErrorDialog.details && (
+            <Alert variant="destructive" className="mb-4">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription className="whitespace-pre-wrap text-sm">
+                {stockErrorDialog.details}
+              </AlertDescription>
+            </Alert>
           )}
 
           {stockErrorDialog.insufficientMaterials && Array.isArray(stockErrorDialog.insufficientMaterials) && stockErrorDialog.insufficientMaterials.length > 0 ? (
