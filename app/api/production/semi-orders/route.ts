@@ -106,32 +106,34 @@ export async function POST(request: NextRequest) {
     // 1. Önce BOM'u kontrol et ve eksik stokları bul
     const { data: bomItems, error: bomError } = await supabase
       .from('semi_bom')
-      .select(`
-        *,
-        raw_material:raw_materials!semi_bom_material_id_fkey(
-          id,
-          name,
-          code,
-          quantity,
-          reserved_quantity,
-          unit
-        ),
-        semi_finished_product:semi_finished_products!semi_bom_material_id_fkey(
-          id,
-          name,
-          code,
-          quantity,
-          reserved_quantity,
-          unit
-        )
-      `)
+      .select('*')
       .eq('semi_product_id', product_id);
 
     if (bomError) {
       logger.error('BOM fetch error:', bomError);
+      logger.error('Product ID:', product_id);
+      logger.error('BOM Error Code:', bomError.code);
+      logger.error('BOM Error Details:', bomError.details);
+      logger.error('BOM Error Hint:', bomError.hint);
+      
+      // Daha açıklayıcı hata mesajı
+      let errorMessage = 'BOM bilgileri alınamadı';
+      let errorDetails = bomError.message || 'Bilinmeyen hata';
+      
+      if (bomError.code === 'PGRST116') {
+        errorMessage = 'Bu ürün için BOM tanımlı değil';
+        errorDetails = 'semi_bom tablosunda bu ürün için kayıt bulunamadı. Lütfen önce BOM oluşturun.';
+      } else if (bomError.message?.includes('relation') || bomError.message?.includes('does not exist')) {
+        errorMessage = 'BOM tablosu bulunamadı';
+        errorDetails = 'semi_bom tablosu mevcut değil. Lütfen veritabanı yöneticisi ile iletişime geçin.';
+      }
+      
       return NextResponse.json({ 
-        error: 'BOM bilgileri alınamadı',
-        details: bomError.message 
+        error: errorMessage,
+        details: errorDetails,
+        bom_error_code: bomError.code,
+        bom_error_message: bomError.message,
+        product_id: product_id
       }, { status: 500 });
     }
 
@@ -163,22 +165,65 @@ export async function POST(request: NextRequest) {
       let materialCode = '';
       let materialUnit = '';
 
-      if (bomItem.material_type === 'raw' && bomItem.raw_material) {
-        material = bomItem.raw_material;
-        materialName = material.name || 'Bilinmeyen';
-        materialCode = material.code || 'N/A';
-        materialUnit = material.unit || 'kg';
-        const currentStock = material.quantity || 0;
-        const reservedStock = material.reserved_quantity || 0;
-        availableStock = currentStock - reservedStock;
-      } else if (bomItem.material_type === 'semi' && bomItem.semi_finished_product) {
-        material = bomItem.semi_finished_product;
-        materialName = material.name || 'Bilinmeyen';
-        materialCode = material.code || 'N/A';
-        materialUnit = material.unit || 'adet';
-        const currentStock = material.quantity || 0;
-        const reservedStock = material.reserved_quantity || 0;
-        availableStock = currentStock - reservedStock;
+      // Malzeme bilgilerini manuel olarak çek (foreign key join yerine)
+      if (bomItem.material_type === 'raw') {
+        const { data: rawMaterial, error: rawError } = await supabase
+          .from('raw_materials')
+          .select('id, name, code, quantity, reserved_quantity, unit')
+          .eq('id', bomItem.material_id)
+          .single();
+
+        if (rawError) {
+          logger.error(`Raw material fetch error for ${bomItem.material_id}:`, rawError);
+          insufficientMaterials.push({
+            material_name: 'Bilinmeyen Hammadde',
+            material_code: bomItem.material_id.slice(0, 8),
+            material_type: 'Hammadde',
+            required_quantity: requiredQuantity,
+            available_stock: 0,
+            shortage: requiredQuantity,
+            unit: 'kg',
+          });
+          continue;
+        }
+
+        if (rawMaterial) {
+          materialName = rawMaterial.name || 'Bilinmeyen';
+          materialCode = rawMaterial.code || 'N/A';
+          materialUnit = rawMaterial.unit || 'kg';
+          const currentStock = rawMaterial.quantity || 0;
+          const reservedStock = rawMaterial.reserved_quantity || 0;
+          availableStock = currentStock - reservedStock;
+        }
+      } else if (bomItem.material_type === 'semi') {
+        const { data: semiMaterial, error: semiError } = await supabase
+          .from('semi_finished_products')
+          .select('id, name, code, quantity, reserved_quantity, unit')
+          .eq('id', bomItem.material_id)
+          .single();
+
+        if (semiError) {
+          logger.error(`Semi material fetch error for ${bomItem.material_id}:`, semiError);
+          insufficientMaterials.push({
+            material_name: 'Bilinmeyen Yarı Mamul',
+            material_code: bomItem.material_id.slice(0, 8),
+            material_type: 'Yarı Mamul',
+            required_quantity: requiredQuantity,
+            available_stock: 0,
+            shortage: requiredQuantity,
+            unit: 'adet',
+          });
+          continue;
+        }
+
+        if (semiMaterial) {
+          materialName = semiMaterial.name || 'Bilinmeyen';
+          materialCode = semiMaterial.code || 'N/A';
+          materialUnit = semiMaterial.unit || 'adet';
+          const currentStock = semiMaterial.quantity || 0;
+          const reservedStock = semiMaterial.reserved_quantity || 0;
+          availableStock = currentStock - reservedStock;
+        }
       }
 
       if (availableStock < requiredQuantity) {
