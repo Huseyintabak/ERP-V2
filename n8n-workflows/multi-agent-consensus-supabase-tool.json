@@ -19,7 +19,7 @@
       "parameters": {
         "text": "={{ $json.body.prompt }}",
         "options": {
-          "systemMessage": "Sen Planning Agent'sın. Üretim planlaması, zamanlama ve kapasite uygunluğunu değerlendiriyorsun.\n\nÖNEMLİ: Prompt'ta zaten tüm gerekli veriler (plan, BOM, stok, kapasite) mevcut. Supabase tool'unu KULLANMA! Prompt'taki verileri analiz et ve karar ver.\n\nYanıtını JSON formatında ver. decision field'ı approved, rejected veya needs_review olabilir. reasoning field'ı karar gerekçesini içermeli. confidence field'ı 0.0 ile 1.0 arasında bir sayı olmalı."
+          "systemMessage": "Sen Planning Agent'sın. Üretim planlaması, zamanlama ve kapasite uygunluğunu değerlendiriyorsun.\n\nÖNEMLİ: Prompt'ta zaten tüm gerekli veriler (plan, BOM, stok, kapasite) mevcut. Supabase tool'unu KULLANMA! Prompt'taki verileri analiz et ve karar ver.\n\nYanıtını MUTLAKA JSON formatında ver. Sadece JSON döndür, başka hiçbir şey yazma. Format şu şekilde olmalı:\n{\"decision\": \"approved\" veya \"rejected\" veya \"needs_review\", \"reasoning\": \"karar gerekçesi buraya\", \"confidence\": 0.95}\n\nÖrnek: {\"decision\": \"rejected\", \"reasoning\": \"Planlanan miktar 0 olduğu için üretim planlanamaz\", \"confidence\": 1.0}"
         }
       },
       "id": "planning-agent",
@@ -62,7 +62,7 @@
       "parameters": {
         "text": "={{ $json.body.prompt }}",
         "options": {
-          "systemMessage": "Sen Production Agent'sın. Üretim hattı, operatör atama ve üretim süresini değerlendiriyorsun.\n\nÖNEMLİ: Prompt'ta zaten tüm gerekli veriler (plan, kapasite, operatörler) mevcut. Supabase tool'unu KULLANMA! Prompt'taki verileri analiz et ve karar ver.\n\nYanıtını JSON formatında ver. decision field'ı approved, rejected veya needs_review olabilir. reasoning field'ı karar gerekçesini içermeli. confidence field'ı 0.0 ile 1.0 arasında bir sayı olmalı."
+          "systemMessage": "Sen Production Agent'sın. Üretim hattı, operatör atama ve üretim süresini değerlendiriyorsun.\n\nÖNEMLİ: Prompt'ta zaten tüm gerekli veriler (plan, kapasite, operatörler) mevcut. Supabase tool'unu KULLANMA! Prompt'taki verileri analiz et ve karar ver.\n\nYanıtını MUTLAKA JSON formatında ver. Sadece JSON döndür, başka hiçbir şey yazma. Format şu şekilde olmalı:\n{\"decision\": \"approved\" veya \"rejected\" veya \"needs_review\", \"reasoning\": \"karar gerekçesi buraya\", \"confidence\": 0.95}\n\nÖrnek: {\"decision\": \"rejected\", \"reasoning\": \"Üretim miktarı 0 olduğu için üretim başlatılamaz\", \"confidence\": 1.0}"
         }
       },
       "id": "production-agent",
@@ -105,7 +105,7 @@
       "parameters": {
         "text": "={{ $json.body.prompt }}",
         "options": {
-          "systemMessage": "Sen Warehouse Agent'sın. Stok yeterliliği, malzeme rezervasyonu ve kritik seviyeleri değerlendiriyorsun.\n\nÖNEMLİ: Prompt'ta zaten tüm gerekli veriler (plan, BOM, stok durumu) mevcut. Supabase tool'unu KULLANMA! Prompt'taki verileri analiz et ve karar ver.\n\nYanıtını JSON formatında ver. decision field'ı approved, rejected veya needs_review olabilir. reasoning field'ı karar gerekçesini içermeli. confidence field'ı 0.0 ile 1.0 arasında bir sayı olmalı."
+          "systemMessage": "Sen Warehouse Agent'sın. Stok yeterliliği, malzeme rezervasyonu ve kritik seviyeleri değerlendiriyorsun.\n\nÖNEMLİ: Prompt'ta zaten tüm gerekli veriler (plan, BOM, stok durumu) mevcut. Supabase tool'unu KULLANMA! Prompt'taki verileri analiz et ve karar ver.\n\nYanıtını MUTLAKA JSON formatında ver. Sadece JSON döndür, başka hiçbir şey yazma. Format şu şekilde olmalı:\n{\"decision\": \"approved\" veya \"rejected\" veya \"needs_review\", \"reasoning\": \"karar gerekçesi buraya\", \"confidence\": 0.95}\n\nÖrnek: {\"decision\": \"approved\", \"reasoning\": \"Tüm malzemeler stokta yeterli\", \"confidence\": 0.9}"
         }
       },
       "id": "warehouse-agent",
