@@ -1,0 +1,229 @@
+{
+  "name": "Thunder Multi-Agent Consensus (Final)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "multi-agent-consensus",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 500],
+      "webhookId": "multi-agent-consensus"
+    },
+    {
+      "parameters": {
+        "resource": "text",
+        "operation": "message",
+        "modelId": "gpt-4o",
+        "messages": {
+          "values": [
+            {
+              "role": "system",
+              "content": "Sen Thunder ERP'nin üretim planlama agent'ısın.\n\nGörevlerin:\n1. Sipariş bilgilerini analiz et\n2. BOM (Bill of Materials) kontrol et\n3. Stok durumunu değerlendir\n4. Üretim sürelerini hesapla\n5. Optimum üretim planı oluştur\n\nYanıt formatı JSON:\n{\n  \"decision\": \"approved\" | \"rejected\" | \"needs_review\",\n  \"reasoning\": \"Karar gerekçesi\",\n  \"confidence\": 0.95\n}"
+            },
+            {
+              "role": "user",
+              "content": "={{ $json.body.prompt }}"
+            }
+          ]
+        },
+        "options": {
+          "temperature": 0.7,
+          "maxTokens": 1024
+        },
+        "simplifyOutput": true
+      },
+      "id": "planning-agent",
+      "name": "Planning Agent (GPT-4o)",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1,
+      "position": [450, 300],
+      "credentials": {
+        "openAiApi": {
+          "id": "openai-credentials",
+          "name": "OpenAI API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "text",
+        "operation": "message",
+        "modelId": "gpt-4o",
+        "messages": {
+          "values": [
+            {
+              "role": "system",
+              "content": "Sen Thunder ERP'nin üretim yönetimi agent'ısın.\n\nGörevlerin:\n1. Üretim planlarını analiz et\n2. Operatör atamalarını değerlendir\n3. Üretim süreçlerini optimize et\n4. Kalite kontrol süreçlerini yönet\n5. Üretim performansını izle\n\nYanıt formatı JSON:\n{\n  \"decision\": \"approved\" | \"rejected\" | \"needs_review\",\n  \"reasoning\": \"Karar gerekçesi\",\n  \"confidence\": 0.95\n}"
+            },
+            {
+              "role": "user",
+              "content": "={{ $json.body.prompt }}"
+            }
+          ]
+        },
+        "options": {
+          "temperature": 0.7,
+          "maxTokens": 1024
+        },
+        "simplifyOutput": true
+      },
+      "id": "production-agent",
+      "name": "Production Agent (GPT-4o)",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1,
+      "position": [450, 500],
+      "credentials": {
+        "openAiApi": {
+          "id": "openai-credentials",
+          "name": "OpenAI API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "text",
+        "operation": "message",
+        "modelId": "gpt-4o",
+        "messages": {
+          "values": [
+            {
+              "role": "system",
+              "content": "Sen Thunder ERP'nin depo yönetimi agent'ısın.\n\nGörevlerin:\n1. Stok durumunu analiz et\n2. Depo zone'larını yönet\n3. Stok hareketlerini takip et\n4. Malzeme rezervasyonlarını kontrol et\n5. Depo optimizasyon önerileri sun\n\nYanıt formatı JSON:\n{\n  \"decision\": \"approved\" | \"rejected\" | \"needs_review\",\n  \"reasoning\": \"Karar gerekçesi\",\n  \"confidence\": 0.95\n}"
+            },
+            {
+              "role": "user",
+              "content": "={{ $json.body.prompt }}"
+            }
+          ]
+        },
+        "options": {
+          "temperature": 0.7,
+          "maxTokens": 1024
+        },
+        "simplifyOutput": true
+      },
+      "id": "warehouse-agent",
+      "name": "Warehouse Agent (GPT-4o)",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1,
+      "position": [450, 700],
+      "credentials": {
+        "openAiApi": {
+          "id": "openai-credentials",
+          "name": "OpenAI API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// 3 agent'ın response'larını topla ve parse et\nconst items = $input.all();\n\n// Her agent'ın response'unu güvenli şekilde parse et\nfunction parseAgentResponse(item) {\n  const input = item.json;\n  let content = '';\n  \n  // Input bir object ise (simplifyOutput: true olduğunda)\n  if (input.message && input.message.content) {\n    content = input.message.content;\n  }\n  // Input bir array ise\n  else if (Array.isArray(input) && input.length > 0) {\n    if (input[0].message && input[0].message.content) {\n      content = input[0].message.content;\n    } else if (input[0].content) {\n      content = input[0].content;\n    } else {\n      content = JSON.stringify(input[0]);\n    }\n  }\n  // Diğer formatlar\n  else if (input.content) {\n    content = input.content;\n  } else {\n    content = JSON.stringify(input);\n  }\n  \n  // JSON parse et (eğer string ise)\n  try {\n    if (typeof content === 'string') {\n      return JSON.parse(content);\n    }\n    return content;\n  } catch (e) {\n    // Parse edilemezse, basit bir object oluştur\n    return {\n      decision: 'needs_review',\n      reasoning: content,\n      confidence: 0.5\n    };\n  }\n}\n\n// Agent response'larını parse et\nconst planning = parseAgentResponse(items[0]);\nconst production = parseAgentResponse(items[1]);\nconst warehouse = parseAgentResponse(items[2]);\n\n// Agent bilgilerini topla\nconst agents = [\n  { name: 'Planning', decision: planning.decision || 'needs_review', reasoning: planning.reasoning || '', confidence: planning.confidence || 0.5 },\n  { name: 'Production', decision: production.decision || 'needs_review', reasoning: production.reasoning || '', confidence: production.confidence || 0.5 },\n  { name: 'Warehouse', decision: warehouse.decision || 'needs_review', reasoning: warehouse.reasoning || '', confidence: warehouse.confidence || 0.5 }\n];\n\n// Konsensüs analizi\nconst approveCount = agents.filter(a => a.decision === 'approved').length;\nconst rejectCount = agents.filter(a => a.decision === 'rejected').length;\nconst needsReviewCount = agents.filter(a => a.decision === 'needs_review').length;\n\n// Consensus prompt oluştur\nconst consensusPrompt = `3 agent'tan gelen cevaplar:\\n\\n${agents.map((a, i) => \n  `${i+1}. ${a.name} Agent:\\n   Karar: ${a.decision}\\n   Güven: ${a.confidence}\\n   Gerekçe: ${a.reasoning}\\n`\n).join('\\n')}\\n\\nKonsensüs: ${approveCount} approve, ${rejectCount} reject, ${needsReviewCount} needs_review\\n\\nBu 3 agent'ın cevaplarını analiz et ve nihai karar ver.`;\n\nreturn {\n  json: {\n    agents,\n    consensus: { \n      approve: approveCount, \n      reject: rejectCount,\n      needs_review: needsReviewCount\n    },\n    consensusPrompt\n  }\n};"
+      },
+      "id": "aggregate",
+      "name": "Aggregate Responses",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [650, 500]
+    },
+    {
+      "parameters": {
+        "resource": "text",
+        "operation": "message",
+        "modelId": "gpt-4o",
+        "messages": {
+          "values": [
+            {
+              "role": "system",
+              "content": "Sen Thunder ERP'nin yönetici karar verme agent'ısın.\n\nGörevlerin:\n1. Stratejik kararlar al\n2. Çoklu agent konsensüsü oluştur\n3. Kritik onayları değerlendir\n4. Sistem performansını analiz et\n5. İş süreçlerini optimize et\n\n3 agent'ın görüşlerini değerlendirerek nihai karar ver.\n\nYanıt formatı JSON:\n{\n  \"finalDecision\": \"approved\" | \"rejected\" | \"needs_review\",\n  \"reasoning\": \"Detaylı açıklama\",\n  \"consensus\": {\n    \"approve\": 2,\n    \"reject\": 1,\n    \"needs_review\": 0\n  },\n  \"confidence\": 0.95\n}"
+            },
+            {
+              "role": "user",
+              "content": "={{ $json.consensusPrompt }}"
+            }
+          ]
+        },
+        "options": {
+          "temperature": 0.5,
+          "maxTokens": 1024
+        },
+        "simplifyOutput": true
+      },
+      "id": "manager-agent",
+      "name": "Manager Agent (Consensus)",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1,
+      "position": [850, 500],
+      "credentials": {
+        "openAiApi": {
+          "id": "openai-credentials",
+          "name": "OpenAI API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Manager agent'ın response'unu parse et\nconst managerInput = $input.item.json;\nconst aggregateData = $('Aggregate Responses').item.json;\n\n// Manager response'unu güvenli şekilde parse et\nlet managerContent = '';\n\n// Input bir object ise (simplifyOutput: true olduğunda)\nif (managerInput.message && managerInput.message.content) {\n  managerContent = managerInput.message.content;\n}\n// Input bir array ise\nelse if (Array.isArray(managerInput) && managerInput.length > 0) {\n  if (managerInput[0].message && managerInput[0].message.content) {\n    managerContent = managerInput[0].message.content;\n  } else if (managerInput[0].content) {\n    managerContent = managerInput[0].content;\n  } else {\n    managerContent = JSON.stringify(managerInput[0]);\n  }\n}\n// Diğer formatlar\nelse if (managerInput.content) {\n  managerContent = managerInput.content;\n} else {\n  managerContent = JSON.stringify(managerInput);\n}\n\n// JSON parse et\nlet managerDecision;\ntry {\n  if (typeof managerContent === 'string') {\n    managerDecision = JSON.parse(managerContent);\n  } else {\n    managerDecision = managerContent;\n  }\n} catch (e) {\n  managerDecision = {\n    finalDecision: 'needs_review',\n    reasoning: managerContent,\n    confidence: 0.5,\n    consensus: aggregateData.consensus\n  };\n}\n\n// Final response oluştur\nconst response = {\n  success: true,\n  workflow: 'multi-agent-consensus',\n  finalDecision: managerDecision.finalDecision || 'needs_review',\n  consensus: managerDecision.consensus || aggregateData.consensus,\n  agentResponses: aggregateData.agents,\n  managerReasoning: managerDecision.reasoning || '',\n  confidence: managerDecision.confidence || 0.5\n};\n\nreturn {\n  json: response\n};"
+      },
+      "id": "format-response",
+      "name": "Format Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1050, 500]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}"
+      },
+      "id": "response",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1250, 500]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [
+          { "node": "Planning Agent (GPT-4o)", "type": "main", "index": 0 },
+          { "node": "Production Agent (GPT-4o)", "type": "main", "index": 0 },
+          { "node": "Warehouse Agent (GPT-4o)", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Planning Agent (GPT-4o)": {
+      "main": [[{ "node": "Aggregate Responses", "type": "main", "index": 0 }]]
+    },
+    "Production Agent (GPT-4o)": {
+      "main": [[{ "node": "Aggregate Responses", "type": "main", "index": 0 }]]
+    },
+    "Warehouse Agent (GPT-4o)": {
+      "main": [[{ "node": "Aggregate Responses", "type": "main", "index": 0 }]]
+    },
+    "Aggregate Responses": {
+      "main": [[{ "node": "Manager Agent (Consensus)", "type": "main", "index": 0 }]]
+    },
+    "Manager Agent (Consensus)": {
+      "main": [[{ "node": "Format Response", "type": "main", "index": 0 }]]
+    },
+    "Format Response": {
+      "main": [[{ "node": "Respond to Webhook", "type": "main", "index": 0 }]]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0,
+  "updatedAt": "2025-01-27T00:00:00.000Z",
+  "versionId": "1"
+}
+
