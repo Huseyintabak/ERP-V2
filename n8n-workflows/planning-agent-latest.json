@@ -1,0 +1,83 @@
+{
+  "name": "Thunder Planning Agent (Basic)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "planning-agent",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "webhookId": "planning-agent"
+    },
+    {
+      "parameters": {
+        "resource": "text",
+        "operation": "message",
+        "modelId": "gpt-4o",
+        "messages": {
+          "values": [
+            {
+              "role": "system",
+              "content": "Sen Thunder ERP'nin üretim planlama agent'ısın.\n\nGörevlerin:\n1. Sipariş bilgilerini analiz et\n2. BOM (Bill of Materials) kontrol et\n3. Stok durumunu değerlendir\n4. Üretim sürelerini hesapla\n5. Optimum üretim planı oluştur\n\nYanıt formatı JSON:\n{\n  \"decision\": \"approved\" | \"rejected\" | \"needs_review\",\n  \"reasoning\": \"Karar gerekçesi\",\n  \"production_plan\": {\n    \"start_date\": \"2025-12-20\",\n    \"end_date\": \"2025-12-27\",\n    \"estimated_duration_hours\": 168,\n    \"required_materials\": [],\n    \"warnings\": []\n  },\n  \"confidence\": 0.95\n}"
+            },
+            {
+              "role": "user",
+              "content": "={{ $json.body.prompt }}"
+            }
+          ]
+        },
+        "options": {
+          "temperature": 0.7,
+          "maxTokens": 2048
+        },
+        "simplifyOutput": true
+      },
+      "id": "openai-agent",
+      "name": "Planning Agent (GPT-4o)",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1,
+      "position": [450, 300],
+      "credentials": {
+        "openAiApi": {
+          "id": "openai-credentials",
+          "name": "OpenAI API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ {\n  \"success\": true,\n  \"agent\": \"planning\",\n  \"response\": $json[0].message.content\n} }}"
+      },
+      "id": "response",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [650, 300]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [[{ "node": "Planning Agent (GPT-4o)", "type": "main", "index": 0 }]]
+    },
+    "Planning Agent (GPT-4o)": {
+      "main": [[{ "node": "Respond to Webhook", "type": "main", "index": 0 }]]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0,
+  "updatedAt": "2025-01-27T00:00:00.000Z",
+  "versionId": "1"
+}
+
