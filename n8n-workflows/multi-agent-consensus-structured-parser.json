@@ -212,14 +212,28 @@
     },
     {
       "parameters": {
-        "jsCode": "// Parse node'larından gelen parse edilmiş output'ları al\nconst inputs = $input.all();\n\n// Debug: Input sayısını logla\nconsole.log('Total inputs received:', inputs.length);\n\n// Tüm input'ları topla\nlet planning = null;\nlet production = null;\nlet warehouse = null;\n\n// Önce direkt node referanslarını dene\ntry {\n  const planningNode = $node[\"Parse Planning Output\"];\n  const productionNode = $node[\"Parse Production Output\"];\n  const warehouseNode = $node[\"Parse Warehouse Output\"];\n  \n  if (planningNode && planningNode.json) {\n    planning = Array.isArray(planningNode.json) ? planningNode.json[0] : planningNode.json;\n    console.log('Planning from direct node access');\n  }\n  if (productionNode && productionNode.json) {\n    production = Array.isArray(productionNode.json) ? productionNode.json[0] : productionNode.json;\n    console.log('Production from direct node access');\n  }\n  if (warehouseNode && warehouseNode.json) {\n    warehouse = Array.isArray(warehouseNode.json) ? warehouseNode.json[0] : warehouseNode.json;\n    console.log('Warehouse from direct node access');\n  }\n} catch (e) {\n  console.log('Direct node access failed:', e.message);\n}\n\n// Eğer direkt erişim çalışmadıysa, $input.all() kullan\nif (!planning || !production || !warehouse) {\n  console.log('Using $input.all() fallback');\n  \n  // Tüm input'ları topla\n  const allInputs = [];\n  for (let i = 0; i < inputs.length; i++) {\n    const json = inputs[i]?.json || {};\n    if (json.decision) { // Sadece geçerli decision'ı olan input'ları al\n      allInputs.push(json);\n      console.log(`Input ${i}: decision=${json.decision}, reasoning=${(json.reasoning || '').substring(0, 50)}`);\n    }\n  }\n  \n  // Eksik olanları sırayla ata\n  if (!planning && allInputs.length > 0) {\n    planning = allInputs[0];\n    console.log('Planning assigned from input[0]');\n  }\n  if (!production && allInputs.length > 1) {\n    production = allInputs[1];\n    console.log('Production assigned from input[1]');\n  }\n  if (!warehouse && allInputs.length > 2) {\n    warehouse = allInputs[2];\n    console.log('Warehouse assigned from input[2]');\n  }\n  \n  // Eğer hala eksik varsa, kalan input'ları kullan\n  if (!warehouse && allInputs.length > 2) {\n    warehouse = allInputs.find(inp => inp !== planning && inp !== production) || allInputs[2];\n    console.log('Warehouse assigned from remaining input');\n  }\n}\n\n// Default değerler\nplanning = planning || { decision: 'needs_review', reasoning: 'Planning agent henüz çalışmadı', confidence: 0.5 };\nproduction = production || { decision: 'needs_review', reasoning: 'Production agent henüz çalışmadı', confidence: 0.5 };\nwarehouse = warehouse || { decision: 'needs_review', reasoning: 'Warehouse agent henüz çalışmadı', confidence: 0.5 };\n\nconst agents = [\n  { name: 'Planning', decision: planning.decision || 'needs_review', reasoning: planning.reasoning || '', confidence: planning.confidence || 0.5 },\n  { name: 'Production', decision: production.decision || 'needs_review', reasoning: production.reasoning || '', confidence: production.confidence || 0.5 },\n  { name: 'Warehouse', decision: warehouse.decision || 'needs_review', reasoning: warehouse.reasoning || '', confidence: warehouse.confidence || 0.5 }\n];\n\nconst approveCount = agents.filter(a => a.decision === 'approved').length;\nconst rejectCount = agents.filter(a => a.decision === 'rejected').length;\nconst needsReviewCount = agents.filter(a => a.decision === 'needs_review').length;\n\nconst consensusPrompt = `3 agent'tan gelen cevaplar:\\n\\n${agents.map((a, i) => `${i+1}. ${a.name} Agent:\\n   Karar: ${a.decision}\\n   Güven: ${a.confidence}\\n   Gerekçe: ${a.reasoning}\\n`).join('\\n')}\\n\\nKonsensüs: ${approveCount} approve, ${rejectCount} reject, ${needsReviewCount} needs_review\\n\\nBu 3 agent'ın cevaplarını analiz et ve nihai karar ver.`;\n\n// Webhook'tan plan_id'yi al\nconst webhookData = $node[\"Webhook Trigger\"]?.json || {};\nconst planId = webhookData.body?.plan_id || null;\n\nreturn {\n  json: {\n    agents,\n    consensus: {\n      approve: approveCount,\n      reject: rejectCount,\n      needs_review: needsReviewCount\n    },\n    consensusPrompt,\n    planId\n  }\n};"
+        "mode": "append",
+        "options": {}
+      },
+      "id": "merge-all-agents",
+      "name": "Merge All Agents",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2.1,
+      "position": [
+        19200,
+        11248
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse node'larından gelen parse edilmiş output'ları al\n// Merge node'dan gelen tüm input'ları al (tüm agent'lar tamamlanana kadar bekler)\nconst inputs = $input.all();\n\n// Debug: Input sayısını logla\nconsole.log('Total inputs received:', inputs.length);\n\n// Tüm input'ları topla\nlet planning = null;\nlet production = null;\nlet warehouse = null;\n\n// Önce direkt node referanslarını dene\ntry {\n  const planningNode = $node[\"Parse Planning Output\"];\n  const productionNode = $node[\"Parse Production Output\"];\n  const warehouseNode = $node[\"Parse Warehouse Output\"];\n  \n  if (planningNode && planningNode.json) {\n    planning = Array.isArray(planningNode.json) ? planningNode.json[0] : planningNode.json;\n    console.log('Planning from direct node access');\n  }\n  if (productionNode && productionNode.json) {\n    production = Array.isArray(productionNode.json) ? productionNode.json[0] : productionNode.json;\n    console.log('Production from direct node access');\n  }\n  if (warehouseNode && warehouseNode.json) {\n    warehouse = Array.isArray(warehouseNode.json) ? warehouseNode.json[0] : warehouseNode.json;\n    console.log('Warehouse from direct node access');\n  }\n} catch (e) {\n  console.log('Direct node access failed:', e.message);\n}\n\n// Eğer direkt erişim çalışmadıysa, $input.all() kullan\nif (!planning || !production || !warehouse) {\n  console.log('Using $input.all() fallback');\n  \n  // Tüm input'ları topla\n  const allInputs = [];\n  for (let i = 0; i < inputs.length; i++) {\n    const json = inputs[i]?.json || {};\n    if (json.decision) { // Sadece geçerli decision'ı olan input'ları al\n      allInputs.push(json);\n      console.log(`Input ${i}: decision=${json.decision}, reasoning=${(json.reasoning || '').substring(0, 50)}`);\n    }\n  }\n  \n  // Eksik olanları sırayla ata\n  if (!planning && allInputs.length > 0) {\n    planning = allInputs[0];\n    console.log('Planning assigned from input[0]');\n  }\n  if (!production && allInputs.length > 1) {\n    production = allInputs[1];\n    console.log('Production assigned from input[1]');\n  }\n  if (!warehouse && allInputs.length > 2) {\n    warehouse = allInputs[2];\n    console.log('Warehouse assigned from input[2]');\n  }\n  \n  // Eğer hala eksik varsa, kalan input'ları kullan\n  if (!warehouse && allInputs.length > 2) {\n    warehouse = allInputs.find(inp => inp !== planning && inp !== production) || allInputs[2];\n    console.log('Warehouse assigned from remaining input');\n  }\n}\n\n// Default değerler\nplanning = planning || { decision: 'needs_review', reasoning: 'Planning agent henüz çalışmadı', confidence: 0.5 };\nproduction = production || { decision: 'needs_review', reasoning: 'Production agent henüz çalışmadı', confidence: 0.5 };\nwarehouse = warehouse || { decision: 'needs_review', reasoning: 'Warehouse agent henüz çalışmadı', confidence: 0.5 };\n\nconst agents = [\n  { name: 'Planning', decision: planning.decision || 'needs_review', reasoning: planning.reasoning || '', confidence: planning.confidence || 0.5 },\n  { name: 'Production', decision: production.decision || 'needs_review', reasoning: production.reasoning || '', confidence: production.confidence || 0.5 },\n  { name: 'Warehouse', decision: warehouse.decision || 'needs_review', reasoning: warehouse.reasoning || '', confidence: warehouse.confidence || 0.5 }\n];\n\nconst approveCount = agents.filter(a => a.decision === 'approved').length;\nconst rejectCount = agents.filter(a => a.decision === 'rejected').length;\nconst needsReviewCount = agents.filter(a => a.decision === 'needs_review').length;\n\nconst consensusPrompt = `3 agent'tan gelen cevaplar:\\n\\n${agents.map((a, i) => `${i+1}. ${a.name} Agent:\\n   Karar: ${a.decision}\\n   Güven: ${a.confidence}\\n   Gerekçe: ${a.reasoning}\\n`).join('\\n')}\\n\\nKonsensüs: ${approveCount} approve, ${rejectCount} reject, ${needsReviewCount} needs_review\\n\\nBu 3 agent'ın cevaplarını analiz et ve nihai karar ver.`;\n\n// Webhook'tan plan_id'yi al\nconst webhookData = $node[\"Webhook Trigger\"]?.json || {};\nconst planId = webhookData.body?.plan_id || null;\n\nreturn {\n  json: {\n    agents,\n    consensus: {\n      approve: approveCount,\n      reject: rejectCount,\n      needs_review: needsReviewCount\n    },\n    consensusPrompt,\n    planId\n  }\n};"
       },
       "id": "7c8b30d3-4201-4a8b-8137-675724f9dc09",
       "name": "Aggregate Responses",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        19344,
+        19520,
         11248
       ]
     },
@@ -354,7 +368,7 @@
       "main": [
         [
           {
-            "node": "Aggregate Responses",
+            "node": "Merge All Agents",
             "type": "main",
             "index": 0
           }
@@ -376,7 +390,7 @@
       "main": [
         [
           {
-            "node": "Aggregate Responses",
+            "node": "Merge All Agents",
             "type": "main",
             "index": 0
           }
@@ -395,6 +409,17 @@
       ]
     },
     "Parse Warehouse Output": {
+      "main": [
+        [
+          {
+            "node": "Merge All Agents",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge All Agents": {
       "main": [
         [
           {
