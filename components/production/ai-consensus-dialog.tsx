@@ -468,7 +468,7 @@ export function AiConsensusDialog({
 
         {/* Footer - Fixed at bottom */}
         {result && (
-          <div className="flex justify-end gap-2 pt-4 px-6 pb-6 border-t flex-shrink-0">
+          <div className="flex justify-end gap-2 pt-4 px-6 pb-6 border-t flex-shrink-0 bg-background">
             <Button variant="outline" onClick={onClose}>
               Kapat
             </Button>
@@ -484,6 +484,15 @@ export function AiConsensusDialog({
                   Yeniden Analiz Et
                 </>
               )}
+            </Button>
+          </div>
+        )}
+        
+        {/* Loading/Initial state footer */}
+        {(!result || loading) && (
+          <div className="flex justify-end gap-2 pt-4 px-6 pb-6 border-t flex-shrink-0 bg-background">
+            <Button variant="outline" onClick={onClose}>
+              Kapat
             </Button>
           </div>
         )}
