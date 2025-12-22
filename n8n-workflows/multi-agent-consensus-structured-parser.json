@@ -17,7 +17,6 @@
     },
     {
       "parameters": {
-        "agent": "openAIFunctionsAgent",
         "text": "={{ $json.body.prompt }}",
         "options": {
           "systemMessage": "Sen Planning Agent'sın. Üretim planlaması, zamanlama ve kapasite uygunluğunu değerlendiriyorsun.\n\nÖNEMLİ: Prompt'ta zaten tüm gerekli veriler (plan, BOM, stok, kapasite) mevcut. Supabase tool'unu KULLANMA! Prompt'taki verileri analiz et ve karar ver.\n\nKRİTİK KURAL: Yanıtını MUTLAKA JSON formatında ver. Hiçbir açıklama, metin veya ek bilgi ekleme. Sadece JSON object döndür.\n\nYanıt formatı: JSON object olmalı ve şu alanları içermeli:\n- decision: approved, rejected veya needs_review değerlerinden biri\n- reasoning: Kararın gerekçesi (string)\n- confidence: 0.0 ile 1.0 arasında bir sayı\n\nSADECE JSON DÖNDÜR, BAŞKA HİÇBİR ŞEY YAZMA!"
@@ -71,7 +70,6 @@
     },
     {
       "parameters": {
-        "agent": "openAIFunctionsAgent",
         "text": "={{ $json.body.prompt }}",
         "options": {
           "systemMessage": "Sen Production Agent'sın. Üretim hattı, operatör atama ve üretim süresini değerlendiriyorsun.\n\nÖNEMLİ: Prompt'ta zaten tüm gerekli veriler (plan, kapasite, operatörler) mevcut. Supabase tool'unu KULLANMA! Prompt'taki verileri analiz et ve karar ver.\n\nKRİTİK KURAL: Yanıtını MUTLAKA JSON formatında ver. Hiçbir açıklama, metin veya ek bilgi ekleme. Sadece JSON object döndür.\n\nYanıt formatı: JSON object olmalı ve şu alanları içermeli:\n- decision: approved, rejected veya needs_review değerlerinden biri\n- reasoning: Kararın gerekçesi (string)\n- confidence: 0.0 ile 1.0 arasında bir sayı\n\nSADECE JSON DÖNDÜR, BAŞKA HİÇBİR ŞEY YAZMA!"
@@ -125,7 +123,6 @@
     },
     {
       "parameters": {
-        "agent": "openAIFunctionsAgent",
         "text": "={{ $json.body.prompt }}",
         "options": {
           "systemMessage": "Sen Warehouse Agent'sın. Stok yeterliliği, malzeme rezervasyonu ve kritik seviyeleri değerlendiriyorsun.\n\nÖNEMLİ: Prompt'ta zaten tüm gerekli veriler (plan, BOM, stok durumu) mevcut. Supabase tool'unu KULLANMA! Prompt'taki verileri analiz et ve karar ver.\n\nKRİTİK KURAL: Yanıtını MUTLAKA JSON formatında ver. Hiçbir açıklama, metin veya ek bilgi ekleme. Sadece JSON object döndür.\n\nYanıt formatı: JSON object olmalı ve şu alanları içermeli:\n- decision: approved, rejected veya needs_review değerlerinden biri\n- reasoning: Kararın gerekçesi (string)\n- confidence: 0.0 ile 1.0 arasında bir sayı\n\nSADECE JSON DÖNDÜR, BAŞKA HİÇBİR ŞEY YAZMA!"
@@ -189,7 +186,6 @@
     },
     {
       "parameters": {
-        "agent": "openAIFunctionsAgent",
         "text": "={{ $json.consensusPrompt }}",
         "options": {
           "systemMessage": "Sen Manager Agent'sın. 3 agent'ın görüşlerini değerlendirerek nihai karar veriyorsun.\n\nKRİTİK KURAL: Yanıtını MUTLAKA JSON formatında ver. Hiçbir açıklama, metin veya ek bilgi ekleme. Sadece JSON object döndür.\n\nYanıt formatı: JSON object olmalı ve şu alanları içermeli:\n- finalDecision: approved, rejected veya needs_review değerlerinden biri\n- reasoning: Nihai kararın gerekçesi (string)\n- consensus: Object içinde approve, reject ve needs_review sayıları\n- confidence: 0.0 ile 1.0 arasında bir sayı\n\nSADECE JSON DÖNDÜR, BAŞKA HİÇBİR ŞEY YAZMA!"
