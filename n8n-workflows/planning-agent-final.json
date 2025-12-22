@@ -52,7 +52,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const input = $input.item.json;\nconst response = {\n  success: true,\n  agent: \"planning\",\n  response: input[0].message.content\n};\n\nreturn {\n  json: response\n};"
+        "jsCode": "// OpenAI node'dan gelen response'u al\nconst input = $input.item.json;\n\n// Response formatını kontrol et\nlet content = '';\n\nif (Array.isArray(input) && input.length > 0) {\n  // Array formatı\n  if (input[0].message && input[0].message.content) {\n    content = input[0].message.content;\n  } else if (input[0].content) {\n    content = input[0].content;\n  } else {\n    content = JSON.stringify(input[0]);\n  }\n} else if (input.message && input.message.content) {\n  // Object formatı\n  content = input.message.content;\n} else if (input.content) {\n  content = input.content;\n} else {\n  // Fallback: tüm input'u string'e çevir\n  content = JSON.stringify(input);\n}\n\n// Response oluştur\nconst response = {\n  success: true,\n  agent: \"planning\",\n  response: content\n};\n\nreturn {\n  json: response\n};"
       },
       "id": "code-node",
       "name": "Format Response",
