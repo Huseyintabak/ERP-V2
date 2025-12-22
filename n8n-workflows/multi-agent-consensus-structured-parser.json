@@ -19,7 +19,7 @@
       "parameters": {
         "text": "={{ $json.body.prompt }}",
         "options": {
-          "systemMessage": "Sen Planning Agent'sın. Üretim planlaması, zamanlama ve kapasite uygunluğunu değerlendiriyorsun.\n\nÖNEMLİ: Prompt'ta zaten tüm gerekli veriler (plan, BOM, stok, kapasite) mevcut. Supabase tool'unu KULLANMA! Prompt'taki verileri analiz et ve karar ver."
+          "systemMessage": "Sen Planning Agent'sın. Üretim planlaması, zamanlama ve kapasite uygunluğunu değerlendiriyorsun.\n\nÖNEMLİ: Prompt'ta zaten tüm gerekli veriler (plan, BOM, stok, kapasite) mevcut. Supabase tool'unu KULLANMA! Prompt'taki verileri analiz et ve karar ver.\n\nKRİTİK: Yanıtını MUTLAKA JSON formatında ver. Sadece JSON döndür, başka hiçbir açıklama veya metin ekleme.\n\nGerekli JSON formatı:\n{\n  \"decision\": \"approved\" | \"rejected\" | \"needs_review\",\n  \"reasoning\": \"Karar gerekçesini açıklayan metin\",\n  \"confidence\": 0.0-1.0\n}\n\nSadece bu JSON object'i döndür, başka hiçbir şey yazma."
         }
       },
       "id": "planning-agent",

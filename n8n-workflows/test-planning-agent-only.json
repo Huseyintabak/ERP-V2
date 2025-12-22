@@ -1,0 +1,146 @@
+{
+  "name": "Test Planning Agent Only",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "test-planning-agent",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "webhookId": "test-planning-agent"
+    },
+    {
+      "parameters": {
+        "text": "={{ $json.body.prompt }}",
+        "options": {
+          "systemMessage": "Sen Planning Agent'sın. Üretim planlaması, zamanlama ve kapasite uygunluğunu değerlendiriyorsun.\n\nÖNEMLİ: Prompt'ta zaten tüm gerekli veriler (plan, BOM, stok, kapasite) mevcut. Supabase tool'unu KULLANMA! Prompt'taki verileri analiz et ve karar ver.\n\nKRİTİK: Yanıtını MUTLAKA JSON formatında ver. Sadece JSON döndür, başka hiçbir açıklama veya metin ekleme.\n\nGerekli JSON formatı:\n{\n  \"decision\": \"approved\" | \"rejected\" | \"needs_review\",\n  \"reasoning\": \"Karar gerekçesini açıklayan metin\",\n  \"confidence\": 0.0-1.0\n}\n\nSadece bu JSON object'i döndür, başka hiçbir şey yazma."
+        }
+      },
+      "id": "planning-agent",
+      "name": "Planning Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1,
+      "position": [500, 300]
+    },
+    {
+      "parameters": {
+        "model": "gpt-4o",
+        "options": {
+          "maxTokens": 512,
+          "temperature": 0.5
+        }
+      },
+      "id": "planning-model",
+      "name": "GPT-4o (Planning)",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [500, 200],
+      "credentials": {
+        "openAiApi": {
+          "id": "openai-credentials",
+          "name": "OpenAI API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionId": "={{ $json.body.plan_id || $json.body.order_id || 'test-' + Date.now() }}"
+      },
+      "id": "planning-memory",
+      "name": "Simple Memory (Planning)",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1,
+      "position": [500, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Planning Agent output'unu parse et ve debug bilgisi ekle\nconst agentOutput = $input.item.json;\n\n// Debug: Raw output'u logla\nconst debugInfo = {\n  rawOutput: agentOutput,\n  outputType: typeof agentOutput,\n  isArray: Array.isArray(agentOutput),\n  keys: agentOutput ? Object.keys(agentOutput) : []\n};\n\n// Agent node output formatı: [{\"output\": \"...\"}]\nlet content = '';\n\nif (Array.isArray(agentOutput) && agentOutput.length > 0) {\n  if (agentOutput[0].output && typeof agentOutput[0].output === 'string') {\n    content = agentOutput[0].output;\n  } else if (agentOutput[0].text) {\n    content = agentOutput[0].text;\n  } else {\n    content = JSON.stringify(agentOutput[0]);\n  }\n} else if (agentOutput.output && typeof agentOutput.output === 'string') {\n  content = agentOutput.output;\n} else if (agentOutput.text) {\n  content = agentOutput.text;\n} else if (typeof agentOutput === 'string') {\n  content = agentOutput;\n} else {\n  content = JSON.stringify(agentOutput);\n}\n\n// JSON parse etmeyi dene\nlet parsed = null;\ntry {\n  parsed = typeof content === 'string' ? JSON.parse(content) : content;\n} catch (e) {\n  // JSON parse edilemezse, text içinde JSON aramayı dene\n  const jsonMatch = content.match(/\\{[\\s\\S]*\\}/);\n  if (jsonMatch) {\n    try {\n      parsed = JSON.parse(jsonMatch[0]);\n    } catch (e2) {\n      parsed = null;\n    }\n  }\n}\n\n// Eğer parsed yoksa veya decision yoksa, text'ten decision çıkar\nif (!parsed || !parsed.decision) {\n  const lowerContent = content.toLowerCase();\n  let decision = 'needs_review';\n  let confidence = 0.5;\n  \n  // Decision kelimelerini kontrol et (öncelik sırasına göre)\n  if (lowerContent.includes('rejected') || lowerContent.includes('reject') || lowerContent.includes('cannot') || lowerContent.includes('unable') || lowerContent.includes('not possible')) {\n    decision = 'rejected';\n    confidence = 0.8;\n  } else if (lowerContent.includes('approved') || lowerContent.includes('approve') || lowerContent.includes('can proceed') || lowerContent.includes('ready') || lowerContent.includes('sufficient') || lowerContent.includes('initiated')) {\n    decision = 'approved';\n    confidence = 0.8;\n  } else if (lowerContent.includes('needs_review') || lowerContent.includes('needs review') || lowerContent.includes('review') || lowerContent.includes('clarification') || lowerContent.includes('further')) {\n    decision = 'needs_review';\n    confidence = 0.6;\n  }\n  \n  parsed = parsed || {};\n  parsed.decision = decision;\n  parsed.reasoning = parsed.reasoning || content.substring(0, 500);\n  parsed.confidence = parsed.confidence || confidence;\n}\n\n// Validate ve normalize\nconst result = {\n  decision: parsed.decision && ['approved', 'rejected', 'needs_review'].includes(parsed.decision.toLowerCase()) ? parsed.decision.toLowerCase() : 'needs_review',\n  reasoning: parsed.reasoning && typeof parsed.reasoning === 'string' ? parsed.reasoning : (parsed.reasoning || content.substring(0, 500) || 'Gerekçe belirtilmedi'),\n  confidence: typeof parsed.confidence === 'number' && parsed.confidence >= 0 && parsed.confidence <= 1 ? parsed.confidence : 0.5,\n  debug: debugInfo,\n  rawContent: content.substring(0, 200)\n};\n\nreturn {\n  json: result\n};"
+      },
+      "id": "parse-planning",
+      "name": "Parse Planning Output (Debug)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [700, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "respond",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [900, 300]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Planning Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Planning Agent": {
+      "main": [
+        [
+          {
+            "node": "Parse Planning Output (Debug)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Planning Output (Debug)": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GPT-4o (Planning)": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Planning Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory (Planning)": {
+      "ai_memory": [
+        [
+          {
+            "node": "Planning Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": []
+}
+
