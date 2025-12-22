@@ -7,10 +7,10 @@ import { logger } from '@/lib/utils/logger';
 /**
  * POST /api/ai/n8n-consensus-with-data
  * 
- * Plan ID veya Order ID'den gerçek Supabase verilerini çekip
+ * Plan ID, Order ID veya Semi Order ID'den gerçek Supabase verilerini çekip
  * multi-agent consensus workflow'unu otomatik olarak çalıştırır.
  * 
- * Body: { plan_id?: string, order_id?: string }
+ * Body: { plan_id?: string, order_id?: string, semi_order_id?: string }
  */
 export async function POST(request: NextRequest) {
   try {
@@ -26,11 +26,11 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { plan_id, order_id } = body;
+    const { plan_id, order_id, semi_order_id } = body;
 
-    if (!plan_id && !order_id) {
+    if (!plan_id && !order_id && !semi_order_id) {
       return NextResponse.json(
-        { error: 'plan_id or order_id is required' },
+        { error: 'plan_id, order_id, or semi_order_id is required' },
         { status: 400 }
       );
     }
@@ -38,11 +38,13 @@ export async function POST(request: NextRequest) {
     const supabase = await createClient();
     let plan: any = null;
     let order: any = null;
+    let semiOrder: any = null;
     let product: any = null;
     let bomMaterials: any[] = [];
     let productionCapacity: any = null;
+    let isSemiProduction = false; // Yarı mamul üretimi mi?
 
-    // 1. Plan veya Order bilgisini çek
+    // 1. Plan, Order veya Semi Order bilgisini çek
     if (plan_id) {
       const { data: planData, error: planError } = await supabase
         .from('production_plans')
@@ -119,6 +121,33 @@ export async function POST(request: NextRequest) {
         .single();
 
       plan = planData;
+    } else if (semi_order_id) {
+      // Yarı mamul üretim siparişi
+      isSemiProduction = true;
+      const { data: semiOrderData, error: semiOrderError } = await supabase
+        .from('semi_production_orders')
+        .select(`
+          *,
+          product:semi_finished_products (
+            id,
+            name,
+            code,
+            unit,
+            quantity
+          )
+        `)
+        .eq('id', semi_order_id)
+        .single();
+
+      if (semiOrderError || !semiOrderData) {
+        return NextResponse.json(
+          { error: 'Semi production order not found' },
+          { status: 404 }
+        );
+      }
+
+      semiOrder = semiOrderData;
+      product = semiOrderData.product;
     }
 
     if (!product) {
@@ -128,36 +157,77 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 2. BOM malzemelerini çek
-    const { data: bomData, error: bomError } = await supabase
-      .from('bom')
-      .select(`
-        *,
-        raw_materials!bom_material_id_fkey (
-          id,
-          name,
-          code,
-          quantity,
-          reserved_quantity,
-          critical_level,
-          unit,
-          unit_price
-        ),
-        semi_finished_products!bom_material_id_fkey (
-          id,
-          name,
-          code,
-          quantity,
-          reserved_quantity,
-          critical_level,
-          unit_cost
-        )
-      `)
-      .eq('finished_product_id', product.id);
+    // 2. BOM malzemelerini çek (nihai ürün için bom, yarı mamul için semi_bom)
+    let bomData: any[] = [];
+    let bomError: any = null;
+
+    if (isSemiProduction) {
+      // Yarı mamul üretimi için semi_bom kullan
+      const { data, error } = await supabase
+        .from('semi_bom')
+        .select(`
+          *,
+          raw_materials!semi_bom_material_id_fkey (
+            id,
+            name,
+            code,
+            quantity,
+            reserved_quantity,
+            critical_level,
+            unit,
+            unit_price
+          ),
+          semi_finished_products!semi_bom_material_id_fkey (
+            id,
+            name,
+            code,
+            quantity,
+            reserved_quantity,
+            critical_level,
+            unit_cost
+          )
+        `)
+        .eq('semi_product_id', product.id);
+      
+      bomData = data || [];
+      bomError = error;
+    } else {
+      // Nihai ürün üretimi için bom kullan
+      const { data, error } = await supabase
+        .from('bom')
+        .select(`
+          *,
+          raw_materials!bom_material_id_fkey (
+            id,
+            name,
+            code,
+            quantity,
+            reserved_quantity,
+            critical_level,
+            unit,
+            unit_price
+          ),
+          semi_finished_products!bom_material_id_fkey (
+            id,
+            name,
+            code,
+            quantity,
+            reserved_quantity,
+            critical_level,
+            unit_cost
+          )
+        `)
+        .eq('finished_product_id', product.id);
+      
+      bomData = data || [];
+      bomError = error;
+    }
 
     // Planned quantity'yi önce hesapla (BOM hesaplamasında kullanılacak)
     let plannedQuantity = 0;
-    if (plan?.planned_quantity && plan.planned_quantity > 0) {
+    if (isSemiProduction) {
+      plannedQuantity = semiOrder?.planned_quantity || 0;
+    } else if (plan?.planned_quantity && plan.planned_quantity > 0) {
       plannedQuantity = plan.planned_quantity;
     } else if (order?.total_quantity && order.total_quantity > 0) {
       plannedQuantity = order.total_quantity;
@@ -190,7 +260,9 @@ export async function POST(request: NextRequest) {
             criticalLevel = material.critical_level || 0;
             unitPrice = material.unit_cost || 0;
           }
-          const requiredQuantity = (item.quantity_needed || 0) * plannedQuantity;
+          // BOM yapısı: bom tablosunda quantity_needed, semi_bom tablosunda quantity
+          const quantityPerUnit = item.quantity_needed || item.quantity || 0;
+          const requiredQuantity = quantityPerUnit * plannedQuantity;
           const availableStock = currentStock - reservedStock;
 
           return {
@@ -242,30 +314,48 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Aktif üretim planları ve yarı mamul siparişlerini çek
     const { data: activePlans, error: activePlansError } = await supabase
       .from('production_plans')
       .select('id, planned_quantity, produced_quantity, status, assigned_operator_id')
       .in('status', ['devam_ediyor', 'planlandi']);
 
-    // Kapasite hesaplama
+    const { data: activeSemiOrders, error: activeSemiOrdersError } = await supabase
+      .from('semi_production_orders')
+      .select('id, planned_quantity, produced_quantity, status, assigned_operator_id')
+      .in('status', ['devam_ediyor', 'planlandi']);
+
+    // Kapasite hesaplama (nihai ürün + yarı mamul üretimleri)
     const totalDailyCapacity = operators?.reduce((sum, op) => sum + (op.daily_capacity || 0), 0) || 0;
-    const activeProductionCount = activePlans?.length || 0;
-    const totalActiveQuantity = activePlans?.reduce((sum, p) => sum + (p.planned_quantity || 0), 0) || 0;
+    const activeProductionCount = (activePlans?.length || 0) + (activeSemiOrders?.length || 0);
+    const totalActiveQuantity = 
+      (activePlans?.reduce((sum, p) => sum + (p.planned_quantity || 0), 0) || 0) +
+      (activeSemiOrders?.reduce((sum, s) => sum + (s.planned_quantity || 0), 0) || 0);
 
     productionCapacity = {
       total_operators: operators?.length || 0,
       total_daily_capacity: totalDailyCapacity,
-      active_production_plans: activeProductionCount,
+      active_production_plans: activePlans?.length || 0,
+      active_semi_orders: activeSemiOrders?.length || 0,
+      total_active_productions: activeProductionCount,
       total_active_quantity: totalActiveQuantity,
       available_capacity: totalDailyCapacity - totalActiveQuantity,
     };
 
     // 4. Prompt oluştur
     // plannedQuantity zaten yukarıda hesaplandı (BOM hesaplamasında kullanıldı)
-    const orderNumber = order?.order_number || 'N/A';
-    const customerName = order?.customer_name || 'N/A';
-    const deliveryDate = order?.delivery_date || 'N/A';
-    const priority = order?.priority || 'orta';
+    const orderNumber = isSemiProduction 
+      ? (semiOrder?.order_number || 'N/A')
+      : (order?.order_number || 'N/A');
+    const customerName = isSemiProduction 
+      ? 'İç Üretim' // Yarı mamul üretimleri için müşteri yok
+      : (order?.customer_name || 'N/A');
+    const deliveryDate = isSemiProduction 
+      ? 'N/A' // Yarı mamul üretimleri için teslim tarihi yok
+      : (order?.delivery_date || 'N/A');
+    const priority = isSemiProduction 
+      ? (semiOrder?.priority || 'orta')
+      : (order?.priority || 'orta');
 
     // BOM özeti
     const bomSummary = bomMaterials.map(m => 
@@ -278,17 +368,19 @@ export async function POST(request: NextRequest) {
       ? `\n⚠️ EKSİK MALZEMELER:\n${insufficientMaterials.map(m => `- ${m.material_name}: ${m.shortage} ${m.material_type === 'raw' ? 'kg' : 'adet'} eksik`).join('\n')}`
       : '\n✅ Tüm malzemeler stokta yeterli';
 
-    const prompt = `Sipariş ${orderNumber} için ${plannedQuantity} adet ${product.name} (${product.code}) üretimi planlanacak.
+    const productionType = isSemiProduction ? 'Yarı Mamul Üretimi' : 'Nihai Ürün Üretimi';
+    const prompt = `${productionType} - ${isSemiProduction ? 'Sipariş' : 'Sipariş'} ${orderNumber} için ${plannedQuantity} adet ${product.name} (${product.code}) üretimi planlanacak.
 
-SİPARİŞ BİLGİLERİ:
-- Sipariş No: ${orderNumber}
-- Müşteri: ${customerName}
+${isSemiProduction ? 'YARI MAMUL ÜRETİM SİPARİŞİ BİLGİLERİ:' : 'SİPARİŞ BİLGİLERİ:'}
+- ${isSemiProduction ? 'Sipariş' : 'Sipariş'} No: ${orderNumber}
+${!isSemiProduction ? `- Müşteri: ${customerName}` : ''}
 - Ürün: ${product.name} (${product.code})
 - Planlanan Miktar: ${plannedQuantity} ${product.unit || 'adet'}
-- Teslim Tarihi: ${deliveryDate}
+${!isSemiProduction ? `- Teslim Tarihi: ${deliveryDate}` : ''}
 - Öncelik: ${priority}
 ${plan ? `- Plan No: ${plan.plan_number || plan.id.slice(0, 8)}` : ''}
 ${plan ? `- Plan Durumu: ${plan.status}` : ''}
+${isSemiProduction && semiOrder ? `- Sipariş Durumu: ${semiOrder.status}` : ''}
 
 BOM (Bill of Materials) ve STOK DURUMU:
 ${bomSummary}${insufficientSummary}
@@ -296,7 +388,9 @@ ${bomSummary}${insufficientSummary}
 ÜRETİM KAPASİTESİ:
 - Toplam Operatör Sayısı: ${productionCapacity.total_operators}
 - Toplam Günlük Kapasite: ${productionCapacity.total_daily_capacity} adet/gün
-- Aktif Üretim Planları: ${productionCapacity.active_production_plans}
+- Aktif Nihai Ürün Planları: ${productionCapacity.active_production_plans}
+- Aktif Yarı Mamul Siparişleri: ${productionCapacity.active_semi_orders}
+- Toplam Aktif Üretim: ${productionCapacity.total_active_productions}
 - Aktif Üretim Miktarı: ${productionCapacity.total_active_quantity} adet
 - Kullanılabilir Kapasite: ${productionCapacity.available_capacity} adet/gün
 
@@ -319,9 +413,11 @@ Her agent kendi perspektifinden değerlendirsin:
       {
         plan_id: plan?.id,
         order_id: order?.id,
+        semi_order_id: semiOrder?.id,
         product_id: product.id,
         planned_quantity: plannedQuantity,
         delivery_date: deliveryDate,
+        is_semi_production: isSemiProduction,
       }
     );
 
@@ -338,8 +434,10 @@ Her agent kendi perspektifinden değerlendirsin:
     // 6. Sonuçları formatla ve döndür
     return NextResponse.json({
       success: true,
+      is_semi_production: isSemiProduction,
       plan_id: plan?.id,
       order_id: order?.id,
+      semi_order_id: semiOrder?.id,
       order_number: orderNumber,
       product: {
         id: product.id,

@@ -74,7 +74,9 @@ interface ConsensusResult {
   production_capacity: {
     total_operators: number;
     total_daily_capacity: number;
-    active_production_plans: number;
+    active_production_plans?: number;
+    active_semi_orders?: number;
+    total_active_productions?: number;
     total_active_quantity: number;
     available_capacity: number;
   };
@@ -96,33 +98,49 @@ interface ConsensusResult {
   };
 }
 
+interface SemiProductionOrder {
+  id: string;
+  order_number: string;
+  product: {
+    name: string;
+    code: string;
+  };
+}
+
 interface AiConsensusDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  plan: ProductionPlan | null;
+  plan?: ProductionPlan | null;
+  semiOrder?: SemiProductionOrder | null;
 }
 
 export function AiConsensusDialog({
   isOpen,
   onClose,
   plan,
+  semiOrder,
 }: AiConsensusDialogProps) {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<ConsensusResult | null>(null);
 
   const handleRunConsensus = async () => {
-    if (!plan) return;
+    if (!plan && !semiOrder) return;
 
     setLoading(true);
     setResult(null);
 
     try {
+      const body: any = {};
+      if (plan) {
+        body.plan_id = plan.id;
+      } else if (semiOrder) {
+        body.semi_order_id = semiOrder.id;
+      }
+
       const response = await fetch('/api/ai/n8n-consensus-with-data', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          plan_id: plan.id,
-        }),
+        body: JSON.stringify(body),
       });
 
       if (!response.ok) {
@@ -180,7 +198,9 @@ export function AiConsensusDialog({
           <DialogDescription>
             {plan
               ? `${plan.order?.order_number || plan.id.slice(0, 8)} - ${plan.product?.name || 'Ürün'} için AI agent'ları konsensüs kararı verecek`
-              : 'Plan seçilmedi'}
+              : semiOrder
+              ? `${semiOrder.order_number} - ${semiOrder.product.name} için AI agent'ları konsensüs kararı verecek`
+              : 'Plan/Sipariş seçilmedi'}
           </DialogDescription>
         </DialogHeader>
 
@@ -375,9 +395,11 @@ export function AiConsensusDialog({
                       </div>
                       <div>
                         <div className="text-lg font-bold">
-                          {result.production_capacity.active_production_plans}
+                          {result.production_capacity.active_production_plans || result.production_capacity.total_active_productions || 0}
                         </div>
-                        <div className="text-xs text-gray-500">Aktif Plan</div>
+                        <div className="text-xs text-gray-500">
+                          {result.production_capacity.active_semi_orders !== undefined ? 'Aktif Üretim' : 'Aktif Plan'}
+                        </div>
                       </div>
                       <div>
                         <div className="text-lg font-bold">
