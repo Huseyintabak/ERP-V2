@@ -191,32 +191,23 @@ export default function YariMamulUretimPage() {
         fetchProductionOrders();
       } else {
         // Debug: API response'unu logla
-        console.log('API Error Response:', data);
-        console.log('Insufficient Materials:', data.insufficient_materials);
-        console.log('Details:', data.details);
+        console.log('🔴 API Error Response:', JSON.stringify(data, null, 2));
+        console.log('🔴 Insufficient Materials:', data.insufficient_materials);
+        console.log('🔴 Details:', data.details);
+        console.log('🔴 Error:', data.error);
         
-        // Detaylı hata mesajını dialog'da göster
-        if (data.insufficient_materials && Array.isArray(data.insufficient_materials) && data.insufficient_materials.length > 0) {
-          // Eksik malzemeler varsa dialog aç
-          console.log('Opening dialog with insufficient materials:', data.insufficient_materials.length);
-          setStockErrorDialog({
-            isOpen: true,
-            error: data.error || 'Yeterli stok bulunmuyor',
-            details: data.details,
-            insufficientMaterials: data.insufficient_materials,
-          });
-        } else if (data.details) {
-          // Diğer hatalar için de dialog aç
-          console.log('Opening dialog with details only');
-          setStockErrorDialog({
-            isOpen: true,
-            error: data.error || 'Bir hata oluştu',
-            details: data.details,
-          });
-        } else {
-          console.log('Showing toast error');
-          toast.error(data.error || 'Bir hata oluştu');
-        }
+        // Her durumda dialog aç (hata varsa)
+        const dialogData: typeof stockErrorDialog = {
+          isOpen: true,
+          error: data.error || 'Yeterli stok bulunmuyor',
+          details: data.details || undefined,
+          insufficientMaterials: (data.insufficient_materials && Array.isArray(data.insufficient_materials) && data.insufficient_materials.length > 0) 
+            ? data.insufficient_materials 
+            : undefined,
+        };
+        
+        console.log('🔴 Setting dialog state:', JSON.stringify(dialogData, null, 2));
+        setStockErrorDialog(dialogData);
       }
     } catch (error: any) {
       toast.error(error.message || 'Bir hata oluştu');
@@ -816,26 +807,23 @@ export default function YariMamulUretimPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-red-600">
               <AlertCircle className="h-5 w-5" />
-              {stockErrorDialog.error}
+              {stockErrorDialog.error || 'Hata'}
             </DialogTitle>
-            {stockErrorDialog.details && (
-              <DialogDescription>
-                {stockErrorDialog.details}
-              </DialogDescription>
-            )}
           </DialogHeader>
 
-          {/* Always show details if available, even if insufficientMaterials is empty */}
-          {stockErrorDialog.details && (
-            <Alert variant="destructive" className="mb-4">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription className="whitespace-pre-wrap text-sm">
-                {stockErrorDialog.details}
-              </AlertDescription>
-            </Alert>
+          {/* Debug: Show state info */}
+          {process.env.NODE_ENV === 'development' && (
+            <div className="text-xs bg-gray-100 p-2 rounded mb-4">
+              <div>Error: {stockErrorDialog.error}</div>
+              <div>Has Details: {stockErrorDialog.details ? 'YES' : 'NO'}</div>
+              <div>Has Materials: {stockErrorDialog.insufficientMaterials?.length || 0}</div>
+              {stockErrorDialog.details && <div className="mt-2">Details Preview: {stockErrorDialog.details.substring(0, 100)}...</div>}
+            </div>
           )}
 
-          {stockErrorDialog.insufficientMaterials && Array.isArray(stockErrorDialog.insufficientMaterials) && stockErrorDialog.insufficientMaterials.length > 0 ? (
+          <div className="space-y-4">
+            {/* Show insufficient materials if available */}
+            {stockErrorDialog.insufficientMaterials && Array.isArray(stockErrorDialog.insufficientMaterials) && stockErrorDialog.insufficientMaterials.length > 0 ? (
             <div className="space-y-4">
               <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />
@@ -899,21 +887,30 @@ export default function YariMamulUretimPage() {
                 </AlertDescription>
               </Alert>
             </div>
-          ) : stockErrorDialog.details ? (
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription className="whitespace-pre-wrap">
-                {stockErrorDialog.details}
-              </AlertDescription>
-            </Alert>
-          ) : (
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>
-                Stok kontrolü yapılamadı. Lütfen tekrar deneyin veya stok durumunu kontrol edin.
-              </AlertDescription>
-            </Alert>
-          )}
+            ) : null}
+
+            {/* Always show details if available */}
+            {stockErrorDialog.details && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Detaylar</AlertTitle>
+                <AlertDescription className="whitespace-pre-wrap text-sm mt-2">
+                  {stockErrorDialog.details}
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {/* Fallback if no details or materials */}
+            {!stockErrorDialog.details && (!stockErrorDialog.insufficientMaterials || stockErrorDialog.insufficientMaterials.length === 0) && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  Stok kontrolü yapılamadı. Lütfen tekrar deneyin veya stok durumunu kontrol edin.
+                  {stockErrorDialog.error && ` (${stockErrorDialog.error})`}
+                </AlertDescription>
+              </Alert>
+            )}
+          </div>
 
           <div className="flex justify-end gap-2 pt-4 border-t">
             <Button variant="outline" onClick={() => {
