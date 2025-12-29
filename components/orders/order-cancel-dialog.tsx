@@ -1,34 +1,35 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { 
-  XCircle, 
-  AlertTriangle, 
-  Package, 
-  Calendar, 
-  User, 
+import { useState, useEffect } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  XCircle,
+  AlertTriangle,
+  Package,
+  Calendar,
+  User,
   Clock,
   CheckCircle,
-  X
-} from 'lucide-react';
-import { toast } from 'sonner';
-import { useAuthStore } from '@/stores/auth-store';
-import { logger } from '@/lib/utils/logger';
+  X,
+} from "lucide-react";
+import { toast } from "sonner";
+import { useAuthStore } from "@/stores/auth-store";
+import { logger } from "@/lib/utils/logger";
+import { type Order } from "@/stores/order-store";
 
-interface Order {
-  id: string;
-  order_number: string;
-  customer_name: string;
-  status: string;
-  created_at: string;
-  created_by: string;
+interface OrderWithPlans extends Order {
   production_plans?: Array<{
     id: string;
     product_name: string;
@@ -41,7 +42,7 @@ interface Order {
 interface OrderCancelDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  order: Order | null;
+  order: OrderWithPlans | null;
   onCancelSuccess: () => void;
 }
 
@@ -49,10 +50,10 @@ export function OrderCancelDialog({
   isOpen,
   onClose,
   order,
-  onCancelSuccess
+  onCancelSuccess,
 }: OrderCancelDialogProps) {
   const { user } = useAuthStore();
-  const [reason, setReason] = useState('');
+  const [reason, setReason] = useState("");
   const [isCancelling, setIsCancelling] = useState(false);
   const [permissionCheck, setPermissionCheck] = useState<{
     allowed: boolean;
@@ -70,25 +71,28 @@ export function OrderCancelDialog({
 
     try {
       if (!user?.id) {
-        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+        throw new Error("Kullanıcı kimlik doğrulaması gerekli");
       }
 
-      const response = await fetch(`/api/orders/cancel-permission?orderId=${order.id}`, {
-        headers: {
-          'x-user-id': user.id
-        }
-      });
+      const response = await fetch(
+        `/api/orders/cancel-permission?orderId=${order.id}`,
+        {
+          headers: {
+            "x-user-id": user.id,
+          },
+        },
+      );
       const data = await response.json();
       setPermissionCheck(data);
     } catch (error) {
-      logger.error('Permission check error:', error);
-      setPermissionCheck({ allowed: false, reason: 'İzin kontrolü başarısız' });
+      logger.error("Permission check error:", error);
+      setPermissionCheck({ allowed: false, reason: "İzin kontrolü başarısız" });
     }
   };
 
   const handleCancel = async () => {
     if (!reason.trim() || !order) {
-      toast.error('İptal sebebi belirtilmelidir');
+      toast.error("İptal sebebi belirtilmelidir");
       return;
     }
 
@@ -96,14 +100,14 @@ export function OrderCancelDialog({
       setIsCancelling(true);
 
       if (!user?.id) {
-        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+        throw new Error("Kullanıcı kimlik doğrulaması gerekli");
       }
 
-      const response = await fetch('/api/orders/cancel', {
-        method: 'POST',
+      const response = await fetch("/api/orders/cancel", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-          'x-user-id': user.id
+          "Content-Type": "application/json",
+          "x-user-id": user.id,
         },
         body: JSON.stringify({
           orderId: order.id,
@@ -114,46 +118,49 @@ export function OrderCancelDialog({
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'İptal işlemi başarısız');
+        throw new Error(data.error || "İptal işlemi başarısız");
       }
 
-      toast.success('Sipariş başarıyla iptal edildi');
+      toast.success("Sipariş başarıyla iptal edildi");
       onCancelSuccess();
       onClose();
-      setReason('');
-
+      setReason("");
     } catch (error: any) {
-      logger.error('Cancel error:', error);
-      toast.error(error.message || 'İptal işlemi başarısız');
+      logger.error("Cancel error:", error);
+      toast.error(error.message || "İptal işlemi başarısız");
     } finally {
       setIsCancelling(false);
     }
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString('tr-TR', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+    return new Date(dateString).toLocaleString("tr-TR", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     });
   };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'beklemede':
+      case "beklemede":
         return <Badge variant="secondary">Beklemede</Badge>;
-      case 'onaylandi':
+      case "onaylandi":
         return <Badge variant="default">Onaylandı</Badge>;
-      case 'planlandi':
+      case "planlandi":
         return <Badge variant="outline">Planlandı</Badge>;
-      case 'uretimde':
+      case "uretimde":
         return <Badge variant="destructive">Üretimde</Badge>;
-      case 'tamamlandi':
+      case "tamamlandi":
         return <Badge className="bg-green-600">Tamamlandı</Badge>;
-      case 'iptal':
-        return <Badge variant="outline" className="text-red-600">İptal</Badge>;
+      case "iptal":
+        return (
+          <Badge variant="outline" className="text-red-600">
+            İptal
+          </Badge>
+        );
       default:
         return <Badge variant="secondary">{status}</Badge>;
     }
@@ -161,10 +168,16 @@ export function OrderCancelDialog({
 
   if (!order) return null;
 
-  const hasCompletedPlans = order.production_plans?.some(plan => plan.status === 'tamamlandi');
-  const hasProduction = order.production_plans?.some(plan => plan.produced_quantity > 0);
+  const hasCompletedPlans = order.production_plans?.some(
+    (plan: any) => plan.status === "tamamlandi",
+  );
+  const hasProduction = order.production_plans?.some(
+    (plan: any) => plan.produced_quantity > 0,
+  );
   const totalPlans = order.production_plans?.length || 0;
-  const completedPlans = order.production_plans?.filter(plan => plan.status === 'tamamlandi').length || 0;
+  const completedPlans =
+    order.production_plans?.filter((plan: any) => plan.status === "tamamlandi")
+      .length || 0;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -196,7 +209,7 @@ export function OrderCancelDialog({
                   <Label className="text-sm font-medium">Müşteri</Label>
                   <div className="flex items-center gap-2">
                     <User className="h-4 w-4 text-gray-500" />
-                    <span>{order.customer_name}</span>
+                    <span>{order.customer?.name || "Müşteri Yok"}</span>
                   </div>
                 </div>
 
@@ -208,10 +221,14 @@ export function OrderCancelDialog({
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium">Oluşturulma Tarihi</Label>
+                  <Label className="text-sm font-medium">
+                    Oluşturulma Tarihi
+                  </Label>
                   <div className="flex items-center gap-2">
                     <Calendar className="h-4 w-4 text-gray-500" />
-                    <span className="text-sm">{formatDate(order.created_at)}</span>
+                    <span className="text-sm">
+                      {formatDate(order.created_at)}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -226,8 +243,11 @@ export function OrderCancelDialog({
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {order.production_plans.map((plan) => (
-                    <div key={plan.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  {order.production_plans.map((plan: any) => (
+                    <div
+                      key={plan.id}
+                      className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                    >
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
                           <Package className="h-4 w-4 text-white" />
@@ -235,13 +255,14 @@ export function OrderCancelDialog({
                         <div>
                           <div className="font-medium">{plan.product_name}</div>
                           <div className="text-sm text-gray-500">
-                            Hedef: {plan.target_quantity} | Üretilen: {plan.produced_quantity}
+                            Hedef: {plan.target_quantity} | Üretilen:{" "}
+                            {plan.produced_quantity}
                           </div>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
                         {getStatusBadge(plan.status)}
-                        {plan.status === 'tamamlandi' && (
+                        {plan.status === "tamamlandi" && (
                           <CheckCircle className="h-4 w-4 text-green-600" />
                         )}
                         {plan.produced_quantity > 0 && (
@@ -251,10 +272,12 @@ export function OrderCancelDialog({
                     </div>
                   ))}
                 </div>
-                
+
                 <div className="mt-4 p-3 bg-blue-50 rounded-lg">
                   <div className="text-sm text-blue-800">
-                    <strong>Özet:</strong> {totalPlans} plan, {completedPlans} tamamlandı, {hasProduction ? 'Üretim başlamış' : 'Üretim başlamamış'}
+                    <strong>Özet:</strong> {totalPlans} plan, {completedPlans}{" "}
+                    tamamlandı,{" "}
+                    {hasProduction ? "Üretim başlamış" : "Üretim başlamamış"}
                   </div>
                 </div>
               </CardContent>
@@ -265,9 +288,7 @@ export function OrderCancelDialog({
           {permissionCheck && !permissionCheck.allowed && (
             <Alert variant="destructive">
               <AlertTriangle className="h-4 w-4" />
-              <AlertDescription>
-                {permissionCheck.reason}
-              </AlertDescription>
+              <AlertDescription>{permissionCheck.reason}</AlertDescription>
             </Alert>
           )}
 
@@ -275,7 +296,8 @@ export function OrderCancelDialog({
             <Alert variant="destructive">
               <AlertTriangle className="h-4 w-4" />
               <AlertDescription>
-                Bu siparişte tamamlanan planlar bulunmaktadır. İptal işlemi tüm planları iptal edecektir.
+                Bu siparişte tamamlanan planlar bulunmaktadır. İptal işlemi tüm
+                planları iptal edecektir.
               </AlertDescription>
             </Alert>
           )}
@@ -284,7 +306,8 @@ export function OrderCancelDialog({
             <Alert>
               <AlertTriangle className="h-4 w-4" />
               <AlertDescription>
-                Bu siparişte üretim başlamış ancak henüz tamamlanmamış planlar bulunmaktadır.
+                Bu siparişte üretim başlamış ancak henüz tamamlanmamış planlar
+                bulunmaktadır.
               </AlertDescription>
             </Alert>
           )}
@@ -313,11 +336,22 @@ export function OrderCancelDialog({
               <Label className="text-sm font-medium">İptal Etkisi</Label>
               <div className="bg-red-50 border border-red-200 rounded-lg p-4">
                 <ul className="text-sm space-y-1">
-                  <li>• <strong>Sipariş durumu:</strong> "iptal" olarak değiştirilecek</li>
-                  <li>• <strong>Tüm planlar:</strong> İptal edilecek</li>
-                  <li>• <strong>Rezervasyonlar:</strong> Serbest bırakılacak</li>
-                  <li>• <strong>Stok hareketleri:</strong> Geri alınacak</li>
-                  <li>• <strong>Bu işlem:</strong> Geri alınamaz</li>
+                  <li>
+                    • <strong>Sipariş durumu:</strong> "iptal" olarak
+                    değiştirilecek
+                  </li>
+                  <li>
+                    • <strong>Tüm planlar:</strong> İptal edilecek
+                  </li>
+                  <li>
+                    • <strong>Rezervasyonlar:</strong> Serbest bırakılacak
+                  </li>
+                  <li>
+                    • <strong>Stok hareketleri:</strong> Geri alınacak
+                  </li>
+                  <li>
+                    • <strong>Bu işlem:</strong> Geri alınamaz
+                  </li>
                 </ul>
               </div>
             </div>
@@ -330,10 +364,12 @@ export function OrderCancelDialog({
           </Button>
           <Button
             onClick={handleCancel}
-            disabled={!permissionCheck?.allowed || !reason.trim() || isCancelling}
+            disabled={
+              !permissionCheck?.allowed || !reason.trim() || isCancelling
+            }
             className="bg-red-600 hover:bg-red-700"
           >
-            {isCancelling ? 'İptal Ediliyor...' : 'Siparişi İptal Et'}
+            {isCancelling ? "İptal Ediliyor..." : "Siparişi İptal Et"}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import { useEffect, useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   Table,
   TableBody,
@@ -11,62 +11,68 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Plus, CheckCircle, Clock, Factory, Edit, Trash2, Users, XCircle, Upload, Download } from 'lucide-react';
-import { toast } from 'sonner';
-import { formatDate } from '@/lib/utils';
-import { OrderForm } from '@/components/production/order-form';
-import { CustomerDialog } from '@/components/customers/customer-dialog';
-import { OrderCancelDialog } from '@/components/orders/order-cancel-dialog';
-import { BulkOrderImportDialog } from '@/components/orders/bulk-order-import-dialog';
-import { useOrders, useOrderActions, useOrderLoading } from '@/stores/order-store';
-import { useRoleBasedRealtime } from '@/lib/hooks/use-realtime-store';
-import { useAuthStore } from '@/stores/auth-store';
-
-interface Order {
-  id: string;
-  order_number: string;
-  customer?: {
-    id: string;
-    name: string;
-    company?: string;
-  };
-  items: Array<{
-    id: string;
-    product: { code: string; name: string };
-    quantity: number;
-  }>;
-  total_quantity: number;
-  priority: string;
-  status: string;
-  delivery_date: string;
-  created_at: string;
-}
+} from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Plus,
+  CheckCircle,
+  Clock,
+  Factory,
+  Edit,
+  Trash2,
+  Users,
+  XCircle,
+  Upload,
+  Download,
+} from "lucide-react";
+import { toast } from "sonner";
+import { formatDate } from "@/lib/utils";
+import { OrderForm } from "@/components/production/order-form";
+import { CustomerDialog } from "@/components/customers/customer-dialog";
+import { OrderCancelDialog } from "@/components/orders/order-cancel-dialog";
+import { BulkOrderImportDialog } from "@/components/orders/bulk-order-import-dialog";
+import {
+  useOrders,
+  useOrderActions,
+  useOrderLoading,
+  type Order,
+} from "@/stores/order-store";
+import { useRoleBasedRealtime } from "@/lib/hooks/use-realtime-store";
+import { useAuthStore } from "@/stores/auth-store";
 
 export default function SiparislerPage() {
   const { user } = useAuthStore();
   const orders = useOrders();
   const loading = useOrderLoading();
   const actions = useOrderActions();
-  
+
   const [isOrderFormOpen, setIsOrderFormOpen] = useState(false);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
-  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
-  
+  const [selectedOrder, setSelectedOrder] = useState<any>(null);
+
   // Real-time updates for orders
-  useRoleBasedRealtime('planlama');
-  
+  useRoleBasedRealtime("planlama");
+
   useEffect(() => {
     actions.fetchOrders();
   }, [actions]);
 
   const handleApprove = async (orderId: string) => {
+    const loadingToast = toast.loading("Sipariş onaylanıyor...");
     try {
       await actions.approveOrder(orderId);
-      toast.success('Sipariş onaylandı!');
+      toast.success("Sipariş onaylandı ve üretim planı oluşturuldu!", {
+        id: loadingToast,
+      });
     } catch (error: any) {
-      toast.error(error.message || 'Onaylama hatası');
+      toast.dismiss(loadingToast);
+      toast.error(error.message || "Onaylama hatası");
     }
   };
 
@@ -80,11 +86,11 @@ export default function SiparislerPage() {
   };
 
   const handleDelete = async (orderId: string) => {
-    if (!confirm('Bu siparişi silmek istediğinize emin misiniz?')) return;
+    if (!confirm("Bu siparişi silmek istediğinize emin misiniz?")) return;
 
     try {
       const response = await fetch(`/api/orders/${orderId}`, {
-        method: 'DELETE',
+        method: "DELETE",
       });
 
       if (!response.ok) {
@@ -92,24 +98,24 @@ export default function SiparislerPage() {
         throw new Error(result.error);
       }
 
-      toast.success('Sipariş silindi');
+      toast.success("Sipariş silindi");
       actions.fetchOrders();
     } catch (error: any) {
-      toast.error(error.message || 'Silme hatası');
+      toast.error(error.message || "Silme hatası");
     }
   };
 
   const handleOrderSubmit = async (data: any) => {
     try {
       if (!user?.id) {
-        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
+        throw new Error("Kullanıcı kimlik doğrulaması gerekli");
       }
 
-      const response = await fetch('/api/orders', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'x-user-id': user.id
+      const response = await fetch("/api/orders", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-user-id": user.id,
         },
         body: JSON.stringify(data),
       });
@@ -118,33 +124,33 @@ export default function SiparislerPage() {
 
       if (!response.ok) throw new Error(result.error);
 
-      toast.success('Sipariş oluşturuldu');
+      toast.success("Sipariş oluşturuldu");
       setIsOrderFormOpen(false);
       actions.fetchOrders();
     } catch (error: any) {
-      toast.error(error.message || 'Sipariş oluşturma hatası');
+      toast.error(error.message || "Sipariş oluşturma hatası");
     }
   };
 
   const getStatusBadge = (status: string) => {
     const variants = {
-      beklemede: 'secondary',
-      onaylandi: 'default',
-      uretimde: 'default',
-      tamamlandi: 'default',
-      iptal: 'destructive',
+      beklemede: "secondary",
+      onaylandi: "default",
+      uretimde: "default",
+      tamamlandi: "default",
+      iptal: "destructive",
     } as const;
 
     const labels = {
-      beklemede: 'Beklemede',
-      onaylandi: 'Onaylandı',
-      uretimde: 'Üretimde',
-      tamamlandi: 'Tamamlandı',
-      iptal: 'İptal Edildi',
+      beklemede: "Beklemede",
+      onaylandi: "Onaylandı",
+      uretimde: "Üretimde",
+      tamamlandi: "Tamamlandı",
+      iptal: "İptal Edildi",
     };
 
     return (
-      <Badge variant={variants[status as keyof typeof variants] || 'secondary'}>
+      <Badge variant={variants[status as keyof typeof variants] || "secondary"}>
         {labels[status as keyof typeof labels] || status}
       </Badge>
     );
@@ -152,21 +158,23 @@ export default function SiparislerPage() {
 
   const getPriorityBadge = (priority: string) => {
     const variants = {
-      dusuk: 'secondary',
-      normal: 'default',
-      yuksek: 'default',
-      acil: 'destructive',
+      dusuk: "secondary",
+      normal: "default",
+      yuksek: "default",
+      acil: "destructive",
     } as const;
 
     const labels = {
-      dusuk: 'Düşük',
-      normal: 'Normal',
-      yuksek: 'Yüksek',
-      acil: 'Acil',
+      dusuk: "Düşük",
+      normal: "Normal",
+      yuksek: "Yüksek",
+      acil: "Acil",
     };
 
     return (
-      <Badge variant={variants[priority as keyof typeof variants] || 'secondary'}>
+      <Badge
+        variant={variants[priority as keyof typeof variants] || "secondary"}
+      >
         {labels[priority as keyof typeof labels] || priority}
       </Badge>
     );
@@ -194,7 +202,9 @@ export default function SiparislerPage() {
               <OrderForm onSuccess={() => setIsOrderFormOpen(false)} />
             </DialogContent>
           </Dialog>
-          <BulkOrderImportDialog onImportComplete={() => actions.fetchOrders()} />
+          <BulkOrderImportDialog
+            onImportComplete={() => actions.fetchOrders()}
+          />
         </div>
       </div>
 
@@ -227,23 +237,35 @@ export default function SiparislerPage() {
               <TableBody>
                 {orders.map((order: any) => (
                   <TableRow key={order.id}>
-                    <TableCell className="font-medium">{order.order_number}</TableCell>
+                    <TableCell className="font-medium">
+                      {order.order_number}
+                    </TableCell>
                     <TableCell>
                       <div>
-                        <div className="font-medium">{order.customer?.name || 'Müşteri Yok'}</div>
+                        <div className="font-medium">
+                          {order.customer?.name || "Müşteri Yok"}
+                        </div>
                         {order.customer?.company && (
-                          <div className="text-sm text-gray-500">{order.customer.company}</div>
+                          <div className="text-sm text-gray-500">
+                            {order.customer.company}
+                          </div>
                         )}
                       </div>
                     </TableCell>
                     <TableCell>
                       <div className="space-y-1">
-                        {order.items?.slice(0, 2).map((item: any, index: number) => (
-                          <div key={index} className="text-sm">
-                            <span className="font-medium">{item.product?.code}</span>
-                            <span className="text-gray-500 ml-2">({item.quantity} adet)</span>
-                          </div>
-                        ))}
+                        {order.items
+                          ?.slice(0, 2)
+                          .map((item: any, index: number) => (
+                            <div key={index} className="text-sm">
+                              <span className="font-medium">
+                                {item.product?.code}
+                              </span>
+                              <span className="text-gray-500 ml-2">
+                                ({item.quantity} adet)
+                              </span>
+                            </div>
+                          ))}
                         {order.items?.length > 2 && (
                           <div className="text-sm text-gray-500">
                             +{order.items.length - 2} ürün daha
@@ -257,7 +279,7 @@ export default function SiparislerPage() {
                     <TableCell>{formatDate(order.delivery_date)}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        {order.status === 'beklemede' && (
+                        {order.status === "beklemede" && (
                           <Button
                             size="sm"
                             variant="outline"
@@ -269,16 +291,17 @@ export default function SiparislerPage() {
                         <Button size="sm" variant="outline">
                           <Edit className="h-4 w-4" />
                         </Button>
-                        {order.status !== 'iptal' && order.status !== 'tamamlandi' && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleCancel(order)}
-                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                          >
-                            <XCircle className="h-4 w-4" />
-                          </Button>
-                        )}
+                        {order.status !== "iptal" &&
+                          order.status !== "tamamlandi" && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleCancel(order)}
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                            >
+                              <XCircle className="h-4 w-4" />
+                            </Button>
+                          )}
                         <Button
                           size="sm"
                           variant="outline"
@@ -295,7 +318,9 @@ export default function SiparislerPage() {
                     <TableCell colSpan={8} className="text-center py-8">
                       <div className="flex flex-col items-center gap-2">
                         <Factory className="h-12 w-12 text-gray-400" />
-                        <p className="text-gray-500">Henüz sipariş bulunmuyor</p>
+                        <p className="text-gray-500">
+                          Henüz sipariş bulunmuyor
+                        </p>
                         <Button
                           variant="outline"
                           onClick={() => setIsOrderFormOpen(true)}
