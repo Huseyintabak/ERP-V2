@@ -28,7 +28,8 @@ INSERT INTO system_settings (key, value, description) VALUES
 INSERT INTO users (id, email, password_hash, name, role, is_active) VALUES
   (gen_random_uuid(), 'admin@thunder.com', '$2a$10$4ZCXIk.OUfI2/18EaQn1PuqZSd6s09d6XhbA52vhhEZfY4uabI3oa', 'Admin Kullanıcı', 'yonetici', TRUE),
   (gen_random_uuid(), 'planlama@thunder.com', '$2a$10$4ZCXIk.OUfI2/18EaQn1PuqZSd6s09d6XhbA52vhhEZfY4uabI3oa', 'Planlama Kullanıcı', 'planlama', TRUE),
-  (gen_random_uuid(), 'depo@thunder.com', '$2a$10$4ZCXIk.OUfI2/18EaQn1PuqZSd6s09d6XhbA52vhhEZfY4uabI3oa', 'Depo Kullanıcı', 'depo', TRUE),
+  (gen_random_uuid(), 'depo@thunder.com', '$2a$10$4ZCXIk.OUfI2/18EaQn1PuqZSd6s09d6XhbA52vhhEZfY4uabI3oa', 'Depo Kullanıcı (Web)', 'depo', TRUE),
+  (gen_random_uuid(), 'mobil@thunder.com', '$2a$10$4ZCXIk.OUfI2/18EaQn1PuqZSd6s09d6XhbA52vhhEZfY4uabI3oa', 'Mobil Depo Kullanıcı', 'depo', TRUE),
   ('11111111-1111-1111-1111-111111111111', 'operator1@thunder.com', '$2a$10$4ZCXIk.OUfI2/18EaQn1PuqZSd6s09d6XhbA52vhhEZfY4uabI3oa', 'Thunder Operatör', 'operator', TRUE),
   ('22222222-2222-2222-2222-222222222222', 'operator2@thunder.com', '$2a$10$4ZCXIk.OUfI2/18EaQn1PuqZSd6s09d6XhbA52vhhEZfY4uabI3oa', 'ThunderPro Operatör', 'operator', TRUE);
 
@@ -75,7 +76,7 @@ INSERT INTO finished_products (code, name, barcode, quantity, unit, sale_price, 
 
 -- NU-001 için: 10 kg HM-001 (Çelik Sac) + 2 adet YM-001 (Plaka A) + 50 adet HM-003 (Vida)
 INSERT INTO bom (finished_product_id, material_type, material_id, quantity_needed)
-SELECT 
+SELECT
   fp.id,
   'raw',
   rm.id,
@@ -84,7 +85,7 @@ FROM finished_products fp, raw_materials rm
 WHERE fp.code = 'NU-001' AND rm.code = 'HM-001';
 
 INSERT INTO bom (finished_product_id, material_type, material_id, quantity_needed)
-SELECT 
+SELECT
   fp.id,
   'semi',
   sfp.id,
@@ -93,7 +94,7 @@ FROM finished_products fp, semi_finished_products sfp
 WHERE fp.code = 'NU-001' AND sfp.code = 'YM-001';
 
 INSERT INTO bom (finished_product_id, material_type, material_id, quantity_needed)
-SELECT 
+SELECT
   fp.id,
   'raw',
   rm.id,
@@ -103,7 +104,7 @@ WHERE fp.code = 'NU-001' AND rm.code = 'HM-003';
 
 -- NU-002 için: 5 metre HM-002 (Alüminyum) + 1 adet YM-002 (Gövde B)
 INSERT INTO bom (finished_product_id, material_type, material_id, quantity_needed)
-SELECT 
+SELECT
   fp.id,
   'raw',
   rm.id,
@@ -112,7 +113,7 @@ FROM finished_products fp, raw_materials rm
 WHERE fp.code = 'NU-002' AND rm.code = 'HM-002';
 
 INSERT INTO bom (finished_product_id, material_type, material_id, quantity_needed)
-SELECT 
+SELECT
   fp.id,
   'semi',
   sfp.id,
@@ -126,7 +127,7 @@ WHERE fp.code = 'NU-002' AND sfp.code = 'YM-002';
 
 -- YM-001 (Plaka A) için BOM: 5 kg HM-001 (Çelik Sac) + 10 adet HM-003 (Vida)
 INSERT INTO semi_bom (semi_product_id, material_id, material_type, quantity, unit)
-SELECT 
+SELECT
   sfp.id,
   rm.id,
   'raw',
@@ -136,7 +137,7 @@ FROM semi_finished_products sfp, raw_materials rm
 WHERE sfp.code = 'YM-001' AND rm.code = 'HM-001';
 
 INSERT INTO semi_bom (semi_product_id, material_id, material_type, quantity, unit)
-SELECT 
+SELECT
   sfp.id,
   rm.id,
   'raw',
@@ -147,7 +148,7 @@ WHERE sfp.code = 'YM-001' AND rm.code = 'HM-003';
 
 -- YM-002 (Gövde B) için BOM: 3 metre HM-002 (Alüminyum) + 1 adet YM-001 (Plaka A)
 INSERT INTO semi_bom (semi_product_id, material_id, material_type, quantity, unit)
-SELECT 
+SELECT
   sfp.id,
   rm.id,
   'raw',
@@ -157,7 +158,7 @@ FROM semi_finished_products sfp, raw_materials rm
 WHERE sfp.code = 'YM-002' AND rm.code = 'HM-002';
 
 INSERT INTO semi_bom (semi_product_id, material_id, material_type, quantity, unit)
-SELECT 
+SELECT
   sfp1.id,
   sfp2.id,
   'semi',
@@ -168,7 +169,7 @@ WHERE sfp1.code = 'YM-002' AND sfp2.code = 'YM-001';
 
 -- YM-003 (Kapak C) için BOM: 2 litre HM-004 (Boya) + 0.5 metre HM-005 (Elektrik Kablosu)
 INSERT INTO semi_bom (semi_product_id, material_id, material_type, quantity, unit)
-SELECT 
+SELECT
   sfp.id,
   rm.id,
   'raw',
@@ -178,7 +179,7 @@ FROM semi_finished_products sfp, raw_materials rm
 WHERE sfp.code = 'YM-003' AND rm.code = 'HM-004';
 
 INSERT INTO semi_bom (semi_product_id, material_id, material_type, quantity, unit)
-SELECT 
+SELECT
   sfp.id,
   rm.id,
   'raw',
@@ -193,11 +194,11 @@ WHERE sfp.code = 'YM-003' AND rm.code = 'HM-005';
 -- Varsayılan kullanıcılar:
 -- - admin@thunder.com / Admin123! (ŞİFRE: 123456 - bcrypt hash'i kullanıldı)
 -- - planlama@thunder.com / Plan123! (ŞİFRE: 123456)
--- - depo@thunder.com / Depo123! (ŞİFRE: 123456)
+-- - depo@thunder.com / Depo123! (ŞİFRE: 123456) → Web dashboard'a gider
+-- - mobil@thunder.com / 123456 → Mobil dashboard'a gider
 -- - operator1@thunder.com / 123456
 -- - operator2@thunder.com / 123456
 --
 -- NOT: Tüm şifreler geçici olarak 123456 kullanıyor!
 -- Production'da mutlaka değiştirin!
 -- ============================================
-

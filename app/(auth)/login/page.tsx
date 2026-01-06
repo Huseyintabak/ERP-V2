@@ -51,9 +51,11 @@ export default function LoginPage() {
       console.log('🔄 Login response:', result);
       console.log('🔄 Redirecting to:', result.redirectUrl);
       console.log('🔄 User:', result.user);
-      
-      // Immediate redirect - no delay
-      window.location.href = result.redirectUrl;
+
+      // Small delay to ensure cookie is set before redirect
+      setTimeout(() => {
+        window.location.href = result.redirectUrl;
+      }, 100);
     } catch (error: any) {
       toast.error(error.message || 'Bir hata oluştu');
     } finally {
@@ -62,7 +64,7 @@ export default function LoginPage() {
   };
 
   return (
-    <Card className="shadow-2xl">
+    <Card className="shadow-2xl w-full max-w-md mx-auto">
       <CardHeader className="space-y-1">
         <CardTitle className="text-2xl font-bold text-center">Thunder ERP v2</CardTitle>
         <CardDescription className="text-center">
@@ -72,13 +74,15 @@ export default function LoginPage() {
       <CardContent>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email" className="text-base">Email</Label>
             <Input
               id="email"
               type="email"
               placeholder="ornek@thunder.com"
               {...register('email')}
               disabled={isLoading}
+              className="h-12 text-base"
+              autoComplete="email"
             />
             {errors.email && (
               <p className="text-sm text-red-600">{errors.email.message}</p>
@@ -86,20 +90,22 @@ export default function LoginPage() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="password">Şifre</Label>
+            <Label htmlFor="password" className="text-base">Şifre</Label>
             <Input
               id="password"
               type="password"
               placeholder="••••••"
               {...register('password')}
               disabled={isLoading}
+              className="h-12 text-base"
+              autoComplete="current-password"
             />
             {errors.password && (
               <p className="text-sm text-red-600">{errors.password.message}</p>
             )}
           </div>
 
-          <Button type="submit" className="w-full" disabled={isLoading}>
+          <Button type="submit" className="w-full h-12 text-base" disabled={isLoading}>
             {isLoading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -114,17 +120,20 @@ export default function LoginPage() {
           </Button>
         </form>
 
-        <div className="mt-6 text-center text-sm text-gray-600">
-          <p className="mb-2">Test Kullanıcıları:</p>
-          <p className="text-xs">admin@thunder.com / 123456</p>
-          <p className="text-xs">planlama@thunder.com / 123456</p>
-          <p className="text-xs">depo@thunder.com / 123456</p>
+        <div className="mt-6 p-3 bg-gray-50 rounded-lg">
+          <p className="text-sm text-gray-600 mb-2 font-semibold text-center">Test Kullanıcıları:</p>
+          <div className="space-y-1 text-sm text-gray-700">
+            <p>👤 admin@thunder.com / 123456</p>
+            <p>📋 planlama@thunder.com / 123456</p>
+            <p>📦 depo@thunder.com / 123456</p>
+            <p>📱 mobil@thunder.com / 123456</p>
+          </div>
         </div>
 
         <div className="mt-4 text-center">
-          <a 
-            href="/operator-login" 
-            className="text-sm text-blue-600 hover:underline"
+          <a
+            href="/operator-login"
+            className="inline-block py-2 px-4 text-sm text-blue-600 hover:text-blue-800 hover:underline"
           >
             Operatör Girişi →
           </a>
@@ -133,5 +142,3 @@ export default function LoginPage() {
     </Card>
   );
 }
-
-

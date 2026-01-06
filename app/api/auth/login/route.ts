@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
     } catch (clientError: any) {
       logger.error('Error creating Supabase client:', clientError);
       return NextResponse.json(
-        { 
+        {
           error: 'Failed to initialize database connection',
           details: process.env.NODE_ENV === 'development' ? clientError.message : undefined
         },
@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
         code: error.code,
         details: error.details
       });
-      
+
       // Don't reveal if user exists or not for security
       return NextResponse.json(
         { error: 'Geçersiz email veya şifre' },
@@ -119,7 +119,23 @@ export async function POST(request: NextRequest) {
     }
 
     // Redirect URL belirle
-    const redirectUrl = user.role === 'operator' ? '/operator-dashboard' : '/dashboard';
+    let redirectUrl = '/dashboard';
+
+    if (user.role === 'operator') {
+      redirectUrl = '/operator-dashboard';
+    } else if (user.role === 'warehouse' || user.role === 'depo') {
+      // Email'e göre yönlendirme yap
+      if (user.email === 'mobil@thunder.com') {
+        // Mobil kullanıcı her zaman mobil dashboard'a gitsin
+        redirectUrl = '/depo/mobile-dashboard';
+      } else if (user.email === 'depo@thunder.com') {
+        // Web depo kullanıcısı web dashboard'a gitsin
+        redirectUrl = '/depo-dashboard';
+      } else {
+        // Diğer depo kullanıcıları için varsayılan
+        redirectUrl = '/depo-dashboard';
+      }
+    }
 
     // Cookie set et ve redirect yap
     const response = NextResponse.json({
@@ -133,15 +149,19 @@ export async function POST(request: NextRequest) {
       token,
     });
 
+    // Set cookie with proper settings
     response.cookies.set('thunder_token', token, {
       httpOnly: true,
-      secure: false, // Set to false for HTTP connections (change to true when using HTTPS)
+      secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       maxAge: 60 * 60 * 24 * 7, // 7 days
       path: '/',
     });
 
     logger.log(`✅ Login successful: ${user.email} (${user.role})`);
+    logger.log(`🔑 Cookie set: thunder_token (path: /, httpOnly: true)`);
+    logger.log(`🔄 Redirect URL: ${redirectUrl}`);
+
     return response;
   } catch (error: any) {
     logger.error('Login error:', {
@@ -150,7 +170,7 @@ export async function POST(request: NextRequest) {
       name: error.name
     });
     return NextResponse.json(
-      { 
+      {
         error: 'Sunucu hatası',
         details: process.env.NODE_ENV === 'development' ? error.message : undefined
       },
@@ -158,5 +178,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-
-

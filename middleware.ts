@@ -1,70 +1,47 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-// Operator route patterns (redirect to /operator-login)
-const OPERATOR_PATTERNS = [
-  '/operator-dashboard',
-];
-
-// Dashboard route patterns (redirect to /login)
-const DASHBOARD_PATTERNS = [
-  '/dashboard',
-  '/yonetici-dashboard',
-  '/planlama-dashboard',
-  '/depo-dashboard',
-  '/uretim',
-  '/stok',
-  '/musteriler',
-  '/raporlar',
-  '/ayarlar',
-  '/kullanicilar',
-  '/satinalma',
-  '/sirket-yonetimi',
-  '/bildirimler',
-  '/islem-gecmisi',
-  '/ai-',
-  '/depo-zone-yonetimi',
-  '/sistem-bakim',
-];
-
 // Public routes that don't need auth
-const PUBLIC_PATTERNS = [
+const PUBLIC_ROUTES = [
   '/login',
   '/operator-login',
   '/403',
+  '/',
+];
+
+// Static files and API routes to skip
+const SKIP_PATTERNS = [
+  '/api',
+  '/_next',
+  '/favicon.ico',
+  '/manifest.json',
+  '/icons',
 ];
 
 export function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
-  
-  // Skip public routes
-  if (PUBLIC_PATTERNS.some(pattern => pathname.includes(pattern)) || pathname === '/') {
+
+  // Skip static files and API routes
+  if (SKIP_PATTERNS.some(pattern => pathname.startsWith(pattern))) {
     return NextResponse.next();
   }
-  
+
+  // Allow public routes
+  if (PUBLIC_ROUTES.includes(pathname)) {
+    return NextResponse.next();
+  }
+
   // Check for auth cookie
   const token = request.cookies.get('thunder_token');
-  
-  // Check if it's an operator route
-  const isOperatorRoute = OPERATOR_PATTERNS.some(pattern => pathname.includes(pattern));
-  
-  if (isOperatorRoute) {
-    if (!token) {
-      const loginUrl = new URL('/operator-login', request.url);
-      return NextResponse.redirect(loginUrl);
+
+  // If no token, redirect to appropriate login
+  if (!token) {
+    if (pathname.startsWith('/operator')) {
+      return NextResponse.redirect(new URL('/operator-login', request.url));
     }
-    return NextResponse.next();
+    return NextResponse.redirect(new URL('/login', request.url));
   }
-  
-  // Check if it's a dashboard route
-  const isDashboardRoute = DASHBOARD_PATTERNS.some(pattern => pathname.includes(pattern));
-  
-  if (isDashboardRoute) {
-    if (!token) {
-      const loginUrl = new URL('/login', request.url);
-      return NextResponse.redirect(loginUrl);
-    }
-  }
-  
+
+  // Token exists, allow access
   return NextResponse.next();
 }
 

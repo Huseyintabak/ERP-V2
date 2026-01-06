@@ -22,10 +22,10 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { 
-  Building2, 
-  Users, 
-  Package, 
+import {
+  Building2,
+  Users,
+  Package,
   Plus,
   Eye,
   ArrowRightLeft,
@@ -78,7 +78,7 @@ export default function DepoZoneYonetimiPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const { user } = useAuthStore();
-  
+
   // Dialog states
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isInventoryDialogOpen, setIsInventoryDialogOpen] = useState(false);
@@ -89,11 +89,11 @@ export default function DepoZoneYonetimiPage() {
   const [selectedZoneInventory, setSelectedZoneInventory] = useState<ZoneInventory[]>([]);
   const [selectedZone, setSelectedZone] = useState<WarehouseZone | null>(null);
   const [centerInventory, setCenterInventory] = useState<ZoneInventory[]>([]);
-  
+
   // Date filter states
   const [filterStartDate, setFilterStartDate] = useState<string>('');
   const [filterEndDate, setFilterEndDate] = useState<string>('');
-  
+
   // Create zone form
   const [newZoneName, setNewZoneName] = useState('');
   const [newZoneCustomerId, setNewZoneCustomerId] = useState('');
@@ -124,17 +124,17 @@ export default function DepoZoneYonetimiPage() {
           'x-user-id': user.id
         }
       });
-      
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      
+
       const text = await response.text();
       if (!text || text.includes('/login')) {
         console.warn('Redirect to login detected');
         return;
       }
-      
+
       const result = JSON.parse(text);
       const zonesData = result.data || [];
       setZones(zonesData);
@@ -143,7 +143,7 @@ export default function DepoZoneYonetimiPage() {
       const totalZones = zonesData.length;
       const customerZones = zonesData.filter((z: WarehouseZone) => z.zone_type === 'customer').length;
       const centerZones = zonesData.filter((z: WarehouseZone) => z.zone_type === 'center').length;
-      const totalProducts = zonesData.reduce((sum: number, zone: WarehouseZone) => 
+      const totalProducts = zonesData.reduce((sum: number, zone: WarehouseZone) =>
         sum + (zone.total_products || 0), 0
       );
 
@@ -167,17 +167,17 @@ export default function DepoZoneYonetimiPage() {
           'x-user-id': user.id
         }
       });
-      
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      
+
       const text = await response.text();
       if (!text || text.includes('/login')) {
         console.warn('Redirect to login detected');
         return;
       }
-      
+
       const result = JSON.parse(text);
       setCustomers(result.data || []);
     } catch (error) {
@@ -190,11 +190,11 @@ export default function DepoZoneYonetimiPage() {
       if (!user?.id) {
         throw new Error('Kullanıcı kimlik doğrulaması gerekli');
       }
-      
+
       // Use provided dates or state dates
       const useStartDate = startDate !== undefined ? startDate : filterStartDate;
       const useEndDate = endDate !== undefined ? endDate : filterEndDate;
-      
+
       // Build query params with date filters
       const params = new URLSearchParams();
       if (useStartDate) {
@@ -203,28 +203,28 @@ export default function DepoZoneYonetimiPage() {
       if (useEndDate) {
         params.append('endDate', useEndDate);
       }
-      
+
       const url = `/api/warehouse/zones/${zoneId}/inventory${params.toString() ? `?${params.toString()}` : ''}`;
-      
+
       console.log('Fetching zone inventory with filters:', { zoneId, startDate: useStartDate, endDate: useEndDate, url });
-      
+
       const response = await fetch(url, {
         headers: {
           'Content-Type': 'application/json',
           'x-user-id': user.id
         }
       });
-      
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      
+
       const text = await response.text();
       if (!text || text.includes('/login')) {
         console.warn('Redirect to login detected');
         return;
       }
-      
+
       const result = JSON.parse(text);
       console.log('Zone inventory result:', { count: result.data?.length, data: result.data });
       setSelectedZoneInventory(result.data || []);
@@ -234,20 +234,20 @@ export default function DepoZoneYonetimiPage() {
       toast.error('Stok bilgileri yüklenirken hata oluştu');
     }
   };
-  
+
   const handleApplyDateFilter = async () => {
     if (!selectedZoneId) {
       toast.error('Zone seçilmedi');
       return;
     }
-    
+
     if (!filterStartDate && !filterEndDate) {
       toast.error('Lütfen en az bir tarih seçin');
       return;
     }
-    
+
     console.log('Applying date filter:', { filterStartDate, filterEndDate, selectedZoneId });
-    
+
     try {
       // Pass dates directly to avoid state timing issues
       await fetchZoneInventory(selectedZoneId, filterStartDate, filterEndDate);
@@ -257,7 +257,7 @@ export default function DepoZoneYonetimiPage() {
       toast.error('Filtreleme sırasında hata oluştu');
     }
   };
-  
+
   const handleClearDateFilter = async () => {
     setFilterStartDate('');
     setFilterEndDate('');
@@ -279,11 +279,11 @@ export default function DepoZoneYonetimiPage() {
           'x-user-id': user.id
         }
       });
-      
+
       if (!response.ok) {
         const errorText = await response.text();
         let errorMessage = `HTTP error! status: ${response.status}`;
-        
+
         try {
           const errorJson = JSON.parse(errorText);
           errorMessage = errorJson.error || errorMessage;
@@ -293,21 +293,21 @@ export default function DepoZoneYonetimiPage() {
             errorMessage = errorText;
           }
         }
-        
+
         if (errorText.includes('/login')) {
           console.warn('Redirect to login detected');
           return;
         }
-        
+
         throw new Error(errorMessage);
       }
-      
+
       const text = await response.text();
       if (!text || text.includes('/login')) {
         console.warn('Redirect to login detected');
         return;
       }
-      
+
       const result = JSON.parse(text);
       setCenterInventory(result.data || []);
     } catch (error: any) {
@@ -429,7 +429,7 @@ export default function DepoZoneYonetimiPage() {
           </CardContent>
         </Card>
 
-        <Card 
+        <Card
           className="cursor-pointer hover:bg-gray-50 transition-colors"
           onClick={() => {
             fetchCenterInventory();
@@ -473,7 +473,7 @@ export default function DepoZoneYonetimiPage() {
                 className="pl-9"
               />
             </div>
-            
+
             <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
               <DialogTrigger asChild>
                 <Button>
@@ -488,7 +488,7 @@ export default function DepoZoneYonetimiPage() {
                     Yeni bir warehouse zone oluşturun
                   </DialogDescription>
                 </DialogHeader>
-                
+
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="zoneName">Zone Adı</Label>
@@ -499,7 +499,7 @@ export default function DepoZoneYonetimiPage() {
                       placeholder="Zone adını girin"
                     />
                   </div>
-                  
+
                   <div className="space-y-2">
                     <Label htmlFor="zoneType">Zone Türü</Label>
                     <Select value={newZoneType} onValueChange={(value: 'general' | 'customer') => setNewZoneType(value)}>
@@ -512,7 +512,7 @@ export default function DepoZoneYonetimiPage() {
                       </SelectContent>
                     </Select>
                   </div>
-                  
+
                   {newZoneType === 'customer' && (
                     <div className="space-y-2">
                       <Label htmlFor="customer">Müşteri</Label>
@@ -531,7 +531,7 @@ export default function DepoZoneYonetimiPage() {
                     </div>
                   )}
                 </div>
-                
+
                 <DialogFooter>
                   <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
                     İptal
@@ -567,7 +567,7 @@ export default function DepoZoneYonetimiPage() {
               {selectedZone?.name} - Stok durumu
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="space-y-4 flex-1 overflow-hidden flex flex-col">
             {selectedZone && (
               <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg">
@@ -576,7 +576,7 @@ export default function DepoZoneYonetimiPage() {
                   <h3 className="font-semibold text-lg">{selectedZone.name}</h3>
                   <div className="flex items-center gap-2 mt-1">
                     <Badge variant={selectedZone.zone_type === 'center' ? 'default' : 'secondary'}>
-                      {selectedZone.zone_type === 'center' ? 'Merkez Zone' : 
+                      {selectedZone.zone_type === 'center' ? 'Merkez Zone' :
                        selectedZone.zone_type === 'customer' ? 'Müşteri Zone' : 'Genel Zone'}
                     </Badge>
                     {selectedZone.customer && (
@@ -586,7 +586,7 @@ export default function DepoZoneYonetimiPage() {
                 </div>
               </div>
             )}
-            
+
             {/* Date Filter */}
             <div className="flex items-center gap-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
               <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -627,7 +627,7 @@ export default function DepoZoneYonetimiPage() {
                   />
                 </div>
                 <div className="flex items-end gap-2">
-                  <Button 
+                  <Button
                     onClick={(e) => {
                       e.preventDefault();
                       handleApplyDateFilter();
@@ -639,7 +639,7 @@ export default function DepoZoneYonetimiPage() {
                     Filtrele
                   </Button>
                   {(filterStartDate || filterEndDate) && (
-                    <Button 
+                    <Button
                       onClick={(e) => {
                         e.preventDefault();
                         handleClearDateFilter();
@@ -653,7 +653,7 @@ export default function DepoZoneYonetimiPage() {
                 </div>
               </div>
             </div>
-            
+
             {selectedZoneInventory.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
                 Bu zone'da henüz ürün bulunmuyor
@@ -742,7 +742,7 @@ export default function DepoZoneYonetimiPage() {
               Tüm üretilen ürünler merkez depoda - İlgi zone'a sevk edilecek
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="space-y-4 flex-1 overflow-hidden flex flex-col">
             <div className="flex items-center gap-4 p-4 bg-blue-50 rounded-lg flex-shrink-0">
               <Building2 className="h-8 w-8 text-blue-600 flex-shrink-0" />
@@ -753,7 +753,7 @@ export default function DepoZoneYonetimiPage() {
                 </p>
               </div>
             </div>
-            
+
             {centerInventory.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground flex-1 flex items-center justify-center">
                 Merkez depoda henüz ürün bulunmuyor
@@ -802,7 +802,7 @@ export default function DepoZoneYonetimiPage() {
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => handleTransfer(inventory.product_id || inventory.material_id, true)}
+                              onClick={() => handleTransfer(inventory.product_id, true)}
                             >
                               <ArrowRightLeft className="h-4 w-4 mr-1" />
                               Transfer
