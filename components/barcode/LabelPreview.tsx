@@ -15,6 +15,7 @@ const LABEL_SIZES = {
   small: { width: 160, height: 120, scale: 4 },
   medium: { width: 250, height: 200, scale: 5 },
   large: { width: 500, height: 300, scale: 5 },
+  custom: { width: 360, height: 240, scale: 4 }, // 90x60mm
 };
 
 export function LabelPreview({ product, options }: LabelPreviewProps) {
@@ -43,6 +44,87 @@ export function LabelPreview({ product, options }: LabelPreviewProps) {
       ctx.strokeStyle = '#000000';
       ctx.lineWidth = 2;
       ctx.strokeRect(0, 0, dims.width, dims.height);
+
+      // QR-only mode for custom size (100x70mm)
+      if (options.qrOnly && options.labelSize === 'custom') {
+        try {
+          const qrSize = 120; // 30mm QR code scaled to preview
+          const textAreaWidth = 180; // 45mm estimated text area scaled
+          const totalContentWidth = qrSize + 12 + textAreaWidth; // QR + gap + text
+
+          // Center horizontally
+          const startX = (dims.width - totalContentWidth) / 2;
+
+          // Center vertically
+          const qrX = startX;
+          const qrY = (dims.height - qrSize) / 2;
+
+          const qrUrl = await QRCode.toDataURL(product.barcode, {
+            width: qrSize * 4,
+            margin: 0,
+            errorCorrectionLevel: 'H',
+          });
+
+          const qrImg = new Image();
+          await new Promise((resolve, reject) => {
+            qrImg.onload = resolve;
+            qrImg.onerror = reject;
+            qrImg.src = qrUrl;
+          });
+
+          ctx.drawImage(qrImg, qrX, qrY, qrSize, qrSize);
+
+          // Text area on right
+          const textX = qrX + qrSize + 12; // 3mm gap scaled
+
+          // Product Name (bold, larger)
+          const nameY = qrY + (qrSize * 0.2);
+          ctx.fillStyle = '#000000';
+          ctx.font = 'bold 14px Arial';
+          ctx.textAlign = 'left';
+          ctx.textBaseline = 'middle';
+
+          // Word wrap for name
+          const maxWidth = textAreaWidth;
+          const words = product.name.split(' ');
+          let line = '';
+          let lineY = nameY;
+          const lineHeight = 16;
+
+          for (let i = 0; i < words.length; i++) {
+            const testLine = line + words[i] + ' ';
+            const metrics = ctx.measureText(testLine);
+
+            if (metrics.width > maxWidth && i > 0) {
+              ctx.fillText(line, textX, lineY);
+              line = words[i] + ' ';
+              lineY += lineHeight;
+            } else {
+              line = testLine;
+            }
+          }
+          ctx.fillText(line, textX, lineY);
+
+          // Product Code
+          const codeY = qrY + (qrSize * 0.55);
+          ctx.font = '12px Arial';
+          ctx.fillText(`Kod: ${product.code}`, textX, codeY);
+
+          // Category
+          if (product.category) {
+            const catY = qrY + (qrSize * 0.85);
+            ctx.font = '10px Arial';
+            ctx.fillText(product.category, textX, catY);
+          }
+
+          setError(null);
+          return;
+        } catch (err) {
+          console.error('QR-only label preview error:', err);
+          setError('QR önizleme oluşturulamadı');
+          return;
+        }
+      }
 
       let currentY = 20;
 
@@ -218,8 +300,9 @@ export function LabelPreview({ product, options }: LabelPreviewProps) {
           <p className="text-xs text-destructive">{error}</p>
         )}
         <div className="text-xs text-muted-foreground text-center">
-          Boyut: {options.labelSize === 'small' ? '40x30mm' : options.labelSize === 'medium' ? '50x40mm' : '100x50mm'}
+          Boyut: {options.labelSize === 'small' ? '40x30mm' : options.labelSize === 'medium' ? '50x40mm' : options.labelSize === 'large' ? '100x50mm' : '90x60mm (100x70mm kağıt)'}
           {options.copies && options.copies > 1 && ` • ${options.copies} kopya`}
+          {options.qrOnly && ' • Sadece QR'}
         </div>
       </div>
     </Card>

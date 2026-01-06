@@ -27,11 +27,12 @@ export interface LabelProduct {
 
 export interface LabelOptions {
   format: 'png' | 'zpl';
-  labelSize: 'small' | 'medium' | 'large'; // 40x30mm, 50x40mm, 100x50mm
+  labelSize: 'small' | 'medium' | 'large' | 'custom'; // 40x30mm, 50x40mm, 100x50mm, 100x70mm
   includeQR?: boolean;
   includePrice?: boolean;
   copies?: number; // Number of copies per label
   barcodeType?: 'CODE128' | 'EAN13' | 'CODE39' | 'ITF14';
+  qrOnly?: boolean; // If true, only show QR code without barcode
 }
 
 export interface LabelDimensions {
@@ -63,6 +64,13 @@ const LABEL_SIZES: Record<LabelOptions['labelSize'], LabelDimensions> = {
     margin: 4,
     barcodeHeight: 12,
     fontSize: 10,
+  },
+  custom: {
+    width: 90,
+    height: 60,
+    margin: 5,
+    barcodeHeight: 0, // Not used for QR-only
+    fontSize: 12,
   },
 };
 
@@ -101,9 +109,158 @@ async function generateQRCodeImage(data: string): Promise<string> {
       errorCorrectionLevel: 'M',
     });
   } catch (error) {
-    console.error('QR code generation error:', error);
-    throw error;
+    return '';
   }
+}
+
+/**
+ * Generate QR-only labels (100x70mm) - Simple layout with product name, code, and QR
+ */
+async function generateQROnlyLabels(
+  products: LabelProduct[],
+  options: LabelOptions
+): Promise<Blob[]> {
+  const dims = LABEL_SIZES['custom']; // 100x70mm
+  const dpi = 300; // High quality for printing
+  const mmToPixel = dpi / 25.4; // Convert mm to pixels
+
+  const width = dims.width; // 100mm
+  const height = dims.height; // 70mm
+
+  const canvasWidth = Math.round(width * mmToPixel);
+  const canvasHeight = Math.round(height * mmToPixel);
+  const scale = mmToPixel; // Pixels per mm
+
+  const blobs: Blob[] = [];
+
+  for (const product of products) {
+    const copies = options.copies || 1;
+
+    for (let copy = 0; copy < copies; copy++) {
+      const canvas = document.createElement('canvas');
+      canvas.width = canvasWidth;
+      canvas.height = canvasHeight;
+
+      const ctx = canvas.getContext('2d');
+      if (!ctx) continue;
+
+      try {
+        // White background
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+
+        // Border
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 0.5 * scale;
+        ctx.strokeRect(
+          0.5 * scale,
+          0.5 * scale,
+          (width - 1) * scale,
+          (height - 1) * scale
+        );
+
+        // Layout for 90x60mm QR-only label (fits in 100x70mm paper) - centered
+        const qrSize = 30; // mm - QR code size
+        const textAreaWidth = 45; // mm - estimated text area width
+        const totalContentWidth = qrSize + 3 + textAreaWidth; // QR + gap + text
+
+        // Center horizontally: (100mm - total content) / 2
+        const startX = (width - totalContentWidth) / 2;
+
+        // Center vertically: (70mm - QR height) / 2
+        const qrX = startX;
+        const qrY = (height - qrSize) / 2;
+
+        const qrData = product.barcode;
+        const qrImage = await QRCode.toDataURL(qrData, {
+          width: qrSize * scale * 4,
+          margin: 0,
+          errorCorrectionLevel: 'H',
+        });
+
+        const qrImg = new Image();
+        await new Promise((resolve, reject) => {
+          qrImg.onload = resolve;
+          qrImg.onerror = reject;
+          qrImg.src = qrImage;
+        });
+
+        ctx.drawImage(
+          qrImg,
+          qrX * scale,
+          qrY * scale,
+          qrSize * scale,
+          qrSize * scale
+        );
+
+        // Text area (right side)
+        const textX = qrX + qrSize + 3; // 3mm gap after QR
+
+        // Product Name (top, bold, larger)
+        const nameY = qrY + (qrSize * 0.2);
+        const nameFontSize = 3.5; // mm - smaller font
+        ctx.fillStyle = '#000000';
+        ctx.font = `bold ${nameFontSize * scale}px Arial`;
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+
+        // Word wrap for product name
+        const maxWidth = textAreaWidth * scale;
+        const words = product.name.split(' ');
+        let line = '';
+        let lineY = nameY * scale;
+        const lineHeight = nameFontSize * scale * 1.15;
+
+        for (let i = 0; i < words.length; i++) {
+          const testLine = line + words[i] + ' ';
+          const metrics = ctx.measureText(testLine);
+
+          if (metrics.width > maxWidth && i > 0) {
+            ctx.fillText(line, textX * scale, lineY);
+            line = words[i] + ' ';
+            lineY += lineHeight;
+          } else {
+            line = testLine;
+          }
+        }
+        ctx.fillText(line, textX * scale, lineY);
+
+        // Product Code (middle)
+        const codeY = qrY + (qrSize * 0.55);
+        const codeFontSize = 3; // mm
+        ctx.font = `${codeFontSize * scale}px Arial`;
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(`Kod: ${product.code}`, textX * scale, codeY * scale);
+
+        // Category (if available, smaller)
+        if (product.category) {
+          const catY = qrY + (qrSize * 0.85);
+          const catFontSize = 2.5; // mm
+          ctx.font = `${catFontSize * scale}px Arial`;
+          ctx.fillText(product.category, textX * scale, catY * scale);
+        }
+
+        // Convert canvas to blob
+        const blob = await new Promise<Blob>((resolve, reject) => {
+          canvas.toBlob(
+            (blob) => {
+              if (blob) resolve(blob);
+              else reject(new Error('Failed to create blob'));
+            },
+            'image/png',
+            0.95
+          );
+        });
+
+        blobs.push(blob);
+      } catch (error) {
+        console.error(`Error generating QR label for ${product.code}:`, error);
+      }
+    }
+  }
+
+  return blobs;
 }
 
 /**
@@ -242,6 +399,11 @@ export async function generateImageLabels(
   products: LabelProduct[],
   options: LabelOptions
 ): Promise<Blob[]> {
+  // Use QR-only generator for custom size with qrOnly flag
+  if (options.qrOnly && options.labelSize === 'custom') {
+    return generateQROnlyLabels(products, options);
+  }
+
   const dims = LABEL_SIZES[options.labelSize];
   const dpi = 300; // High quality for printing
   const mmToPixel = dpi / 25.4; // Convert mm to pixels
@@ -598,7 +760,7 @@ export function downloadLabels(
  */
 export async function printImageLabels(
   blobs: Blob[],
-  labelSize: 'small' | 'medium' | 'large'
+  labelSize: 'small' | 'medium' | 'large' | 'custom'
 ): Promise<void> {
   const imageUrls = await Promise.all(
     blobs.map(blob =>
@@ -617,79 +779,89 @@ export async function printImageLabels(
 
   // Get label dimensions
   const dims = LABEL_SIZES[labelSize];
-  const sideMargin = 2.5; // 2.5mm side margins
-  const pageWidth = `${dims.width + (sideMargin * 2)}mm`;
+  const pageWidth = `${dims.width}mm`;
   const pageHeight = `${dims.height}mm`;
 
-  const html = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <title>Barkod Etiketleri</title>
-      <style>
-        * {
-          margin: 0;
-          padding: 0;
-          box-sizing: border-box;
-        }
-        body {
-          font-family: Arial, sans-serif;
-          background: white;
-        }
-        .label-page {
-          page-break-after: always;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          background: white;
-          width: ${pageWidth};
-          height: ${pageHeight};
-          padding: 0 ${sideMargin}mm;
-          box-sizing: border-box;
-        }
-        .label-page:last-child {
-          page-break-after: auto;
-        }
-        .label-page img {
-          width: ${dims.width}mm;
-          height: ${dims.height}mm;
-          object-fit: contain;
-          display: block;
-        }
-        @media print {
-          @page {
-            size: ${pageWidth} ${pageHeight} landscape;
-            margin: 0;
-          }
-          body {
-            margin: 0;
-          }
-          .label-page {
-            width: ${pageWidth};
-            height: ${pageHeight};
-          }
-        }
-      </style>
-    </head>
-    <body>
-      ${imageUrls.map(url => `
-        <div class="label-page">
-          <img src="${url}" alt="Barkod Etiketi" />
-        </div>
-      `).join('')}
-      <script>
-        window.onload = () => {
-          setTimeout(() => {
-            window.print();
-          }, 500);
-        };
-        window.onafterprint = () => {
-          window.close();
-        };
-      </script>
-    </body>
-    </html>
-  `;
+  const labelPages = imageUrls.map((url, index) =>
+    `<div class="label-page"><img src="${url}" alt="QR Etiket ${index + 1}"/></div>`
+  ).join('');
+
+  const html = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>QR Etiketler</title>
+<style>
+* { margin: 0 !important; padding: 0 !important; box-sizing: border-box; }
+html, body {
+  width: ${pageWidth};
+  height: ${pageHeight};
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden;
+}
+.label-page {
+  width: ${pageWidth};
+  height: ${pageHeight};
+  margin: 0 !important;
+  padding: 0 !important;
+  page-break-after: avoid !important;
+  page-break-before: avoid !important;
+  page-break-inside: avoid !important;
+  display: block;
+  position: relative;
+}
+.label-page img {
+  width: ${pageWidth};
+  height: ${pageHeight};
+  display: block;
+  margin: 0 !important;
+  padding: 0 !important;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+@page {
+  size: ${pageWidth} ${pageHeight};
+  margin: 0 !important;
+  padding: 0 !important;
+}
+@media print {
+  html, body {
+    width: ${pageWidth};
+    height: ${pageHeight};
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden;
+  }
+  .label-page {
+    page-break-after: avoid !important;
+    page-break-before: avoid !important;
+    page-break-inside: avoid !important;
+  }
+}
+</style>
+</head>
+<body>${labelPages}<script>
+window.onload=()=>{
+  // Argox OS-2140D yazıcı bilgileri (konsola yazdırılıyor)
+  console.log('Etiket Boyutu: ${pageWidth} x ${pageHeight}');
+  console.log('Etiket Sayısı: ${imageUrls.length}');
+  console.log('ARGOX OS-2140D AYARLARI:');
+  console.log('1. Sensor Type: Gap Sensor');
+  console.log('2. Media Type: Label with Gap');
+  console.log('3. Label Length: 70mm, Width: 100mm');
+  console.log('4. Gap Length: 2mm');
+
+  setTimeout(()=>{
+    window.print();
+  },300);
+};
+window.onafterprint=()=>{
+  setTimeout(()=>window.close(),100);
+};
+</script></body>
+</html>`;
 
   printWindow.document.write(html);
   printWindow.document.close();

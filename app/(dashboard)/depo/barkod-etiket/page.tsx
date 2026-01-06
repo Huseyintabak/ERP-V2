@@ -5,33 +5,19 @@ import {
   Printer,
   Download,
   FileText,
-  Settings,
-  Sparkles,
   Tag,
+  QrCode,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
 import { ProductSelector } from '@/components/barcode/ProductSelector';
 import { LabelPreview } from '@/components/barcode/LabelPreview';
 import {
-  generatePDFLabels,
-  generateZPLLabels,
   generateImageLabels,
   downloadLabels,
-  printPDFLabels,
   printImageLabels,
   type LabelProduct,
   type LabelOptions,
@@ -39,23 +25,19 @@ import {
 
 export default function BarcodeEtiketPage() {
   const [selectedProducts, setSelectedProducts] = useState<LabelProduct[]>([]);
-  const [options, setOptions] = useState<LabelOptions>({
-    format: 'png',
-    labelSize: 'medium',
-    includeQR: false,
-    includePrice: false,
-    copies: 1,
-    barcodeType: 'CODE128',
-  });
+  const [copies, setCopies] = useState(1);
   const [isGenerating, setIsGenerating] = useState(false);
 
-  // Update option helper
-  function updateOption<K extends keyof LabelOptions>(
-    key: K,
-    value: LabelOptions[K]
-  ) {
-    setOptions((prev) => ({ ...prev, [key]: value }));
-  }
+  // Fixed options for QR-only labels at 100x70mm
+  const options: LabelOptions = {
+    format: 'png',
+    labelSize: 'custom', // We'll use 100x70mm
+    includeQR: true,
+    includePrice: false,
+    copies: copies,
+    barcodeType: 'CODE128', // Not used, but kept for compatibility
+    qrOnly: true, // New flag to indicate QR-only mode
+  };
 
   // Generate and download labels
   async function handleGenerateLabels() {
@@ -68,16 +50,9 @@ export default function BarcodeEtiketPage() {
 
     try {
       const timestamp = new Date().toISOString().split('T')[0];
-
-      if (options.format === 'png') {
-        const blobs = await generateImageLabels(selectedProducts, options);
-        downloadLabels(blobs, `barkod-etiketler-${timestamp}`, 'png');
-        toast.success(`PNG etiketler oluşturuldu (${blobs.length} adet)`);
-      } else {
-        const zpl = generateZPLLabels(selectedProducts, options);
-        downloadLabels(zpl, `barkod-etiketler-${timestamp}`, 'zpl');
-        toast.success('ZPL etiketler oluşturuldu');
-      }
+      const blobs = await generateImageLabels(selectedProducts, options);
+      downloadLabels(blobs, `qr-etiketler-${timestamp}`, 'png');
+      toast.success(`QR etiketler oluşturuldu (${blobs.length} adet)`);
     } catch (error) {
       console.error('Error generating labels:', error);
       toast.error('Etiketler oluşturulurken hata oluştu');
@@ -93,16 +68,11 @@ export default function BarcodeEtiketPage() {
       return;
     }
 
-    if (options.format !== 'png') {
-      toast.error('Doğrudan yazdırma sadece PNG formatı için kullanılabilir');
-      return;
-    }
-
     setIsGenerating(true);
 
     try {
       const blobs = await generateImageLabels(selectedProducts, options);
-      await printImageLabels(blobs, options.labelSize);
+      await printImageLabels(blobs, 'custom');
       toast.success(`${blobs.length} etiket yazdırma için hazırlandı`);
     } catch (error) {
       console.error('Error printing labels:', error);
@@ -113,22 +83,22 @@ export default function BarcodeEtiketPage() {
   }
 
   // Calculate total labels to be printed
-  const totalLabels = selectedProducts.length * (options.copies || 1);
+  const totalLabels = selectedProducts.length * copies;
 
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Barkod Etiket Yazdırma</h1>
+          <h1 className="text-3xl font-bold tracking-tight">QR Kod Etiket Yazdırma</h1>
           <p className="text-muted-foreground mt-1">
-            Ürünler için barkod etiketleri oluşturun ve yazdırın
+            Ürünler için QR kod etiketleri oluşturun ve yazdırın (100x70mm kağıt, 90x60mm içerik)
           </p>
         </div>
         <div className="flex gap-2">
           <Button
             onClick={handlePrintLabels}
-            disabled={selectedProducts.length === 0 || isGenerating || options.format === 'zpl'}
+            disabled={selectedProducts.length === 0 || isGenerating}
             size="lg"
           >
             <Printer className="w-4 h-4 mr-2" />
@@ -184,9 +154,7 @@ export default function BarcodeEtiketPage() {
           </CardHeader>
           <CardContent>
             <div className="flex items-center justify-between">
-              <div className="text-2xl font-bold">
-                {options.labelSize === 'small' ? '40x30' : options.labelSize === 'medium' ? '50x40' : '100x50'}
-              </div>
+              <div className="text-2xl font-bold">90x60</div>
               <span className="text-xs text-muted-foreground">mm</span>
             </div>
           </CardContent>
@@ -195,15 +163,13 @@ export default function BarcodeEtiketPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Format
+              Etiket Tipi
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center justify-between">
-              <Badge variant="secondary" className="text-sm font-bold uppercase">
-                {options.format}
-              </Badge>
-              <Sparkles className="w-4 h-4 text-muted-foreground" />
+              <div className="text-lg font-bold">QR Kod</div>
+              <QrCode className="w-5 h-5 text-muted-foreground" />
             </div>
           </CardContent>
         </Card>
@@ -224,84 +190,40 @@ export default function BarcodeEtiketPage() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Settings className="w-5 h-5" />
+                <QrCode className="w-5 h-5" />
                 Etiket Ayarları
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {/* Format Selection */}
+              {/* Paper Size Info */}
               <div className="space-y-2">
-                <Label htmlFor="format">Format</Label>
-                <Select
-                  value={options.format}
-                  onValueChange={(value: 'png' | 'zpl') =>
-                    updateOption('format', value)
-                  }
-                >
-                  <SelectTrigger id="format">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="png">PNG (Resim - Önerilen)</SelectItem>
-                    <SelectItem value="zpl">ZPL (Zebra Yazıcı)</SelectItem>
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground">
-                  {options.format === 'pdf'
-                    ? 'Tüm yazıcılarla uyumlu PDF formatı'
-                    : 'Zebra termal yazıcılar için ZPL formatı'}
-                </p>
+                <Label>Kağıt Boyutu</Label>
+                <div className="p-3 bg-muted rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold">90 x 60 mm</span>
+                    <span className="text-xs text-muted-foreground">100x70mm kağıt</span>
+                  </div>
+                </div>
               </div>
 
-              <Separator />
-
-              {/* Label Size */}
+              {/* Label Content Info */}
               <div className="space-y-2">
-                <Label htmlFor="labelSize">Etiket Boyutu</Label>
-                <Select
-                  value={options.labelSize}
-                  onValueChange={(value: 'small' | 'medium' | 'large') =>
-                    updateOption('labelSize', value)
-                  }
-                >
-                  <SelectTrigger id="labelSize">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="small">Küçük (40x30mm)</SelectItem>
-                    <SelectItem value="medium">Orta (50x40mm)</SelectItem>
-                    <SelectItem value="large">Büyük (100x50mm)</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Label>Etiket İçeriği</Label>
+                <div className="p-3 bg-muted rounded-lg space-y-1 text-sm">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-primary"></div>
+                    <span>Ürün Adı</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-primary"></div>
+                    <span>Ürün Kodu</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-primary"></div>
+                    <span>QR Kod</span>
+                  </div>
+                </div>
               </div>
-
-              <Separator />
-
-              {/* Barcode Type */}
-              <div className="space-y-2">
-                <Label htmlFor="barcodeType">Barkod Tipi</Label>
-                <Select
-                  value={options.barcodeType}
-                  onValueChange={(value) =>
-                    updateOption('barcodeType', value as any)
-                  }
-                >
-                  <SelectTrigger id="barcodeType">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="CODE128">CODE128 (Önerilen)</SelectItem>
-                    <SelectItem value="EAN13">EAN13</SelectItem>
-                    <SelectItem value="CODE39">CODE39</SelectItem>
-                    <SelectItem value="ITF14">ITF14</SelectItem>
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground">
-                  CODE128 çoğu ürün için en uygun formattır
-                </p>
-              </div>
-
-              <Separator />
 
               {/* Number of Copies */}
               <div className="space-y-2">
@@ -311,45 +233,12 @@ export default function BarcodeEtiketPage() {
                   type="number"
                   min="1"
                   max="100"
-                  value={options.copies}
-                  onChange={(e) =>
-                    updateOption('copies', parseInt(e.target.value) || 1)
-                  }
+                  value={copies}
+                  onChange={(e) => setCopies(parseInt(e.target.value) || 1)}
                 />
                 <p className="text-xs text-muted-foreground">
                   Her ürün için kaç etiket basılacak
                 </p>
-              </div>
-
-              <Separator />
-
-              {/* Additional Options */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="includeQR" className="cursor-pointer">
-                    QR Kod Ekle
-                  </Label>
-                  <Switch
-                    id="includeQR"
-                    checked={options.includeQR}
-                    onCheckedChange={(checked) =>
-                      updateOption('includeQR', checked)
-                    }
-                  />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="includePrice" className="cursor-pointer">
-                    Fiyat Bilgisi
-                  </Label>
-                  <Switch
-                    id="includePrice"
-                    checked={options.includePrice}
-                    onCheckedChange={(checked) =>
-                      updateOption('includePrice', checked)
-                    }
-                  />
-                </div>
               </div>
             </CardContent>
           </Card>
@@ -370,7 +259,7 @@ export default function BarcodeEtiketPage() {
           <div className="flex flex-col gap-2">
             <Button
               onClick={handlePrintLabels}
-              disabled={selectedProducts.length === 0 || isGenerating || options.format !== 'pdf'}
+              disabled={selectedProducts.length === 0 || isGenerating}
               size="lg"
               className="w-full"
             >
