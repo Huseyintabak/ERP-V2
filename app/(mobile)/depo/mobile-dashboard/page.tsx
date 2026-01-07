@@ -124,6 +124,13 @@ export default function MobileDashboardPage() {
       description: 'Stok girişi yap',
     },
     {
+      title: 'Stok Sayım',
+      icon: ClipboardList,
+      href: '/depo/stok-sayim',
+      color: 'bg-purple-500',
+      description: 'Stok sayımı yap',
+    },
+    {
       title: 'Transfer',
       icon: ArrowLeftRight,
       href: '/depo/zone-transfer',
@@ -252,9 +259,9 @@ export default function MobileDashboardPage() {
       )}
 
       {/* Quick Actions */}
-    <div className="px-4 mt-6">
-      <h2 className="text-lg font-bold text-gray-900 mb-4">Hızlı İşlemler</h2>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="px-4 mt-6">
+        <h2 className="text-lg font-bold text-gray-900 mb-4">Hızlı İşlemler</h2>
+        <div className="grid grid-cols-2 gap-3">
           {quickActions.map((action) => (
             <Link key={action.href} href={action.href}>
               <Card className="hover:shadow-lg transition-all duration-200 active:scale-95 border-0 shadow-md h-full">

@@ -28,10 +28,33 @@ export async function GET(
     const { searchParams } = new URL(request.url);
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
-    
-    logger.info('Zone inventory request:', { zoneId, startDate, endDate });
+    const materialType = searchParams.get('material_type');
+    const materialId = searchParams.get('material_id');
+
+    logger.info('Zone inventory request:', { zoneId, startDate, endDate, materialType, materialId });
 
     const adminSupabase = await createAdminClient();
+
+    // If material_type and material_id are provided, fetch specific inventory item
+    if (materialType && materialId) {
+      const { data: inventoryRecord, error: invError } = await adminSupabase
+        .from('zone_inventories')
+        .select('*')
+        .eq('zone_id', zoneId)
+        .eq('material_type', materialType)
+        .eq('material_id', materialId)
+        .maybeSingle();
+
+      if (invError) {
+        logger.error('Error fetching zone inventory:', invError);
+        return NextResponse.json({ error: invError.message }, { status: 500 });
+      }
+
+      return NextResponse.json({
+        data: inventoryRecord,
+        quantity: inventoryRecord?.quantity || 0
+      });
+    }
 
     // Fetch zone inventory (polymorphic - cannot join directly, use admin client for RLS bypass)
     const { data: inventoryRecords, error: invError } = await adminSupabase
@@ -104,35 +127,35 @@ export async function GET(
     if (startDate || endDate) {
       // Get product IDs that were transferred in the date range
       const transferredProductIds = transfers?.map(t => t.product_id) || [];
-      logger.info('Filtering by date range:', { 
-        totalInventory: inventoryRecords.length, 
+      logger.info('Filtering by date range:', {
+        totalInventory: inventoryRecords.length,
         transferredProductIds: transferredProductIds.length,
-        startDate, 
-        endDate 
+        startDate,
+        endDate
       });
-      
+
       // Filter inventory to only show products that were transferred in the date range
-      filteredInventoryRecords = inventoryRecords.filter(inv => 
+      filteredInventoryRecords = inventoryRecords.filter(inv =>
         transferredProductIds.includes(inv.material_id)
       );
-      
-      logger.info('Filtered inventory count:', { 
-        before: inventoryRecords.length, 
-        after: filteredInventoryRecords.length 
+
+      logger.info('Filtered inventory count:', {
+        before: inventoryRecords.length,
+        after: filteredInventoryRecords.length
       });
     }
 
     // Combine inventory with product details and latest transfer date
     const inventory = filteredInventoryRecords.map(inv => {
       const product = products?.find(p => p.id === inv.material_id);
-      
+
       // Find latest transfer for this product to this zone
-      const productTransfers = transfers?.filter(t => 
-        t.product_id === inv.material_id && 
+      const productTransfers = transfers?.filter(t =>
+        t.product_id === inv.material_id &&
         t.to_zone_id === zoneId
       ) || [];
-      
-      const latestTransfer = productTransfers.length > 0 
+
+      const latestTransfer = productTransfers.length > 0
         ? productTransfers[0] // Already sorted by date descending
         : null;
 
@@ -166,7 +189,7 @@ export async function GET(
       return NextResponse.json({ error: zoneError.message }, { status: 500 });
     }
 
-    logger.info('Returning inventory data:', { 
+    logger.info('Returning inventory data:', {
       inventoryCount: inventory?.length || 0,
       filteredCount: filteredInventoryRecords.length,
       hasDateFilter: !!(startDate || endDate),
@@ -174,7 +197,7 @@ export async function GET(
       endDate
     });
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       data: inventory || [],
       zone: zone,
       transfers: transfers || []
@@ -182,8 +205,8 @@ export async function GET(
 
   } catch (error) {
     logger.error('Zone inventory API error:', error);
-    return NextResponse.json({ 
-      error: 'Internal server error' 
+    return NextResponse.json({
+      error: 'Internal server error'
     }, { status: 500 });
   }
 }
@@ -213,8 +236,8 @@ export async function POST(
     const { product_id, quantity } = await request.json();
 
     if (!product_id || quantity === undefined) {
-      return NextResponse.json({ 
-        error: 'Product ID and quantity are required' 
+      return NextResponse.json({
+        error: 'Product ID and quantity are required'
       }, { status: 400 });
     }
 
@@ -243,8 +266,8 @@ export async function POST(
 
   } catch (error) {
     logger.error('Update zone inventory API error:', error);
-    return NextResponse.json({ 
-      error: 'Internal server error' 
+    return NextResponse.json({
+      error: 'Internal server error'
     }, { status: 500 });
   }
 }

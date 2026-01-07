@@ -150,8 +150,7 @@ export async function POST(request: NextRequest) {
       const { error: updateError } = await adminSupabase
         .from('zone_inventories')
         .update({
-          quantity: newZoneQuantity,
-          last_updated: new Date().toISOString()
+          quantity: newZoneQuantity
         })
         .eq('zone_id', zoneId)
         .eq('material_type', materialType)

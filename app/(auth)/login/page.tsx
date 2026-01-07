@@ -17,6 +17,8 @@ export default function LoginPage() {
   const router = useRouter();
   const setUser = useAuthStore((state) => state.setUser);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isRedirecting, setIsRedirecting] = useState(false);
 
   const {
     register,
@@ -27,7 +29,15 @@ export default function LoginPage() {
   });
 
   const onSubmit = async (data: LoginFormData) => {
+    // Prevent duplicate submissions
+    if (isSubmitting || isRedirecting) {
+      console.log('🚫 Duplicate submit prevented - isSubmitting:', isSubmitting, 'isRedirecting:', isRedirecting);
+      return;
+    }
+
+    console.log('🔐 Form submit started');
     setIsLoading(true);
+    setIsSubmitting(true);
 
     try {
       const response = await fetch('/api/auth/login', {
@@ -45,19 +55,20 @@ export default function LoginPage() {
       setUser(result.user);
       toast.success('Giriş başarılı!');
 
-      // Cookie httpOnly olduğu için JavaScript'ten okunamaz
-      // Bu yüzden direkt redirect yapıyoruz, cookie server tarafında set edildi
-      // Hard navigation cookie'yi garanti eder
-      console.log('🔄 Login response:', result);
+      console.log('✅ Login response:', result);
       console.log('🔄 Redirecting to:', result.redirectUrl);
-      console.log('🔄 User:', result.user);
+      console.log('👤 User:', result.user);
 
-      // Small delay to ensure cookie is set before redirect
-      setTimeout(() => {
-        window.location.href = result.redirectUrl;
-      }, 100);
+      // Set redirect flag to prevent any further submissions
+      setIsRedirecting(true);
+
+      // Direct redirect - cookie is already set by server
+      // Using replace to prevent back button issues
+      window.location.replace(result.redirectUrl);
     } catch (error: any) {
+      console.error('❌ Login error:', error);
       toast.error(error.message || 'Bir hata oluştu');
+      setIsSubmitting(false);
     } finally {
       setIsLoading(false);
     }
@@ -105,8 +116,13 @@ export default function LoginPage() {
             )}
           </div>
 
-          <Button type="submit" className="w-full h-12 text-base" disabled={isLoading}>
-            {isLoading ? (
+          <Button type="submit" className="w-full h-12 text-base" disabled={isLoading || isRedirecting}>
+            {isRedirecting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Yönlendiriliyor...
+              </>
+            ) : isLoading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Giriş yapılıyor...

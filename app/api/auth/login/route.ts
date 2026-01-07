@@ -6,9 +6,12 @@ import { logger } from '@/lib/utils/logger';
 
 export async function POST(request: NextRequest) {
   try {
+    logger.log('🔐 Login attempt started');
     const { email, password } = await request.json();
+    logger.log('📧 Email:', email);
 
     if (!email || !password) {
+      logger.log('❌ Missing email or password');
       return NextResponse.json(
         { error: 'Email ve şifre gerekli' },
         { status: 400 }
@@ -35,9 +38,11 @@ export async function POST(request: NextRequest) {
     // Create Supabase client
     let supabase;
     try {
+      logger.log('🔄 Creating Supabase client...');
       supabase = await createClient();
+      logger.log('✅ Supabase client created successfully');
     } catch (clientError: any) {
-      logger.error('Error creating Supabase client:', clientError);
+      logger.error('❌ Error creating Supabase client:', clientError);
       return NextResponse.json(
         {
           error: 'Failed to initialize database connection',
@@ -48,6 +53,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Kullanıcıyı bul
+    logger.log('🔍 Querying user from database...');
     const { data: user, error } = await supabase
       .from('users')
       .select('id, email, name, role, password_hash, is_active')
@@ -55,10 +61,11 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) {
-      logger.error('Database error fetching user:', {
+      logger.error('❌ Database error fetching user:', {
         error: error.message,
         code: error.code,
-        details: error.details
+        details: error.details,
+        hint: error.hint
       });
 
       // Don't reveal if user exists or not for security
@@ -68,7 +75,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    logger.log('✅ User found in database');
+
     if (!user) {
+      logger.log('❌ User not found (null)');
       return NextResponse.json(
         { error: 'Geçersiz email veya şifre' },
         { status: 401 }
@@ -76,7 +86,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Aktif mi kontrol
+    logger.log('🔍 Checking if user is active:', user.is_active);
     if (!user.is_active) {
+      logger.log('❌ User is not active');
       return NextResponse.json(
         { error: 'Hesabınız pasif durumda' },
         { status: 403 }
@@ -84,11 +96,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Şifre kontrolü
+    logger.log('🔑 Comparing password...');
     let isPasswordValid = false;
     try {
       isPasswordValid = await comparePassword(password, user.password_hash);
+      logger.log('🔑 Password comparison result:', isPasswordValid);
     } catch (passwordError: any) {
-      logger.error('Password comparison error:', passwordError);
+      logger.error('❌ Password comparison error:', passwordError);
       return NextResponse.json(
         { error: 'Şifre doğrulama hatası' },
         { status: 500 }
@@ -96,11 +110,14 @@ export async function POST(request: NextRequest) {
     }
 
     if (!isPasswordValid) {
+      logger.log('❌ Invalid password');
       return NextResponse.json(
         { error: 'Geçersiz email veya şifre' },
         { status: 401 }
       );
     }
+
+    logger.log('✅ Password is valid');
 
     // JWT oluştur
     let token: string;

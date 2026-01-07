@@ -67,6 +67,7 @@ export default function StokGirisPage() {
   const [showProductDialog, setShowProductDialog] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [isLoadingProducts, setIsLoadingProducts] = useState(false);
 
   useEffect(() => {
     fetchCenterZone();
@@ -92,20 +93,35 @@ export default function StokGirisPage() {
 
   const fetchProducts = async () => {
     try {
-      // Fetch only raw materials for stock entry
-      const response = await fetch('/api/products/raw-materials');
+      setIsLoadingProducts(true);
+      console.log('Fetching raw materials...');
+
+      // Fetch raw materials from existing stock API
+      const response = await fetch('/api/stock/raw?limit=1000');
+      console.log('Response status:', response.status);
 
       if (response.ok) {
         const data = await response.json();
+        console.log('Fetched data:', data);
+
         const rawMaterials = (data.data || []).map((p: any) => ({
           ...p,
           material_type: 'raw' as const,
           material_type_label: 'Hammadde',
         }));
+
+        console.log('Processed raw materials:', rawMaterials.length);
         setProducts(rawMaterials);
+      } else {
+        const errorData = await response.json();
+        console.error('API Error:', errorData);
+        toast.error('Hammaddeler yüklenemedi');
       }
     } catch (error) {
       console.error('Error fetching products:', error);
+      toast.error('Hammaddeler yüklenemedi');
+    } finally {
+      setIsLoadingProducts(false);
     }
   };
 
@@ -208,7 +224,14 @@ export default function StokGirisPage() {
           } else {
             failCount++;
             const errorData = await response.json();
-            console.error('Stock entry failed:', errorData);
+            console.error('Stock entry failed for product:', item.product.name);
+            console.error('Error details:', errorData);
+            console.error('Request data:', {
+              productId: item.product.id,
+              zoneId: centerZoneId,
+              quantity: item.quantity,
+              material_type: item.product.material_type,
+            });
           }
         } catch (error) {
           failCount++;
@@ -219,10 +242,13 @@ export default function StokGirisPage() {
       if (successCount > 0) {
         transferSuccess();
         toast.success(`${successCount} ürün başarıyla merkez stoğa eklendi! 🎉`);
+
+        // Refresh product list to show updated quantities
+        await fetchProducts();
       }
 
       if (failCount > 0) {
-        toast.error(`${failCount} ürün eklenemedi`);
+        toast.error(`${failCount} ürün eklenemedi. Detaylar için konsola bakın.`);
       }
 
       // Clear list if all successful
@@ -306,23 +332,29 @@ export default function StokGirisPage() {
               <div className="flex-1 overflow-hidden flex flex-col">
                 {/* Search */}
                 <div className="px-6 pb-4">
-                  <div className="relative">
-                    <Search className="absolute left-4 top-4 h-5 w-5 text-gray-400" />
-                    <Input
-                      placeholder="Malzeme adı veya kodu ile ara..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-12 h-14 text-base bg-gray-50 border-gray-200"
-                    />
-                  </div>
+                  <Input
+                    placeholder="Malzeme adı veya kodu ile ara..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="h-14 text-base bg-gray-50 border-gray-200"
+                  />
                 </div>
 
                 {/* Product List */}
                 <div className="flex-1 overflow-y-auto min-h-0 border-t border-gray-200">
-                  {filteredProducts.length === 0 ? (
+                  {isLoadingProducts ? (
+                    <div className="text-center py-12 text-gray-500">
+                      <Loader2 className="h-16 w-16 mx-auto mb-3 animate-spin text-green-600" />
+                      <p className="text-sm">Hammaddeler yükleniyor...</p>
+                    </div>
+                  ) : filteredProducts.length === 0 ? (
                     <div className="text-center py-12 text-gray-500">
                       <Package className="h-16 w-16 mx-auto mb-3 opacity-20" />
-                      <p className="text-sm">Ürün bulunamadı</p>
+                      <p className="text-sm">
+                        {products.length === 0
+                          ? 'Hiç hammadde yok'
+                          : 'Arama sonucu bulunamadı'}
+                      </p>
                     </div>
                   ) : (
                     filteredProducts.map((product) => (

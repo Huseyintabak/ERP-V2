@@ -9,8 +9,8 @@ export default function DashboardPage() {
   const router = useRouter();
 
   useEffect(() => {
+    // Wait for user to be loaded by layout
     if (!user) {
-      router.push('/login');
       return;
     }
 

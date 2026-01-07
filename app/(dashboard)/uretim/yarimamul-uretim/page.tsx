@@ -1,4 +1,5 @@
 'use client';
+// RECOMPILE-FORCED-v3 - Stock Error Dialog Fix
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -126,11 +127,11 @@ export default function YariMamulUretimPage() {
     try {
       const response = await fetch('/api/operators');
       const data = await response.json();
-      
+
       if (response.ok) {
         // API'den gelen veriyi düzelt
         const operatorsData = Array.isArray(data) ? data : (data.data || []);
-        
+
         const formattedOperators = operatorsData.map((op: any) => ({
           id: op.id,
           name: op.user?.name || op.name,
@@ -138,7 +139,7 @@ export default function YariMamulUretimPage() {
           series: op.series || 'N/A',
           current_status: 'active' as const
         }));
-        
+
         setOperators(formattedOperators);
       } else {
         console.error('Operators API error:', data);
@@ -163,21 +164,30 @@ export default function YariMamulUretimPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
+    // FORCE RECOMPILE TEST - v3
+    console.log('🚀🚀🚀 HANDLE SUBMIT CALLED - NEW VERSION v3');
+    console.log('📦 Form data:', formData);
+
     if (!formData.product_id || formData.planned_quantity <= 0) {
       toast.error('Lütfen tüm alanları doldurun');
       return;
     }
 
     try {
+      console.log('📡 SENDING REQUEST...');
+
       const response = await fetch('/api/production/semi-orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)
       });
 
+      console.log('📥 RESPONSE RECEIVED, status:', response.status);
+
       const data = await response.json();
-      
+      console.log('📄 RESPONSE DATA:', JSON.stringify(data, null, 2));
+
       if (response.ok) {
         toast.success('Yarı mamul üretim siparişi oluşturuldu');
         setIsFormOpen(false);
@@ -190,40 +200,43 @@ export default function YariMamulUretimPage() {
         });
         fetchProductionOrders();
       } else {
-        // Debug: API response'unu logla
-        console.log('🔴 API Error Response (raw):', data);
-        console.log('🔴 API Error Response (stringified):', JSON.stringify(data, null, 2));
-        console.log('🔴 Insufficient Materials:', data.insufficient_materials);
-        console.log('🔴 Insufficient Materials Type:', typeof data.insufficient_materials);
-        console.log('🔴 Insufficient Materials Is Array:', Array.isArray(data.insufficient_materials));
-        console.log('🔴 Details:', data.details);
-        console.log('🔴 Error:', data.error);
-        
+        console.log('🔴🔴🔴 ERROR RESPONSE RECEIVED');
+        console.log('🔴 insufficient_materials:', data.insufficient_materials);
+        console.log('🔴 isArray:', Array.isArray(data.insufficient_materials));
+        console.log('🔴 length:', data.insufficient_materials?.length);
+
         // Parse insufficient_materials if it's a string
         let insufficientMaterials = data.insufficient_materials;
         if (typeof insufficientMaterials === 'string') {
           try {
             insufficientMaterials = JSON.parse(insufficientMaterials);
+            console.log('🔴 PARSED:', insufficientMaterials);
           } catch (e) {
-            console.error('Failed to parse insufficient_materials:', e);
+            console.error('Failed to parse:', e);
           }
         }
-        
-        // Her durumda dialog aç (hata varsa)
-        const dialogData: typeof stockErrorDialog = {
-          isOpen: true,
-          error: data.error || 'Yeterli stok bulunmuyor',
-          details: data.details || undefined,
-          insufficientMaterials: (insufficientMaterials && Array.isArray(insufficientMaterials) && insufficientMaterials.length > 0) 
-            ? insufficientMaterials 
-            : undefined,
-        };
-        
-        console.log('🔴 Setting dialog state:', JSON.stringify(dialogData, null, 2));
-        console.log('🔴 Dialog state insufficientMaterials length:', dialogData.insufficientMaterials?.length || 0);
-        setStockErrorDialog(dialogData);
+
+        // Show detailed error dialog for stock issues
+        if (insufficientMaterials && Array.isArray(insufficientMaterials) && insufficientMaterials.length > 0) {
+          console.log('✅✅✅ OPENING DIALOG WITH', insufficientMaterials.length, 'MATERIALS');
+
+          setStockErrorDialog({
+            isOpen: true,
+            error: data.error || 'Yeterli stok bulunmuyor',
+            details: data.details,
+            insufficientMaterials: insufficientMaterials,
+          });
+
+          // Close the form dialog
+          setIsFormOpen(false);
+          console.log('✅ DIALOG STATE SET, FORM CLOSED');
+        } else {
+          console.log('❌ SHOWING TOAST INSTEAD');
+          toast.error(data.error || data.details || 'Üretim siparişi oluşturulamadı');
+        }
       }
     } catch (error: any) {
+      console.error('💥💥💥 EXCEPTION:', error);
       toast.error(error.message || 'Bir hata oluştu');
     }
   };
@@ -324,7 +337,9 @@ export default function YariMamulUretimPage() {
 
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
+    console.log('🚀🚀🚀 HANDLE FORM SUBMIT CALLED - NEW VERSION v3');
+
     if (!formData.product_id || formData.planned_quantity <= 0) {
       toast.error('Lütfen tüm gerekli alanları doldurun');
       return;
@@ -335,11 +350,13 @@ export default function YariMamulUretimPage() {
         throw new Error('Kullanıcı kimlik doğrulaması gerekli');
       }
 
-      const url = editingOrder 
+      const url = editingOrder
         ? `/api/production/semi-orders/${editingOrder.id}`
         : '/api/production/semi-orders';
-      
+
       const method = editingOrder ? 'PUT' : 'POST';
+
+      console.log('📡 SENDING REQUEST...', { url, method });
 
       const response = await fetch(url, {
         method,
@@ -349,6 +366,11 @@ export default function YariMamulUretimPage() {
         },
         body: JSON.stringify(formData),
       });
+
+      console.log('📥 RESPONSE RECEIVED, status:', response.status);
+
+      const errorData = await response.json();
+      console.log('📄 RESPONSE DATA:', errorData);
 
       if (response.ok) {
         toast.success(editingOrder ? 'Sipariş güncellendi' : 'Yarı mamul üretim siparişi oluşturuldu');
@@ -363,8 +385,39 @@ export default function YariMamulUretimPage() {
         });
         fetchProductionOrders();
       } else {
-        const errorData = await response.json();
-        toast.error(errorData.error || 'Bir hata oluştu');
+        console.log('🔴🔴🔴 ERROR RESPONSE');
+        console.log('🔴 insufficient_materials:', errorData.insufficient_materials);
+        console.log('🔴 isArray:', Array.isArray(errorData.insufficient_materials));
+
+        // Parse insufficient_materials if it's a string
+        let insufficientMaterials = errorData.insufficient_materials;
+        if (typeof insufficientMaterials === 'string') {
+          try {
+            insufficientMaterials = JSON.parse(insufficientMaterials);
+            console.log('🔴 PARSED:', insufficientMaterials);
+          } catch (e) {
+            console.error('Failed to parse:', e);
+          }
+        }
+
+        // Show detailed error dialog for stock issues
+        if (insufficientMaterials && Array.isArray(insufficientMaterials) && insufficientMaterials.length > 0) {
+          console.log('✅✅✅ OPENING DIALOG WITH', insufficientMaterials.length, 'MATERIALS');
+
+          setStockErrorDialog({
+            isOpen: true,
+            error: errorData.error || 'Yeterli stok bulunmuyor',
+            details: errorData.details,
+            insufficientMaterials: insufficientMaterials,
+          });
+
+          // Close the form dialog
+          setIsFormOpen(false);
+          console.log('✅ DIALOG STATE SET, FORM CLOSED');
+        } else {
+          console.log('❌ SHOWING TOAST INSTEAD');
+          toast.error(errorData.error || 'Bir hata oluştu');
+        }
       }
     } catch (error) {
       console.error('Error creating/updating order:', error);
@@ -436,7 +489,7 @@ export default function YariMamulUretimPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                
+
                 <div>
                   <Label htmlFor="planned_quantity">Planlanan Miktar *</Label>
                   <Input
@@ -450,7 +503,7 @@ export default function YariMamulUretimPage() {
                   />
                 </div>
               </div>
-              
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="priority">Öncelik</Label>
@@ -493,7 +546,7 @@ export default function YariMamulUretimPage() {
                   </Select>
                 </div>
               </div>
-              
+
               <div>
                 <Label htmlFor="notes">Notlar</Label>
                 <Textarea
@@ -503,7 +556,7 @@ export default function YariMamulUretimPage() {
                   placeholder="Üretim notları..."
                 />
               </div>
-              
+
               <div className="flex justify-end gap-2">
                 <Button type="button" variant="outline" onClick={() => setIsFormOpen(false)}>
                   İptal
@@ -817,7 +870,7 @@ export default function YariMamulUretimPage() {
           setStockErrorDialog({ isOpen: false, error: '' });
         }
       }}>
-        <DialogContent className="max-w-3xl max-h-[90vh]">
+        <DialogContent className="max-w-6xl max-h-[90vh] w-[95vw]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-red-600">
               <AlertCircle className="h-5 w-5" />
@@ -825,35 +878,11 @@ export default function YariMamulUretimPage() {
             </DialogTitle>
           </DialogHeader>
 
-          {/* Debug: Show state info - ALWAYS VISIBLE */}
-          <div className="text-xs bg-gray-100 p-2 rounded mb-4 border border-gray-300">
-            <div className="font-semibold mb-2">🔍 Debug Info:</div>
-            <div>Error: <strong>{stockErrorDialog.error || 'N/A'}</strong></div>
-            <div>Has Details: <strong>{stockErrorDialog.details ? `YES (${stockErrorDialog.details.length} chars)` : 'NO'}</strong></div>
-            <div>Has Materials: <strong>{stockErrorDialog.insufficientMaterials?.length || 0} items</strong></div>
-            <div>Materials Type: <strong>{Array.isArray(stockErrorDialog.insufficientMaterials) ? 'Array' : typeof stockErrorDialog.insufficientMaterials}</strong></div>
-            {stockErrorDialog.details && (
-              <div className="mt-2 border-t pt-2">
-                <div className="font-semibold">Details Preview:</div>
-                <pre className="text-xs mt-1 overflow-auto max-h-20 bg-white p-1 rounded">
-                  {stockErrorDialog.details.substring(0, 200)}...
-                </pre>
-              </div>
-            )}
-            {stockErrorDialog.insufficientMaterials && stockErrorDialog.insufficientMaterials.length > 0 && (
-              <div className="mt-2 border-t pt-2">
-                <div className="font-semibold">Materials Preview:</div>
-                <pre className="text-xs mt-1 overflow-auto max-h-20 bg-white p-1 rounded">
-                  {JSON.stringify(stockErrorDialog.insufficientMaterials.slice(0, 2), null, 2)}
-                </pre>
-              </div>
-            )}
-          </div>
-
-          <div className="space-y-4">
+          <ScrollArea className="max-h-[calc(90vh-200px)]">
+            <div className="space-y-4 pr-4">
             {/* Show insufficient materials if available */}
-            {stockErrorDialog.insufficientMaterials && 
-             Array.isArray(stockErrorDialog.insufficientMaterials) && 
+            {stockErrorDialog.insufficientMaterials &&
+             Array.isArray(stockErrorDialog.insufficientMaterials) &&
              stockErrorDialog.insufficientMaterials.length > 0 ? (
               <div className="space-y-4">
                 <Alert variant="destructive">
@@ -883,24 +912,30 @@ export default function YariMamulUretimPage() {
                                   {material.material_type || 'N/A'}
                                 </Badge>
                               </div>
-                              <div className="grid grid-cols-3 gap-4 mt-3 text-sm">
+                              <div className="grid grid-cols-3 gap-6 mt-3 text-sm">
                                 <div>
-                                  <span className="text-gray-600">Gerekli:</span>
-                                  <span className="ml-2 font-semibold text-gray-900">
-                                    {material.required_quantity?.toLocaleString('tr-TR') || 0} {material.unit || 'adet'}
-                                  </span>
+                                  <div className="flex flex-col">
+                                    <span className="text-gray-600 text-xs mb-1">Gerekli:</span>
+                                    <span className="font-semibold text-gray-900 text-base">
+                                      {material.required_quantity?.toLocaleString('tr-TR') || 0} {material.unit || 'adet'}
+                                    </span>
+                                  </div>
                                 </div>
                                 <div>
-                                  <span className="text-gray-600">Mevcut:</span>
-                                  <span className="ml-2 font-semibold text-gray-900">
-                                    {material.available_stock?.toLocaleString('tr-TR') || 0} {material.unit || 'adet'}
-                                  </span>
+                                  <div className="flex flex-col">
+                                    <span className="text-gray-600 text-xs mb-1">Mevcut:</span>
+                                    <span className="font-semibold text-gray-900 text-base">
+                                      {material.available_stock?.toLocaleString('tr-TR') || 0} {material.unit || 'adet'}
+                                    </span>
+                                  </div>
                                 </div>
                                 <div>
-                                  <span className="text-red-600 font-medium">Eksik:</span>
-                                  <span className="ml-2 font-bold text-red-700">
-                                    {material.shortage?.toLocaleString('tr-TR') || 0} {material.unit || 'adet'}
-                                  </span>
+                                  <div className="flex flex-col">
+                                    <span className="text-red-600 font-medium text-xs mb-1">Eksik:</span>
+                                    <span className="font-bold text-red-700 text-base">
+                                      {material.shortage?.toLocaleString('tr-TR') || 0} {material.unit || 'adet'}
+                                    </span>
+                                  </div>
                                 </div>
                               </div>
                             </div>
@@ -911,50 +946,41 @@ export default function YariMamulUretimPage() {
                   </div>
                 </ScrollArea>
 
-                <Alert>
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>
-                    <strong>Çözüm:</strong> Stok yönetimi sayfasından bu malzemelerin stok miktarını artırın.
+                <Alert className="bg-blue-50 border-blue-200">
+                  <AlertCircle className="h-4 w-4 text-blue-600" />
+                  <AlertTitle className="text-blue-900">Nasıl Düzeltilir?</AlertTitle>
+                  <AlertDescription className="text-blue-800">
+                    <div className="space-y-2 mt-2">
+                      <p>• <strong>Stok Yönetimi</strong> sayfasından bu malzemelerin stok miktarını artırın</p>
+                      <p>• <strong>Satınalma</strong> bölümünden eksik malzemeler için sipariş verin</p>
+                      <p>• Planlanan miktarı azaltarak mevcut stok ile üretim yapabilirsiniz</p>
+                    </div>
                   </AlertDescription>
                 </Alert>
               </div>
             ) : null}
+            </div>
+          </ScrollArea>
 
-            {/* Always show details if available */}
-            {stockErrorDialog.details ? (
-              <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
-                <AlertTitle>Detaylar</AlertTitle>
-                <AlertDescription className="whitespace-pre-wrap text-sm mt-2">
-                  {stockErrorDialog.details}
-                </AlertDescription>
-              </Alert>
-            ) : null}
-
-            {/* Fallback if no details or materials */}
-            {!stockErrorDialog.details && 
-             (!stockErrorDialog.insufficientMaterials || stockErrorDialog.insufficientMaterials.length === 0) ? (
-              <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
-                <AlertTitle>Stok Kontrolü Başarısız</AlertTitle>
-                <AlertDescription>
-                  Stok kontrolü yapılamadı. Lütfen tekrar deneyin veya stok durumunu kontrol edin.
-                  {stockErrorDialog.error && (
-                    <div className="mt-2 font-semibold">
-                      Hata: {stockErrorDialog.error}
-                    </div>
-                  )}
-                </AlertDescription>
-              </Alert>
-            ) : null}
-          </div>
-
-          <div className="flex justify-end gap-2 pt-4 border-t">
-            <Button variant="outline" onClick={() => {
-              setStockErrorDialog({ isOpen: false, error: '' });
-            }}>
-              Kapat
-            </Button>
+          <div className="flex justify-between items-center gap-2 pt-4 border-t mt-4">
+            <div className="text-sm text-gray-600">
+              {stockErrorDialog.insufficientMaterials && stockErrorDialog.insufficientMaterials.length > 0 && (
+                <span>Toplam {stockErrorDialog.insufficientMaterials.length} malzemede eksik bulundu</span>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => {
+                setStockErrorDialog({ isOpen: false, error: '' });
+              }}>
+                Kapat
+              </Button>
+              <Button onClick={() => {
+                setStockErrorDialog({ isOpen: false, error: '' });
+                window.open('/stok-yonetimi', '_blank');
+              }}>
+                Stok Yönetimine Git
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
