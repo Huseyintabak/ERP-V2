@@ -21,8 +21,7 @@ import {
   Check,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { BarcodeScanner } from '@/components/barcode-scanner';
-import { scanSuccess, scanError } from '@/lib/utils/scan-feedback';
+import { BarcodeScanner } from '@/components/barcode/barcode-scanner';
 
 interface Product {
   id: string;
@@ -109,7 +108,6 @@ export default function StokSayimPage() {
       const existingItem = countItems.find(item => item.product.id === scannedProduct.id);
 
       if (existingItem) {
-        scanSuccess();
         toast.info('Ürün zaten listede');
         setIsProcessing(false);
         return;
@@ -148,12 +146,10 @@ export default function StokSayimPage() {
       };
 
       setCountItems(prev => [newItem, ...prev]);
-      scanSuccess();
       toast.success(`${scannedProduct.product_name} eklendi`);
 
     } catch (error) {
       console.error('Error processing scanned product:', error);
-      scanError();
       toast.error('Ürün işlenirken hata oluştu');
     } finally {
       setIsProcessing(false);
