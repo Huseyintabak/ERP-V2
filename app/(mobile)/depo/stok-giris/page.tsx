@@ -329,40 +329,44 @@ export default function StokGirisPage() {
                 Manuel Ekle
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-md max-h-[80vh] overflow-hidden flex flex-col">
-              <DialogHeader>
-                <DialogTitle>Ürün Seç</DialogTitle>
+            <DialogContent className="max-w-2xl max-h-[85vh] overflow-hidden flex flex-col p-0">
+              <DialogHeader className="px-6 pt-6 pb-4">
+                <DialogTitle className="text-xl">Malzeme Seç</DialogTitle>
               </DialogHeader>
-              <div className="space-y-4 flex-1 overflow-hidden flex flex-col">
+              <div className="flex-1 overflow-hidden flex flex-col">
                 {/* Search */}
-                <div className="relative">
-                  <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                  <Input
-                    placeholder="Ürün ara..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
-                  />
+                <div className="px-6 pb-4">
+                  <div className="relative">
+                    <Search className="absolute left-4 top-4 h-5 w-5 text-gray-400" />
+                    <Input
+                      placeholder="Malzeme adı veya kodu ile ara..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-12 h-14 text-base bg-gray-50 border-gray-200"
+                    />
+                  </div>
                 </div>
 
                 {/* Type Filter */}
-                <Select value={selectedProductType} onValueChange={setSelectedProductType}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Tür seçin" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Tüm Ürünler</SelectItem>
-                    <SelectItem value="finished">Mamul</SelectItem>
-                    <SelectItem value="semi">Yarı Mamul</SelectItem>
-                    <SelectItem value="raw">Hammadde</SelectItem>
-                  </SelectContent>
-                </Select>
+                <div className="px-6 pb-4">
+                  <Select value={selectedProductType} onValueChange={setSelectedProductType}>
+                    <SelectTrigger className="h-11">
+                      <SelectValue placeholder="Tür seçin" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Tüm Malzemeler</SelectItem>
+                      <SelectItem value="finished">Mamul</SelectItem>
+                      <SelectItem value="semi">Yarı Mamul</SelectItem>
+                      <SelectItem value="raw">Hammadde</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
                 {/* Product List */}
-                <div className="flex-1 overflow-y-auto space-y-2 min-h-0">
+                <div className="flex-1 overflow-y-auto min-h-0 border-t border-gray-200">
                   {filteredProducts.length === 0 ? (
-                    <div className="text-center py-8 text-gray-500">
-                      <Package className="h-12 w-12 mx-auto mb-2 opacity-20" />
+                    <div className="text-center py-12 text-gray-500">
+                      <Package className="h-16 w-16 mx-auto mb-3 opacity-20" />
                       <p className="text-sm">Ürün bulunamadı</p>
                     </div>
                   ) : (
@@ -374,16 +378,22 @@ export default function StokGirisPage() {
                           setShowProductDialog(false);
                           setSearchTerm('');
                         }}
-                        className="w-full p-3 bg-gray-50 hover:bg-gray-100 rounded-lg border border-gray-200 text-left transition-colors"
+                        className="w-full px-6 py-4 hover:bg-gray-50 text-left transition-colors border-b border-gray-100 last:border-b-0"
                       >
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <h4 className="font-medium text-sm">{product.name}</h4>
-                            <p className="text-xs text-gray-500 mt-1">{product.code}</p>
+                        <div className="flex items-center justify-between gap-4">
+                          <div className="flex-1 min-w-0">
+                            <h4 className="font-semibold text-base text-gray-900 truncate">
+                              {product.name}
+                            </h4>
+                            <p className="text-sm text-gray-500 mt-0.5">
+                              {product.code}
+                            </p>
                           </div>
-                          <Badge className={`text-xs ${typeMap[product.material_type]?.color}`}>
-                            {product.material_type_label}
-                          </Badge>
+                          <div className="flex items-center gap-3 flex-shrink-0">
+                            <span className="text-sm text-gray-600">
+                              {product.quantity} {product.unit || 'adet'}
+                            </span>
+                          </div>
                         </div>
                       </button>
                     ))
