@@ -10,6 +10,21 @@ import { WebSocketErrorSuppressor } from "@/components/websocket-error-suppresso
 export const metadata: Metadata = {
   title: "Thunder ERP v2 - Üretim Yönetim Sistemi",
   description: "Modern, real-time ERP sistemi",
+  manifest: "/manifest.json",
+  icons: {
+    icon: [
+      { url: "/favicon.svg", type: "image/svg+xml" },
+    ],
+    apple: [
+      { url: "/icons/apple-touch-icon.svg", sizes: "180x180", type: "image/svg+xml" },
+    ],
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Thunder ERP",
+  },
+  themeColor: "#1e40af",
 };
 
 export default function RootLayout({
@@ -19,6 +34,14 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="tr">
+      <head>
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="apple-mobile-web-app-title" content="Thunder" />
+        <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+        <link rel="apple-touch-icon" href="/icons/apple-touch-icon.svg" />
+      </head>
       <body className="font-sans antialiased">
         <ErrorBoundary>
           <WebSocketErrorSuppressor />
