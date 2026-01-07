@@ -67,7 +67,6 @@ export default function StokGirisPage() {
   const [showProductDialog, setShowProductDialog] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedProductType, setSelectedProductType] = useState<string>('all');
 
   useEffect(() => {
     fetchCenterZone();
@@ -93,43 +92,18 @@ export default function StokGirisPage() {
 
   const fetchProducts = async () => {
     try {
-      // Fetch all product types
-      const [finishedRes, semiRes, rawRes] = await Promise.all([
-        fetch('/api/products/finished'),
-        fetch('/api/products/semi-finished'),
-        fetch('/api/products/raw-materials'),
-      ]);
+      // Fetch only raw materials for stock entry
+      const response = await fetch('/api/products/raw-materials');
 
-      const allProducts: Product[] = [];
-
-      if (finishedRes.ok) {
-        const data = await finishedRes.json();
-        allProducts.push(...(data.data || []).map((p: any) => ({
-          ...p,
-          material_type: 'finished' as const,
-          material_type_label: 'Mamul',
-        })));
-      }
-
-      if (semiRes.ok) {
-        const data = await semiRes.json();
-        allProducts.push(...(data.data || []).map((p: any) => ({
-          ...p,
-          material_type: 'semi' as const,
-          material_type_label: 'Yarı Mamul',
-        })));
-      }
-
-      if (rawRes.ok) {
-        const data = await rawRes.json();
-        allProducts.push(...(data.data || []).map((p: any) => ({
+      if (response.ok) {
+        const data = await response.json();
+        const rawMaterials = (data.data || []).map((p: any) => ({
           ...p,
           material_type: 'raw' as const,
           material_type_label: 'Hammadde',
-        })));
+        }));
+        setProducts(rawMaterials);
       }
-
-      setProducts(allProducts);
     } catch (error) {
       console.error('Error fetching products:', error);
     }
@@ -281,11 +255,7 @@ export default function StokGirisPage() {
       product.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
       product.barcode?.toLowerCase().includes(searchTerm.toLowerCase());
 
-    const matchesType =
-      selectedProductType === 'all' ||
-      product.material_type === selectedProductType;
-
-    return matchesSearch && matchesType;
+    return matchesSearch;
   });
 
   return (
@@ -345,21 +315,6 @@ export default function StokGirisPage() {
                       className="pl-12 h-14 text-base bg-gray-50 border-gray-200"
                     />
                   </div>
-                </div>
-
-                {/* Type Filter */}
-                <div className="px-6 pb-4">
-                  <Select value={selectedProductType} onValueChange={setSelectedProductType}>
-                    <SelectTrigger className="h-11">
-                      <SelectValue placeholder="Tür seçin" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Tüm Malzemeler</SelectItem>
-                      <SelectItem value="finished">Mamul</SelectItem>
-                      <SelectItem value="semi">Yarı Mamul</SelectItem>
-                      <SelectItem value="raw">Hammadde</SelectItem>
-                    </SelectContent>
-                  </Select>
                 </div>
 
                 {/* Product List */}
