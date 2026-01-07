@@ -65,11 +65,26 @@ interface ScanResult {
   message?: string;
 }
 
+interface ScannedProduct {
+  product: ProductInfo;
+  zoneInventory: ZoneInventory[];
+  barcode: string;
+  quantity: number;
+  sourceZone?: string;
+  targetZone?: string;
+}
+
 export default function MobileZoneTransferPage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [scanResult, setScanResult] = useState<ScanResult | null>(null);
   const [showScanner, setShowScanner] = useState(true);
+
+  // Continuous scan mode
+  const [continuousScanMode, setContinuousScanMode] = useState(false);
+  const [scannedProducts, setScannedProducts] = useState<ScannedProduct[]>([]);
+  const [globalSourceZone, setGlobalSourceZone] = useState<string>('');
+  const [globalTargetZone, setGlobalTargetZone] = useState<string>('');
 
   // Transfer states
   const [zones, setZones] = useState<Zone[]>([]);
@@ -96,10 +111,14 @@ export default function MobileZoneTransferPage() {
 
   const handleScan = async (barcode: string) => {
     setIsLoading(true);
-    setScanResult(null);
-    setSelectedSourceZone('');
-    setSelectedTargetZone('');
-    setTransferQuantity('');
+
+    // Don't reset if in continuous mode
+    if (!continuousScanMode) {
+      setScanResult(null);
+      setSelectedSourceZone('');
+      setSelectedTargetZone('');
+      setTransferQuantity('');
+    }
 
     try {
       const response = await fetch(`/api/barcode/lookup?barcode=${encodeURIComponent(barcode)}`);
@@ -109,26 +128,64 @@ export default function MobileZoneTransferPage() {
           const data = await response.json();
           scanError();
           toast.error(data.message || 'Barkod bulunamadı');
-          setScanResult({
-            found: false,
-            barcode,
-            message: data.message || 'Barkod bulunamadı',
-          });
+
+          if (!continuousScanMode) {
+            setScanResult({
+              found: false,
+              barcode,
+              message: data.message || 'Barkod bulunamadı',
+            });
+          }
           return;
         }
         throw new Error('Barkod sorgulanamadı');
       }
 
       const data: ScanResult = await response.json();
-      setScanResult(data);
 
-      if (data.found) {
-        scanSuccess();
-        toast.success(`Ürün bulundu: ${data.product?.name}`);
-        setShowScanner(false);
+      if (data.found && data.product && data.zoneInventory) {
+        // Continuous mode: allow multiple scans of same product
+        if (continuousScanMode) {
+          const alreadyScanned = scannedProducts.find(
+            (sp) => sp.product.id === data.product!.id
+          );
 
-        // Auto-select first zone with inventory as source
-        if (data.zoneInventory && data.zoneInventory.length > 0) {
+          if (alreadyScanned) {
+            // Increment quantity instead of blocking
+            setScannedProducts((prev) =>
+              prev.map((sp) =>
+                sp.product.id === data.product!.id
+                  ? { ...sp, quantity: sp.quantity + 1 }
+                  : sp
+              )
+            );
+            scanSuccess();
+            toast.success(`${data.product.name} miktarı artırıldı: ${alreadyScanned.quantity + 1}`);
+            return;
+          }
+
+          // Add to scanned products list
+          const firstZone = data.zoneInventory.find((z: ZoneInventory) => z.quantity > 0);
+          const newProduct: ScannedProduct = {
+            product: data.product,
+            zoneInventory: data.zoneInventory,
+            barcode,
+            quantity: 1,
+            sourceZone: globalSourceZone || firstZone?.zone.id,
+            targetZone: globalTargetZone,
+          };
+
+          setScannedProducts((prev) => [...prev, newProduct]);
+          scanSuccess();
+          toast.success(`${data.product.name} listeye eklendi (${scannedProducts.length + 1})`);
+        } else {
+          // Single scan mode
+          setScanResult(data);
+          scanSuccess();
+          toast.success(`Ürün bulundu: ${data.product?.name}`);
+          setShowScanner(false);
+
+          // Auto-select first zone with inventory as source
           const firstZone = data.zoneInventory.find((z: ZoneInventory) => z.quantity > 0);
           if (firstZone) {
             setSelectedSourceZone(firstZone.zone.id);
@@ -150,6 +207,109 @@ export default function MobileZoneTransferPage() {
     setSelectedSourceZone('');
     setSelectedTargetZone('');
     setTransferQuantity('');
+  };
+
+  const toggleContinuousMode = () => {
+    const newMode = !continuousScanMode;
+    setContinuousScanMode(newMode);
+
+    if (newMode) {
+      // Enable continuous mode
+      setShowScanner(true);
+      setScanResult(null);
+      setScannedProducts([]);
+      toast.success('Sürekli okuma modu aktif! 📷');
+    } else {
+      // Disable continuous mode
+      setScannedProducts([]);
+      setGlobalSourceZone('');
+      setGlobalTargetZone('');
+      toast.info('Sürekli okuma modu kapatıldı');
+    }
+  };
+
+  const removeScannedProduct = (index: number) => {
+    setScannedProducts((prev) => prev.filter((_, i) => i !== index));
+    toast.info('Ürün listeden kaldırıldı');
+  };
+
+  const updateProductQuantity = (index: number, quantity: number) => {
+    setScannedProducts((prev) =>
+      prev.map((p, i) => (i === index ? { ...p, quantity } : p))
+    );
+  };
+
+  const handleBatchTransfer = async () => {
+    if (scannedProducts.length === 0) {
+      toast.error('Taranmış ürün yok');
+      return;
+    }
+
+    if (!globalSourceZone || !globalTargetZone) {
+      toast.error('Kaynak ve hedef zone seçmelisiniz');
+      return;
+    }
+
+    // Validate all products
+    for (const sp of scannedProducts) {
+      const sourceZoneInv = sp.zoneInventory.find((zi) => zi.zone.id === globalSourceZone);
+      if (!sourceZoneInv || sourceZoneInv.quantity < sp.quantity) {
+        toast.error(
+          `${sp.product.name}: Yetersiz stok (Mevcut: ${sourceZoneInv?.quantity || 0})`
+        );
+        return;
+      }
+    }
+
+    setIsTransferring(true);
+
+    try {
+      let successCount = 0;
+      let failCount = 0;
+
+      for (const sp of scannedProducts) {
+        try {
+          const response = await fetch('/api/warehouse/transfer', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              fromZoneId: globalSourceZone,
+              toZoneId: globalTargetZone,
+              productId: sp.product.id,
+              quantity: sp.quantity,
+            }),
+          });
+
+          if (response.ok) {
+            successCount++;
+          } else {
+            failCount++;
+          }
+        } catch (error) {
+          failCount++;
+        }
+      }
+
+      if (successCount > 0) {
+        transferSuccess();
+        toast.success(`${successCount} ürün başarıyla transfer edildi! 🎉`);
+      }
+
+      if (failCount > 0) {
+        toast.error(`${failCount} ürün transfer edilemedi`);
+      }
+
+      // Clear list
+      setScannedProducts([]);
+      setGlobalSourceZone('');
+      setGlobalTargetZone('');
+    } catch (error) {
+      console.error('Batch transfer error:', error);
+      scanError();
+      toast.error('Transfer hatası');
+    } finally {
+      setIsTransferring(false);
+    }
   };
 
   const handleTransfer = async () => {
@@ -253,7 +413,7 @@ export default function MobileZoneTransferPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100">
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 pb-20">
       {/* Header */}
       <div className="bg-gradient-to-r from-orange-500 to-orange-600 text-white p-4 sticky top-0 z-10 shadow-lg">
         <div className="flex items-center gap-3">
@@ -268,26 +428,200 @@ export default function MobileZoneTransferPage() {
           <div className="flex-1">
             <h1 className="text-xl font-bold">Zone Transfer</h1>
             <p className="text-orange-100 text-xs mt-0.5">
-              Ürün tarayın ve transfer yapın
+              {continuousScanMode
+                ? `${scannedProducts.length} ürün tarandı`
+                : 'Ürün tarayın ve transfer yapın'}
             </p>
           </div>
+          <Button
+            variant={continuousScanMode ? 'secondary' : 'ghost'}
+            size="sm"
+            onClick={toggleContinuousMode}
+            className={continuousScanMode
+              ? 'bg-white text-orange-600 hover:bg-white/90'
+              : 'text-white hover:bg-white/20'}
+          >
+            {continuousScanMode ? (
+              <>
+                <CheckCircle2 className="h-4 w-4 mr-1" />
+                Sürekli
+              </>
+            ) : (
+              <>
+                <Camera className="h-4 w-4 mr-1" />
+                Tekli
+              </>
+            )}
+          </Button>
         </div>
       </div>
 
       <div className="p-4 space-y-4">
+        {/* Continuous Mode Info */}
+        {continuousScanMode && (
+          <Card className="border-2 border-orange-300 shadow-lg bg-orange-50">
+            <CardContent className="p-4">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 bg-orange-500 rounded-full flex items-center justify-center flex-shrink-0">
+                  <Camera className="h-5 w-5 text-white" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-orange-900">Sürekli Okuma Modu Aktif</h3>
+                  <p className="text-sm text-orange-700 mt-1">
+                    Birden fazla ürün tarayabilirsiniz. Her tarama listeye eklenecek.
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Scanner Section */}
         {showScanner && (
           <Card className="border-0 shadow-lg overflow-hidden">
             <CardHeader className="bg-gradient-to-r from-orange-50 to-orange-100 border-b">
               <CardTitle className="text-lg flex items-center gap-2">
                 <Camera className="h-5 w-5 text-orange-600" />
-                Barkod Tara
+                {continuousScanMode ? 'Ürün Taramaya Devam Edin' : 'Barkod Tara'}
               </CardTitle>
             </CardHeader>
             <CardContent className="p-4">
               <BarcodeScanner
                 onScan={handleScan}
               />
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Scanned Products List (Continuous Mode) */}
+        {continuousScanMode && scannedProducts.length > 0 && (
+          <Card className="border-0 shadow-lg">
+            <CardHeader className="bg-gradient-to-r from-purple-50 to-purple-100 border-b">
+              <CardTitle className="text-lg flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Box className="h-5 w-5 text-purple-600" />
+                  Taranmış Ürünler
+                </div>
+                <Badge variant="secondary" className="text-sm">
+                  {scannedProducts.length} ürün
+                </Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-4 space-y-3">
+              {scannedProducts.map((sp, index) => (
+                <div
+                  key={index}
+                  className="p-3 bg-gray-50 rounded-lg border border-gray-200 space-y-2"
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <h4 className="font-medium text-sm">{sp.product.name}</h4>
+                      <p className="text-xs text-gray-500">{sp.product.code}</p>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removeScannedProduct(index)}
+                      className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                    >
+                      ✕
+                    </Button>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Label className="text-xs">Miktar:</Label>
+                    <Input
+                      type="number"
+                      value={sp.quantity}
+                      onChange={(e) =>
+                        updateProductQuantity(index, parseInt(e.target.value) || 1)
+                      }
+                      className="h-8 w-20 text-sm"
+                      min="1"
+                    />
+                    <span className="text-xs text-gray-500">
+                      {sp.product.unit || 'adet'}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Batch Transfer Form (Continuous Mode) */}
+        {continuousScanMode && scannedProducts.length > 0 && (
+          <Card className="border-0 shadow-lg">
+            <CardHeader className="bg-gradient-to-r from-green-50 to-green-100 border-b">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <ArrowRight className="h-5 w-5 text-green-600" />
+                Toplu Transfer
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-4 space-y-4">
+              {/* Global Source Zone */}
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Kaynak Zone (Tümü İçin)</Label>
+                <Select value={globalSourceZone} onValueChange={setGlobalSourceZone}>
+                  <SelectTrigger className="h-12">
+                    <SelectValue placeholder="Kaynak zone seçin" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {zones.map((zone) => (
+                      <SelectItem key={zone.id} value={zone.id}>
+                        {zone.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Global Target Zone */}
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Hedef Zone (Tümü İçin)</Label>
+                <Select
+                  value={globalTargetZone}
+                  onValueChange={setGlobalTargetZone}
+                  disabled={!globalSourceZone}
+                >
+                  <SelectTrigger className="h-12">
+                    <SelectValue placeholder="Hedef zone seçin" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {zones
+                      .filter((z) => z.id !== globalSourceZone)
+                      .map((zone) => (
+                        <SelectItem key={zone.id} value={zone.id}>
+                          {zone.name}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Batch Transfer Button */}
+              <Button
+                onClick={handleBatchTransfer}
+                disabled={
+                  !globalSourceZone ||
+                  !globalTargetZone ||
+                  scannedProducts.length === 0 ||
+                  isTransferring
+                }
+                className="w-full h-12 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-base font-semibold"
+                size="lg"
+              >
+                {isTransferring ? (
+                  <>
+                    <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                    Transfer Yapılıyor...
+                  </>
+                ) : (
+                  <>
+                    <ArrowRight className="h-5 w-5 mr-2" />
+                    {scannedProducts.length} Ürünü Transfer Et
+                  </>
+                )}
+              </Button>
             </CardContent>
           </Card>
         )}

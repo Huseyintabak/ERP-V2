@@ -117,6 +117,13 @@ export default function MobileDashboardPage() {
 
   const quickActions = [
     {
+      title: 'Stok Giriş',
+      icon: PackagePlus,
+      href: '/depo/stok-giris',
+      color: 'bg-green-500',
+      description: 'Stok girişi yap',
+    },
+    {
       title: 'Transfer',
       icon: ArrowLeftRight,
       href: '/depo/zone-transfer',
@@ -247,7 +254,7 @@ export default function MobileDashboardPage() {
       {/* Quick Actions */}
     <div className="px-4 mt-6">
       <h2 className="text-lg font-bold text-gray-900 mb-4">Hızlı İşlemler</h2>
-      <div className="grid grid-cols-1 gap-3 max-w-sm mx-auto">
+      <div className="grid grid-cols-2 gap-3">
           {quickActions.map((action) => (
             <Link key={action.href} href={action.href}>
               <Card className="hover:shadow-lg transition-all duration-200 active:scale-95 border-0 shadow-md h-full">
