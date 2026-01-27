@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { Toaster } from "@/components/ui/sonner";
@@ -24,6 +24,9 @@ export const metadata: Metadata = {
     statusBarStyle: "default",
     title: "Thunder ERP",
   },
+};
+
+export const viewport: Viewport = {
   themeColor: "#1e40af",
 };
 

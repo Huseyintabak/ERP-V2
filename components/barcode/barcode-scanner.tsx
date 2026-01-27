@@ -13,6 +13,8 @@ interface BarcodeScannerProps {
   onClose?: () => void;
   title?: string;
   showManualInput?: boolean;
+  continuousMode?: boolean; // Don't stop scanning after each successful scan
+  isProcessing?: boolean; // External processing state to prevent duplicate scans
 }
 
 export function BarcodeScanner({
@@ -20,12 +22,15 @@ export function BarcodeScanner({
   onClose,
   title = 'Barkod Okuyucu',
   showManualInput = true,
+  continuousMode = false,
+  isProcessing = false,
 }: BarcodeScannerProps) {
-  const [isScanning, setIsScanning] = useState(false);
+  const [isScanning, setIsScanning] = useState(continuousMode); // Auto-start if continuous mode
   const [manualBarcode, setManualBarcode] = useState('');
   const [error, setError] = useState<string | null>(null);
   const scannerRef = useRef<any>(null);
   const isMountedRef = useRef(true);
+  const isCallbackProcessingRef = useRef<boolean>(false);
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -33,6 +38,13 @@ export function BarcodeScanner({
       isMountedRef.current = false;
     };
   }, []);
+
+  // Auto-start scanner when continuous mode is enabled
+  useEffect(() => {
+    if (continuousMode && !isScanning) {
+      setIsScanning(true);
+    }
+  }, [continuousMode]);
 
   useEffect(() => {
     let scanner: any = null;
@@ -81,18 +93,45 @@ export function BarcodeScanner({
             // Success callback
             if (!isMountedRef.current) return;
 
+            // Block if external processing is active
+            if (isProcessing) {
+              return;
+            }
+
+            // Block if internal callback is processing
+            if (isCallbackProcessingRef.current) {
+              return;
+            }
+
+            // Set blocking flag IMMEDIATELY
+            isCallbackProcessingRef.current = true;
+
             // Instant feedback when barcode is detected
             provideFeedback('info', { sound: true, vibration: true, visual: false });
 
-            scanner.stop().then(() => {
-              if (isMountedRef.current) {
-                setIsScanning(false);
-                scannerRef.current = null;
-                onScan(decodedText);
-              }
-            }).catch((err: any) => {
-              console.error('Error stopping scanner:', err);
-            });
+            // In continuous mode, keep scanning
+            if (continuousMode) {
+              // Call onScan but keep scanner running
+              onScan(decodedText);
+
+              // Release callback lock after a short delay to allow parent processing
+              setTimeout(() => {
+                isCallbackProcessingRef.current = false;
+              }, 100);
+            } else {
+              // Original behavior: stop after scan
+              scanner.stop().then(() => {
+                if (isMountedRef.current) {
+                  setIsScanning(false);
+                  scannerRef.current = null;
+                  onScan(decodedText);
+                  isCallbackProcessingRef.current = false;
+                }
+              }).catch((err: any) => {
+                console.error('Error stopping scanner:', err);
+                isCallbackProcessingRef.current = false;
+              });
+            }
           },
           (errorMessage: string) => {
             // Error callback - ignore scanning errors
@@ -113,14 +152,24 @@ export function BarcodeScanner({
 
     return () => {
       if (scanner && scannerRef.current) {
-        scanner.stop()
-          .catch((err: any) => console.error('Cleanup stop error:', err))
-          .finally(() => {
+        try {
+          const scannerState = scanner.getState();
+          if (scannerState === 2 || scannerState === 3) { // SCANNING or PAUSED
+            scanner.stop()
+              .catch((err: any) => console.error('Cleanup stop error:', err))
+              .finally(() => {
+                scannerRef.current = null;
+              });
+          } else {
             scannerRef.current = null;
-          });
+          }
+        } catch (err) {
+          console.error('Cleanup error:', err);
+          scannerRef.current = null;
+        }
       }
     };
-  }, [isScanning, onScan]);
+  }, [isScanning, onScan, continuousMode, isProcessing]);
 
   const handleStartScanning = () => {
     setIsScanning(true);
@@ -129,21 +178,29 @@ export function BarcodeScanner({
 
   const handleStopScanning = () => {
     if (scannerRef.current) {
-      scannerRef.current
-        .stop()
-        .then(() => {
-          if (isMountedRef.current) {
-            setIsScanning(false);
-            scannerRef.current = null;
-          }
-        })
-        .catch((err: any) => {
-          console.error('Error stopping scanner:', err);
-          if (isMountedRef.current) {
-            setIsScanning(false);
-            scannerRef.current = null;
-          }
-        });
+      // Check if scanner is actually running before stopping
+      const scannerState = scannerRef.current.getState();
+      if (scannerState === 2 || scannerState === 3) { // SCANNING or PAUSED
+        scannerRef.current
+          .stop()
+          .then(() => {
+            if (isMountedRef.current) {
+              setIsScanning(false);
+              scannerRef.current = null;
+            }
+          })
+          .catch((err: any) => {
+            console.error('Error stopping scanner:', err);
+            if (isMountedRef.current) {
+              setIsScanning(false);
+              scannerRef.current = null;
+            }
+          });
+      } else {
+        // Scanner not running, just clean up
+        setIsScanning(false);
+        scannerRef.current = null;
+      }
     } else {
       setIsScanning(false);
     }

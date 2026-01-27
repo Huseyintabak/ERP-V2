@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { AgentOrchestrator } from '@/lib/ai/orchestrator';
+import { agentLogger } from '@/lib/ai/utils/logger';
+import { logger } from '@/lib/utils/logger';
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,6 +18,58 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = await createClient();
+
+    // ============================================
+    // AI AGENT VALIDATION (Warehouse Agent)
+    // ============================================
+    if (process.env.AGENT_ENABLED === 'true') {
+      try {
+        logger.log('🤖 Warehouse Agent validation başlatılıyor (stock entry)...');
+
+        const orchestrator = AgentOrchestrator.getInstance();
+        const agentResult = await orchestrator.startConversation('warehouse', {
+          id: `stock_entry_${product_id}_${Date.now()}`,
+          prompt: `Stok girişi doğrula: Ürün ID ${product_id}, Miktar: ${quantity}`,
+          type: 'validation',
+          context: {
+            productId: product_id,
+            barcode: barcode,
+            quantity: quantity,
+            location: location,
+            movementType: 'giris',
+            notes: notes,
+          },
+          urgency: 'medium',
+          severity: 'medium',
+        });
+
+        await agentLogger.log({
+          agent: 'warehouse',
+          action: 'stock_entry_validation',
+          materialId: product_id,
+          finalDecision: agentResult.finalDecision,
+          protocolResult: agentResult.protocolResult,
+        });
+
+        // Agent reddettiyse - Graceful degradation: warning log ama devam et
+        if (agentResult.finalDecision === 'rejected') {
+          logger.warn('⚠️ Warehouse Agent stok girişini reddetti, ama işleme devam ediliyor');
+        }
+
+        // Agent onayladıysa
+        if (agentResult.finalDecision === 'approved') {
+          logger.log('✅ Warehouse Agent stok girişini onayladı');
+        }
+      } catch (error: any) {
+        logger.warn('⚠️ Warehouse Agent validation hatası, stok girişi devam ediyor:', error.message);
+        await agentLogger.error({
+          agent: 'warehouse',
+          action: 'stock_entry_validation_error',
+          materialId: product_id,
+          error: error.message,
+        });
+      }
+    }
 
     // Get current user (if authentication is implemented)
     // const { data: { user } } = await supabase.auth.getUser();

@@ -145,6 +145,83 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
+    // ============================================
+    // AI AGENT VALIDATION (Production Agent)
+    // ============================================
+    if (process.env.AGENT_ENABLED === 'true') {
+      try {
+        logger.log('🤖 Production Agent validation başlatılıyor...');
+
+        const orchestrator = AgentOrchestrator.getInstance();
+        const agentResult = await orchestrator.startConversation('production', {
+          id: `production_log_${plan_id}_${Date.now()}`,
+          prompt: `Üretim kaydı doğrula: Plan #${plan_id}, Ürün: ${product.code}, Miktar: ${quantity_produced}`,
+          type: 'validation',
+          context: {
+            planId: plan_id,
+            productId: product.id,
+            productCode: product.code,
+            productName: product.name,
+            quantityProduced: quantity_produced,
+            plannedQuantity: plan.planned_quantity,
+            producedQuantity: plan.produced_quantity,
+            totalProduced: totalProduced,
+            barcodeScanned: barcode_scanned,
+            operatorId: operatorId,
+            bomSnapshot: bomSnapshot,
+          },
+          urgency: 'high',
+          severity: 'high',
+        });
+
+        await agentLogger.log({
+          agent: 'production',
+          action: 'production_log_validation',
+          planId: plan_id,
+          finalDecision: agentResult.finalDecision,
+          protocolResult: agentResult.protocolResult,
+        });
+
+        // Agent reddettiyse - Graceful degradation: warning log ama devam et
+        if (agentResult.finalDecision === 'rejected') {
+          logger.warn('⚠️ Production Agent üretim kaydını reddetti, ama operatör kaydı ile devam ediliyor');
+          logger.warn('📋 Agent reddetme nedenleri:', agentResult.protocolResult?.errors || []);
+          logger.warn('💡 Agent önerileri:', agentResult.protocolResult?.warnings || []);
+
+          await agentLogger.warn({
+            agent: 'production',
+            action: 'production_log_rejected_by_agent_but_continuing',
+            planId: plan_id,
+            finalDecision: 'rejected',
+            protocolResult: agentResult.protocolResult,
+            message: 'Agent reddetti ama operatör kaydı ile devam ediliyor',
+          });
+        }
+
+        // Agent onayladıysa
+        if (agentResult.finalDecision === 'approved') {
+          logger.log('✅ Production Agent üretim kaydını onayladı');
+        }
+
+        // Her durumda devam et (agent sadece öneri verir, final karar operatörde)
+        logger.log('✅ Production Agent validation tamamlandı, üretim kaydına devam ediliyor...');
+      } catch (error: any) {
+        // Agent hatası durumunda graceful degradation - operatör kaydı devam eder
+        logger.error('❌ Production Agent validation hatası:', error);
+        logger.warn('⚠️ Production Agent validation hatası, operatör kaydı devam ediyor:', error.message);
+
+        await agentLogger.error({
+          agent: 'production',
+          action: 'production_log_validation_error',
+          planId: plan_id,
+          error: error.message,
+        });
+        // Hata olsa bile operatör kaydı devam eder (graceful degradation)
+      }
+    } else {
+      logger.warn(`⚠️ Production Agent validation atlandı: AGENT_ENABLED=${process.env.AGENT_ENABLED}`);
+    }
+
     // 5. Stok Yeterlilik Kontrolü (BOM Snapshot)
     const { data: bomSnapshot, error: bomError } = await supabase
       .from('production_plan_bom_snapshot')

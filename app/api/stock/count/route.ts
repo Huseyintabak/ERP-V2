@@ -84,20 +84,78 @@ export async function POST(request: NextRequest) {
       ? ((difference / material.quantity) * 100).toFixed(2)
       : '0';
 
+    const analysis = {
+      system_quantity: material.quantity,
+      physical_quantity: validated.physicalQuantity,
+      difference: difference,
+      variance_percentage: parseFloat(variancePercent),
+      severity: Math.abs(parseFloat(variancePercent)) > 10 
+        ? 'high' 
+        : Math.abs(parseFloat(variancePercent)) > 5 
+        ? 'medium' 
+        : 'low'
+    };
+
+    // ============================================
+    // AI AGENT VALIDATION (Warehouse Agent)
+    // ============================================
+    if (process.env.AGENT_ENABLED === 'true') {
+      try {
+        logger.log('🤖 Warehouse Agent validation başlatılıyor (stock count)...');
+
+        const orchestrator = AgentOrchestrator.getInstance();
+        const agentResult = await orchestrator.startConversation('warehouse', {
+          id: `stock_count_${validated.materialId}_${Date.now()}`,
+          prompt: `Envanter sayımı doğrula: ${material.name} (${material.code}), Sistem: ${material.quantity}, Fiziksel: ${validated.physicalQuantity}, Fark: ${difference}`,
+          type: 'validation',
+          context: {
+            materialType: validated.materialType,
+            materialId: validated.materialId,
+            materialCode: material.code,
+            materialName: material.name,
+            systemQuantity: material.quantity,
+            physicalQuantity: validated.physicalQuantity,
+            difference: difference,
+            variancePercentage: parseFloat(variancePercent),
+            severity: analysis.severity,
+            notes: validated.notes,
+          },
+          urgency: analysis.severity === 'high' ? 'high' : 'medium',
+          severity: analysis.severity === 'high' ? 'high' : 'medium',
+        });
+
+        await agentLogger.log({
+          agent: 'warehouse',
+          action: 'stock_count_validation',
+          materialId: validated.materialId,
+          finalDecision: agentResult.finalDecision,
+          protocolResult: agentResult.protocolResult,
+        });
+
+        // Agent reddettiyse - Graceful degradation: warning log ama devam et
+        if (agentResult.finalDecision === 'rejected') {
+          logger.warn('⚠️ Warehouse Agent envanter sayımını reddetti, ama işleme devam ediliyor');
+        }
+
+        // Agent onayladıysa
+        if (agentResult.finalDecision === 'approved') {
+          logger.log('✅ Warehouse Agent envanter sayımını onayladı');
+        }
+      } catch (error: any) {
+        logger.warn('⚠️ Warehouse Agent validation hatası, envanter sayımı devam ediyor:', error.message);
+        await agentLogger.error({
+          agent: 'warehouse',
+          action: 'stock_count_validation_error',
+          materialId: validated.materialId,
+          error: error.message,
+        });
+      }
+    }
+
     return NextResponse.json({
       success: true,
       data: count,
-      analysis: {
-        system_quantity: material.quantity,
-        physical_quantity: validated.physicalQuantity,
-        difference: difference,
-        variance_percentage: parseFloat(variancePercent),
-        severity: Math.abs(parseFloat(variancePercent)) > 10 
-          ? 'high' 
-          : Math.abs(parseFloat(variancePercent)) > 5 
-          ? 'medium' 
-          : 'low'
-      }
+      analysis
     }, { status: 201 });
 
   } catch (error: any) {

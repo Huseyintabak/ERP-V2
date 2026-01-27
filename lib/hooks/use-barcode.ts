@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 
 export const useBarcode = (onScan: (barcode: string) => void) => {
   const [buffer, setBuffer] = useState('');
+  const bufferRef = useRef('');
 
   useEffect(() => {
     let timeout: NodeJS.Timeout;
@@ -9,17 +10,22 @@ export const useBarcode = (onScan: (barcode: string) => void) => {
     const handleKeyPress = (e: KeyboardEvent) => {
       // Enter tuşu basıldığında barkod tamamlanmış sayılır
       if (e.key === 'Enter') {
-        if (buffer.trim()) {
-          onScan(buffer.trim());
+        if (bufferRef.current.trim()) {
+          onScan(bufferRef.current.trim());
+          bufferRef.current = '';
           setBuffer('');
         }
       } else if (e.key.length === 1) {
         // Sadece karakter tuşlarını al
-        setBuffer(prev => prev + e.key);
+        bufferRef.current += e.key;
+        setBuffer(bufferRef.current);
         
         // Timeout'u temizle ve yeniden başlat
         clearTimeout(timeout);
-        timeout = setTimeout(() => setBuffer(''), 100); // 100ms sonra buffer'ı temizle
+        timeout = setTimeout(() => {
+          bufferRef.current = '';
+          setBuffer('');
+        }, 100); // 100ms sonra buffer'ı temizle
       }
     };
 
@@ -29,7 +35,7 @@ export const useBarcode = (onScan: (barcode: string) => void) => {
       window.removeEventListener('keypress', handleKeyPress);
       clearTimeout(timeout);
     };
-  }, [buffer, onScan]);
+  }, [onScan]);
 
   return buffer;
 };

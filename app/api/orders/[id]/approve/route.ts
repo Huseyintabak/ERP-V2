@@ -86,10 +86,12 @@ async function handleApprove(request: NextRequest, params: { id: string }) {
             orderError,
           );
         } else {
-          // Planning Agent ile konuşma başlat
+          // Multi-Agent validation: Planning, Warehouse, Manager
           const orchestrator = AgentOrchestrator.getInstance();
-          const agentResult = await orchestrator.startConversation("planning", {
-            id: `order_approve_${id}_${Date.now()}`,
+          
+          // Planning Agent validation
+          const planningResult = await orchestrator.startConversation("planning", {
+            id: `order_approve_planning_${id}_${Date.now()}`,
             prompt: `Bu siparişi onaylamak istiyorum: Order #${orderData.order_number || id}`,
             type: "request",
             context: {
@@ -114,9 +116,76 @@ async function handleApprove(request: NextRequest, params: { id: string }) {
             agent: "planning",
             action: "order_approval_validation",
             orderId: id,
-            finalDecision: agentResult.finalDecision,
-            protocolResult: agentResult.protocolResult,
+            finalDecision: planningResult.finalDecision,
+            protocolResult: planningResult.protocolResult,
           });
+
+          // Warehouse Agent validation (stock check)
+          const warehouseResult = await orchestrator.startConversation("warehouse", {
+            id: `order_approve_warehouse_${id}_${Date.now()}`,
+            prompt: `Bu sipariş için stok kontrolü yap: Order #${orderData.order_number || id}`,
+            type: "request",
+            context: {
+              orderId: id,
+              action: "check_stock",
+              orderData: {
+                id: orderData.id,
+                order_number: orderData.order_number,
+                items: orderData.order_items || [],
+              },
+            },
+            urgency: "high",
+            severity: "high",
+          });
+
+          await agentLogger.log({
+            agent: "warehouse",
+            action: "order_approval_stock_check",
+            orderId: id,
+            finalDecision: warehouseResult.finalDecision,
+            protocolResult: warehouseResult.protocolResult,
+          });
+
+          // Manager Agent validation (risk and budget analysis)
+          const managerResult = await orchestrator.startConversation("manager", {
+            id: `order_approve_manager_${id}_${Date.now()}`,
+            prompt: `Bu sipariş için risk ve bütçe analizi yap: Order #${orderData.order_number || id}`,
+            type: "analysis",
+            context: {
+              orderId: id,
+              orderData: {
+                id: orderData.id,
+                order_number: orderData.order_number,
+                items: orderData.order_items || [],
+              },
+              operation: "order_approval",
+            },
+            urgency: "high",
+            severity: "high",
+          });
+
+          await agentLogger.log({
+            agent: "manager",
+            action: "order_approval_risk_analysis",
+            orderId: id,
+            finalDecision: managerResult.finalDecision,
+            protocolResult: managerResult.protocolResult,
+          });
+
+          // Combine results - use the most restrictive decision
+          const agentResults = [planningResult, warehouseResult, managerResult];
+          const agentResult = {
+            finalDecision: agentResults.some(r => r.finalDecision === "rejected") 
+              ? "rejected" 
+              : agentResults.some(r => r.finalDecision === "pending_approval")
+              ? "pending_approval"
+              : "approved",
+            protocolResult: {
+              decisions: agentResults.map(r => r.protocolResult?.decision),
+              errors: agentResults.flatMap(r => r.protocolResult?.errors || []),
+              warnings: agentResults.flatMap(r => r.protocolResult?.warnings || []),
+            },
+          };
 
           // Agent reddettiyse - Graceful degradation: warning log ama devam et
           if (agentResult.finalDecision === "rejected") {

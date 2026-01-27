@@ -22,6 +22,14 @@ const customJestConfig = {
     '!**/*.d.ts',
     '!**/node_modules/**',
   ],
+  coverageThreshold: {
+    global: {
+      branches: 60,
+      functions: 60,
+      lines: 60,
+      statements: 60,
+    },
+  },
   testTimeout: 30000, // 30 saniye timeout
   // Environment variable'ları test ortamında kullanılabilir yap
   globals: {
