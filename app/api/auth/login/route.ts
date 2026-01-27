@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/server';
 import { comparePassword } from '@/lib/auth/password';
 import { signJWT } from '@/lib/auth/jwt';
 import { logger } from '@/lib/utils/logger';
@@ -35,14 +35,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create Supabase client
+    // Create Supabase admin client (service role)
     let supabase;
     try {
-      logger.log('🔄 Creating Supabase client...');
-      supabase = await createClient();
-      logger.log('✅ Supabase client created successfully');
+      logger.log('🔄 Creating Supabase admin client...');
+      supabase = createAdminClient();
+      logger.log('✅ Supabase admin client created successfully');
     } catch (clientError: any) {
-      logger.error('❌ Error creating Supabase client:', clientError);
+      logger.error('❌ Error creating Supabase admin client:', clientError);
       return NextResponse.json(
         {
           error: 'Failed to initialize database connection',
