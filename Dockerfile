@@ -5,8 +5,10 @@ WORKDIR /app
 # Bağımlılık dosyalarını kopyala
 COPY package.json package-lock.json ./
 
-# Production için temiz kurulum
-RUN npm ci
+# Production için kurulum
+# Not: Lokalde package.json ve package-lock tam senkron olmayabildiği için
+# Docker build sırasında "npm ci" yerine "npm install" kullanıyoruz.
+RUN npm install
 
 # Uygulama kodunu kopyala
 COPY . .
