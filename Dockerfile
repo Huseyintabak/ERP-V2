@@ -2,6 +2,8 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
+ENV OPENAI_API_KEY=dummy
+
 # Bağımlılık dosyalarını kopyala
 COPY package.json package-lock.json ./
 
