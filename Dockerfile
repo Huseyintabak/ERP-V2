@@ -2,7 +2,11 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
+# Build sırasında gerekli olan env'ler (dummy değerler)
+# Gerçek değerler runtime'da .env.docker'dan gelecek
 ENV OPENAI_API_KEY=dummy
+ENV NEXT_PUBLIC_SUPABASE_URL=https://placeholder.supabase.co
+ENV NEXT_PUBLIC_SUPABASE_ANON_KEY=placeholder-anon-key
 
 # Bağımlılık dosyalarını kopyala
 COPY package.json package-lock.json ./
