@@ -366,14 +366,15 @@ const calculateRoleStats = async (role: keyof RoleBasedStats, filters?: { startD
       // Raw materials: unit_price (cost) - maliyet fiyatı
       // Semi-finished: unit_cost (cost) - maliyet fiyatı  
       // Finished products: cost_price (if available) - BOM bazlı maliyet, yoksa 0 (sale_price kullanma!)
-      // EXCLUDE: "iscilik" related items (not physical inventory - labor costs)
+      // EXCLUDE: Trx_iscilik, Genel_Gider (işçilik/genel gider - fiziksel stok değil)
+      const EXCLUDED_RAW_CODES = ['trx_iscilik', 'genel_gider'];
       const stockValueCalculation = [
         ...rawMaterials
           .filter((item: any) => {
-            // Exclude labor/cost items that shouldn't be in inventory
-            const code = (item.code || '').toLowerCase();
+            const code = (item.code || '').toLowerCase().trim();
             const name = (item.name || '').toLowerCase();
-            return !code.includes('iscilik') && !name.includes('iscilik');
+            const isExcluded = EXCLUDED_RAW_CODES.some(c => code === c || name.includes(c.replace('_', ' ')));
+            return !isExcluded && !code.includes('iscilik') && !name.includes('iscilik');
           })
           .map((item: any) => ({
             type: 'raw',
