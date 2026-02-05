@@ -370,16 +370,28 @@ export async function GET(
           currentStock = stockData?.quantity || 0;
         }
 
+        // Silinmiş malzeme için material null gelebilir; UI'da .name okunmasın diye her zaman obje döndür
+        const materialPayload = material
+          ? { ...material, unit_price: material.unit_price ?? 0, unit_cost: material.unit_cost ?? 0 }
+          : {
+              id: record.material_id,
+              name: 'Silinmiş / Bilinmeyen Malzeme',
+              code: 'N/A',
+              unit: 'adet',
+              unit_price: 0,
+              unit_cost: 0,
+            };
+
         return {
           id: record.id,
           material_type: record.material_type,
           material_id: record.material_id,
           quantity_needed: record.quantity || record.quantity_needed, // semi_bom'da quantity, bom'da quantity_needed
-          material_name: material?.name || 'Unknown Material',
-          material_code: material?.code || 'N/A',
-          unit: material?.unit || 'adet',
+          material_name: materialPayload.name,
+          material_code: materialPayload.code,
+          unit: materialPayload.unit,
           current_stock: currentStock,
-          material,
+          material: materialPayload,
         };
       }) || []
     );

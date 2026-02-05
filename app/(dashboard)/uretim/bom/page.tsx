@@ -1143,18 +1143,18 @@ export default function BOMPage() {
                           </TableCell>
                           <TableCell>
                             <div>
-                              <div className="font-medium">{entry.material.name}</div>
+                              <div className="font-medium">{entry.material?.name ?? entry.material_name ?? 'Bilinmeyen'}</div>
                               <div className="text-sm text-muted-foreground">
-                                {entry.material.code} • {entry.material.unit}
+                                {entry.material?.code ?? entry.material_code ?? 'N/A'} • {entry.material?.unit ?? entry.unit ?? 'adet'}
                               </div>
                             </div>
                           </TableCell>
                           <TableCell>{entry.quantity_needed}</TableCell>
                           <TableCell>
-                            ₺{((entry.material.unit_price || entry.material.unit_cost) || 0).toFixed(2)}
+                            ₺{((entry.material?.unit_price ?? entry.material?.unit_cost) ?? 0).toFixed(2)}
                           </TableCell>
                           <TableCell className="font-medium">
-                            ₺{(((entry.material.unit_price || entry.material.unit_cost) || 0) * entry.quantity_needed).toFixed(2)}
+                            ₺{(((entry.material?.unit_price ?? entry.material?.unit_cost) ?? 0) * entry.quantity_needed).toFixed(2)}
                           </TableCell>
                           <TableCell>
                             <div className="flex gap-2">
@@ -1359,9 +1359,9 @@ export default function BOMPage() {
               <div>
                 <label className="text-sm font-medium text-muted-foreground">Malzeme</label>
                 <div className="mt-1">
-                  <p className="font-medium">{editingBOM.material.name}</p>
+                  <p className="font-medium">{editingBOM.material?.name ?? editingBOM.material_name ?? 'Bilinmeyen'}</p>
                   <p className="text-sm text-muted-foreground">
-                    {editingBOM.material.code} • {editingBOM.material.unit}
+                    {editingBOM.material?.code ?? editingBOM.material_code ?? 'N/A'} • {editingBOM.material?.unit ?? editingBOM.unit ?? 'adet'}
                   </p>
                 </div>
               </div>

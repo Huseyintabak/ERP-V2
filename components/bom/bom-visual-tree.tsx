@@ -94,15 +94,16 @@ export function BomVisualTree({
         
         // Position raw materials at the bottom
         rawMaterials.forEach((material: any, index: number) => {
+          const mat = material.material ?? {};
           const materialNode: BomNode = {
             id: `material-${material.id}`,
             type: 'raw',
             data: {
-              label: material.material.name,
-              code: material.material.code,
+              label: mat.name ?? material.material_name ?? 'Bilinmeyen',
+              code: mat.code ?? material.material_code ?? 'N/A',
               quantity: material.quantity_needed,
-              unit: material.material.unit,
-              cost: material.material.unit_price || material.material.unit_cost || 0,
+              unit: mat.unit ?? material.unit ?? 'adet',
+              cost: mat.unit_price ?? mat.unit_cost ?? 0,
               materialId: material.material_id // Store original material ID
             },
             position: { 
@@ -123,21 +124,22 @@ export function BomVisualTree({
             type: 'custom',
             animated: true,
             style: { stroke: '#ef4444', strokeWidth: 2 },
-            data: { label: `${material.quantity_needed} ${material.material.unit}` }
+            data: { label: `${material.quantity_needed} ${mat.unit ?? material.unit ?? 'adet'}` }
           });
         });
         
         // Position semi-finished materials in the middle
         semiMaterials.forEach((material: any, index: number) => {
+          const mat = material.material ?? {};
           const materialNode: BomNode = {
             id: `material-${material.id}`,
             type: 'semi',
             data: {
-              label: material.material.name,
-              code: material.material.code,
+              label: mat.name ?? material.material_name ?? 'Bilinmeyen',
+              code: mat.code ?? material.material_code ?? 'N/A',
               quantity: material.quantity_needed,
-              unit: material.material.unit,
-              cost: material.material.unit_price || material.material.unit_cost || 0,
+              unit: mat.unit ?? material.unit ?? 'adet',
+              cost: mat.unit_price ?? mat.unit_cost ?? 0,
               materialId: material.material_id // Store original material ID
             },
             position: { 
@@ -158,7 +160,7 @@ export function BomVisualTree({
             type: 'custom',
             animated: true,
             style: { stroke: '#f59e0b', strokeWidth: 2 },
-            data: { label: `${material.quantity_needed} ${material.material.unit}` }
+            data: { label: `${material.quantity_needed} ${mat.unit ?? material.unit ?? 'adet'}` }
           });
         });
       }
@@ -193,15 +195,16 @@ export function BomVisualTree({
       
       // Position raw materials at the bottom
       rawMaterials.forEach((material: any, index: number) => {
+        const mat = material.material ?? {};
         const materialNode: BomNode = {
           id: `material-${material.id}`,
           type: 'raw',
           data: {
-            label: material.material.name,
-            code: material.material.code,
+            label: mat.name ?? material.material_name ?? 'Bilinmeyen',
+            code: mat.code ?? material.material_code ?? 'N/A',
             quantity: material.quantity_needed,
-            unit: material.material.unit,
-            cost: material.material.unit_price || material.material.unit_cost || 0,
+            unit: mat.unit ?? material.unit ?? 'adet',
+            cost: mat.unit_price ?? mat.unit_cost ?? 0,
             materialId: material.material_id // Store original material ID
           },
           position: { 
@@ -222,21 +225,22 @@ export function BomVisualTree({
           type: 'custom',
           animated: true,
           style: { stroke: '#ef4444', strokeWidth: 2 },
-          data: { label: `${material.quantity_needed} ${material.material.unit}` }
+          data: { label: `${material.quantity_needed} ${mat.unit ?? material.unit ?? 'adet'}` }
         });
       });
       
       // Position semi-finished materials in the middle
       semiMaterials.forEach((material: any, index: number) => {
+        const mat = material.material ?? {};
         const materialNode: BomNode = {
           id: `material-${material.id}`,
           type: 'semi',
           data: {
-            label: material.material.name,
-            code: material.material.code,
+            label: mat.name ?? material.material_name ?? 'Bilinmeyen',
+            code: mat.code ?? material.material_code ?? 'N/A',
             quantity: material.quantity_needed,
-            unit: material.material.unit,
-            cost: material.material.unit_price || material.material.unit_cost || 0,
+            unit: mat.unit ?? material.unit ?? 'adet',
+            cost: mat.unit_price ?? mat.unit_cost ?? 0,
             materialId: material.material_id // Store original material ID
           },
           position: { 
@@ -257,7 +261,7 @@ export function BomVisualTree({
           type: 'custom',
           animated: true,
           style: { stroke: '#f59e0b', strokeWidth: 2 },
-          data: { label: `${material.quantity_needed} ${material.material.unit}` }
+          data: { label: `${material.quantity_needed} ${mat.unit ?? material.unit ?? 'adet'}` }
         });
       });
       
