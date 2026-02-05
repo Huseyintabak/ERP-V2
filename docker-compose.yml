@@ -2,11 +2,17 @@ version: "3.9"
 
 services:
   thunder-erp-web:
-    build: .
+    build:
+      context: .
+      args:
+        - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
+        - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+        - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+        - JWT_SECRET=${JWT_SECRET}
+        - OPENAI_API_KEY=${OPENAI_API_KEY:-dummy}
     container_name: thunder-erp-web
     restart: unless-stopped
     ports:
       - "3000:3000"
     env_file:
       - .env.docker
-

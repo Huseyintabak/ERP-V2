@@ -2,11 +2,19 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Build sırasında gerekli olan env'ler (dummy değerler)
-# Gerçek değerler runtime'da .env.docker'dan gelecek
-ENV OPENAI_API_KEY=dummy
-ENV NEXT_PUBLIC_SUPABASE_URL=https://placeholder.supabase.co
-ENV NEXT_PUBLIC_SUPABASE_ANON_KEY=placeholder-anon-key
+# Build arguments - docker-compose.yml'den gelecek
+ARG NEXT_PUBLIC_SUPABASE_URL
+ARG NEXT_PUBLIC_SUPABASE_ANON_KEY
+ARG SUPABASE_SERVICE_ROLE_KEY
+ARG JWT_SECRET
+ARG OPENAI_API_KEY=dummy
+
+# Build sırasında ARG'ları ENV'e çevir (Next.js NEXT_PUBLIC_* için gerekli)
+ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL
+ENV NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY
+ENV SUPABASE_SERVICE_ROLE_KEY=$SUPABASE_SERVICE_ROLE_KEY
+ENV JWT_SECRET=$JWT_SECRET
+ENV OPENAI_API_KEY=$OPENAI_API_KEY
 
 # Bağımlılık dosyalarını kopyala
 COPY package.json package-lock.json ./
