@@ -167,9 +167,14 @@ export async function POST(request: NextRequest) {
     });
 
     // Set cookie with proper settings
+    // NOT: HTTPS olmayan ortamlarda (internal network) secure: false olmalı
+    // Production'da HTTPS varsa secure: true yapın
+    const isHttps = process.env.FORCE_HTTPS === 'true' || 
+                    (process.env.NODE_ENV === 'production' && process.env.USE_HTTPS === 'true');
+    
     response.cookies.set('thunder_token', token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: isHttps,
       sameSite: 'lax',
       maxAge: 60 * 60 * 24 * 7, // 7 days
       path: '/',
