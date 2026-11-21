@@ -16,6 +16,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
+    // Request body parse — DB'ye gitmeden önce zorunlu alanları doğrula
+    const body = await request.json();
+    const { plan_id, barcode_scanned, quantity_produced } = body;
+
+    if (!plan_id || !barcode_scanned || !quantity_produced) {
+      return NextResponse.json({ 
+        error: 'plan_id, barcode_scanned ve quantity_produced gerekli' 
+      }, { status: 400 });
+    }
+
     const operatorId = payload.userId;
     const supabase = await createClient();
     const adminSupabase = createAdminClient();
@@ -44,16 +54,6 @@ export async function POST(request: NextRequest) {
       logger.error('Invalid operator ID format:', { operatorId, operatorIdType: typeof operatorId });
       return NextResponse.json({ 
         error: '❌ Üretim kaydı oluşturulamadı!\n\n🔍 Problem: Geçersiz operatör kimliği formatı\n💡 Çözüm: Lütfen tekrar giriş yapın.' 
-      }, { status: 400 });
-    }
-
-    // Request body parse
-    const body = await request.json();
-    const { plan_id, barcode_scanned, quantity_produced } = body;
-
-    if (!plan_id || !barcode_scanned || !quantity_produced) {
-      return NextResponse.json({ 
-        error: 'plan_id, barcode_scanned ve quantity_produced gerekli' 
       }, { status: 400 });
     }
 

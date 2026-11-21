@@ -14,9 +14,11 @@ jest.mock('@/lib/supabase/server', () => ({
 }));
 
 // Mock JWT
+// Route operatör kimliğinin UUID formatında olmasını şart koşuyor
+const OPERATOR_ID = '11111111-2222-3333-4444-555555555555';
 jest.mock('@/lib/auth/jwt', () => ({
   verifyJWT: jest.fn(() => ({
-    userId: 'test-operator-uuid',
+    userId: '11111111-2222-3333-4444-555555555555',
     role: 'operator',
   })),
 }));
@@ -27,27 +29,6 @@ jest.mock('@/lib/utils/logger', () => ({
     log: jest.fn(),
     error: jest.fn(),
     warn: jest.fn(),
-  },
-}));
-
-// Mock agent logger
-jest.mock('@/lib/ai/utils/logger', () => ({
-  agentLogger: {
-    log: jest.fn(),
-    error: jest.fn(),
-    warn: jest.fn(),
-  },
-}));
-
-// Mock orchestrator
-jest.mock('@/lib/ai/orchestrator', () => ({
-  AgentOrchestrator: {
-    getInstance: jest.fn(() => ({
-      startConversation: jest.fn().mockResolvedValue({
-        finalDecision: 'approve',
-        confidence: 0.9,
-      }),
-    })),
   },
 }));
 
@@ -140,6 +121,16 @@ describe('Production API', () => {
       });
 
       createClient.mockReturnValueOnce(mockSupabase);
+
+      // Admin client: operatör users tablosunda mevcut (route plan kontrolünden önce bakıyor)
+      const { createAdminClient } = require('@/lib/supabase/server');
+      const mockAdmin = createMockSupabaseClient();
+      (mockAdmin.from as jest.Mock).mockReturnValueOnce({
+        select: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockReturnThis(),
+        single: jest.fn().mockResolvedValue({ data: { id: OPERATOR_ID, role: 'operator' }, error: null }),
+      });
+      createAdminClient.mockReturnValueOnce(mockAdmin);
 
       const request = new NextRequest('http://localhost:3000/api/production/log', {
         method: 'POST',
