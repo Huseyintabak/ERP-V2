@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
-import { BrowserMultiFormatReader } from '@zxing/browser';
+import { BrowserMultiFormatReader, type IScannerControls } from '@zxing/browser';
 
 interface ProductInfo {
   id: string;
@@ -51,6 +51,7 @@ export default function BarcodeScannerPage() {
   const streamRef = useRef<MediaStream | null>(null);
   const readerRef = useRef<BrowserMultiFormatReader | null>(null);
   const scanningRef = useRef<boolean>(false);
+  const controlsRef = useRef<IScannerControls | null>(null);
 
   useEffect(() => {
     // Initialize ZXing reader
@@ -143,39 +144,36 @@ export default function BarcodeScannerPage() {
     }
   };
 
-  // Continuous scanning loop
-  const startContinuousScanning = () => {
+  // Sürekli tarama: ZXing kendi döngüsünü çalıştırır, her başarılı okumada callback'i çağırır.
+  // (Önceki kod decodeFromVideoElement'i callback'siz her frame'de çağırıp dönen
+  // IScannerControls üzerinde getText() arıyordu → hata sessizce yutuluyor, hiçbir barkod okunmuyordu.)
+  const startContinuousScanning = async () => {
     const video = videoRef.current;
     const reader = readerRef.current;
 
     if (!video || !reader) return;
 
-    const scanFrame = async () => {
-      if (!scanningRef.current) return;
-
-      try {
-        const result = await reader.decodeFromVideoElement(video);
-
-        if (result) {
-          const code = result.getText();
-          handleScanSuccess(code);
+    try {
+      controlsRef.current = await reader.decodeFromVideoElement(video, (result) => {
+        if (result && scanningRef.current) {
+          handleScanSuccess(result.getText());
         }
-      } catch (err) {
-        // No barcode found in this frame - continue scanning
-      }
-
-      if (scanningRef.current) {
-        requestAnimationFrame(scanFrame);
-      }
-    };
-
-    scanFrame();
+        // result yoksa bu frame'de barkod bulunamadı — ZXing taramaya devam eder
+      });
+    } catch (err) {
+      console.error('Barcode decode start error:', err);
+      toast.error('Barkod okuyucu başlatılamadı');
+    }
   };
 
   // Stop camera and scanning
   const stopScanner = () => {
     scanningRef.current = false;
     setIsScanning(false);
+
+    // ZXing tarama döngüsünü durdur
+    controlsRef.current?.stop();
+    controlsRef.current = null;
 
     // Stop video stream
     if (streamRef.current) {

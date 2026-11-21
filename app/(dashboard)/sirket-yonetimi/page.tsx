@@ -168,15 +168,10 @@ export default function SirketYonetimiPage() {
 
   const handleCreateCompany = async () => {
     try {
-      if (!user?.id) {
-        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
-      }
-
       const response = await fetch('/api/companies', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-user-id': user.id
         },
         body: JSON.stringify(formData),
       });
@@ -206,15 +201,10 @@ export default function SirketYonetimiPage() {
     if (!selectedCompany) return;
 
     try {
-      if (!user?.id) {
-        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
-      }
-
       const response = await fetch(`/api/companies/${selectedCompany.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'x-user-id': user.id
         },
         body: JSON.stringify(formData),
       });
@@ -240,15 +230,8 @@ export default function SirketYonetimiPage() {
     if (!deleteId) return;
 
     try {
-      if (!user?.id) {
-        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
-      }
-
       const response = await fetch(`/api/companies/${deleteId}`, {
         method: 'DELETE',
-        headers: {
-          'x-user-id': user.id
-        }
       });
 
       const data = await response.json();
