@@ -2,8 +2,9 @@ import type { NextConfig } from "next";
 import withPWA from '@ducanh2912/next-pwa';
 
 const nextConfig: NextConfig = {
+  // Lint hataları build'i durdurur (2026-11: tüm error seviyesi kurallar temizlendi)
   eslint: {
-    ignoreDuringBuilds: true,
+    ignoreDuringBuilds: false,
   },
   // Tip hataları build'i durdurur (2026-11: 527 hata temizlendi; tekrar birikmesin)
   typescript: {
