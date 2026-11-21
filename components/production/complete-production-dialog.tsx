@@ -18,7 +18,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CheckCircle, Package, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import { logger } from '@/lib/utils/logger';
-import { useAuthStore } from '@/stores/auth-store';
 
 interface ProductionPlan {
   id: string;
@@ -40,84 +39,43 @@ interface CompleteProductionDialogProps {
 export function CompleteProductionDialog({ plan, onComplete }: CompleteProductionDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const { user } = useAuthStore();
 
+  // Planı tamamlar. Operatör ekranıyla aynı yol: /api/production/plan-status (action: complete).
+  // Stok, üretim kayıtları girilirken trigger'larla güncellenir; burada stoğa ayrıca dokunulmaz.
+  // (Önceki /api/production/complete çağrısı kalan miktarı BOM tüketimi yapmadan nihai ürün
+  // stoğuna ekliyordu; plan durumunu da geçersiz 'completed' değeriyle güncellemeye çalışıyordu.)
   const handleComplete = async () => {
     setIsLoading(true);
-    
     try {
-      if (!user?.id) {
-        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
-      }
-
-      // Eğer plan'da order_id ve product_id yoksa, plan_id ile plan bilgilerini çek
-      let orderId = plan.order_id;
-      let productId = plan.product_id;
-
-      if (!orderId || !productId) {
-        // Plan bilgilerini fetch et
-        const planResponse = await fetch(`/api/production/plans/${plan.id}`, {
-          headers: {
-            'x-user-id': user.id
-          }
+      const remaining = (plan.planned_quantity || 0) - (plan.produced_quantity || 0);
+      if (remaining > 0) {
+        toast.error('Plan tamamlanamaz', {
+          description: `Hedefe ${remaining} adet kaldı. Önce operatör üretim kaydı girmeli.`,
         });
-
-        if (!planResponse.ok) {
-          throw new Error('Plan bilgileri alınamadı');
-        }
-
-        const planData = await planResponse.json();
-        orderId = planData.order_id || planData.order?.id;
-        productId = planData.product_id || planData.product?.id;
-
-        if (!orderId || !productId) {
-          throw new Error('Plan bilgilerinde order_id veya product_id bulunamadı');
-        }
-      }
-
-      // Üretilen miktarı hesapla (planlanan - şu ana kadar üretilen)
-      const producedQuantity = (plan.planned_quantity || 0) - (plan.produced_quantity || 0);
-      
-      if (producedQuantity <= 0) {
-        toast.error('Üretim zaten tamamlanmış', {
-          description: 'Bu plan için üretim zaten tamamlanmış. Stoklar güncel.',
-        });
-        setIsOpen(false);
         return;
       }
 
-      const response = await fetch('/api/production/complete', {
+      const response = await fetch('/api/production/plan-status', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-user-id': user.id
-        },
-        body: JSON.stringify({ 
-          order_id: orderId,
-          order_type: 'production_plan',
-          product_id: productId,
-          product_type: 'finished', // Production plans için her zaman finished products
-          produced_quantity: producedQuantity
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan_id: plan.id, action: 'complete' }),
       });
-
       const data = await response.json();
 
-      if (response.ok && data.message) {
-        toast.success('Üretim başarıyla tamamlandı!', {
-          description: `Sipariş ${plan.order_number} için stoklar güncellendi.`,
+      if (response.ok && data.success) {
+        toast.success('Üretim planı tamamlandı', {
+          description: `Sipariş ${plan.order_number}: kalan rezervasyonlar serbest bırakıldı.`,
         });
-        
         setIsOpen(false);
         onComplete?.();
       } else {
-        toast.error('Üretim tamamlanamadı', {
+        toast.error('Plan tamamlanamadı', {
           description: data.error || 'Bilinmeyen bir hata oluştu.',
         });
       }
     } catch (error: any) {
       logger.error('Complete production error:', error);
-      toast.error('Üretim tamamlanamadı', {
+      toast.error('Plan tamamlanamadı', {
         description: error.message || 'Bağlantı hatası oluştu.',
       });
     } finally {

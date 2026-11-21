@@ -138,16 +138,28 @@ export async function POST(request: NextRequest) {
       }, { status: 500 });
     }
 
-    // 6. Complete action ise Order status'u da güncelle
+    // 6. Complete action ise: siparişin TÜM planları kapandıysa (tamamlandı/iptal) siparişi tamamla.
+    // (Önceden çok ürünlü siparişte tek plan bitince bütün sipariş "tamamlandı" oluyordu.)
     if (action === 'complete') {
-      const { error: orderUpdateError } = await supabase
-        .from('orders')
-        .update({ status: 'tamamlandi' })
-        .eq('id', plan.order_id);
+      const { data: openPlans, error: openPlansError } = await supabase
+        .from('production_plans')
+        .select('id')
+        .eq('order_id', plan.order_id)
+        .not('status', 'in', '(tamamlandi,iptal)')
+        .limit(1);
 
-      if (orderUpdateError) {
-        logger.error('Order update error:', orderUpdateError);
-        // Plan güncellendi ama order güncellenemedi - warning olarak logla
+      if (openPlansError) {
+        logger.error('Open plans check error:', openPlansError);
+      } else if (!openPlans || openPlans.length === 0) {
+        const { error: orderUpdateError } = await supabase
+          .from('orders')
+          .update({ status: 'tamamlandi' })
+          .eq('id', plan.order_id);
+
+        if (orderUpdateError) {
+          logger.error('Order update error:', orderUpdateError);
+          // Plan güncellendi ama order güncellenemedi - warning olarak logla
+        }
       }
     }
 

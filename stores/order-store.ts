@@ -156,10 +156,6 @@ interface OrderStore {
     // Business logic
     approveOrder: (orderId: string) => Promise<void>;
     startProduction: (orderId: string, planId: string) => Promise<void>;
-    completeProduction: (
-      planId: string,
-      producedQuantity: number,
-    ) => Promise<void>;
     cancelOrder: (orderId: string, reason: string) => Promise<void>;
 
     // Filters
@@ -619,51 +615,6 @@ export const useOrderStore = create<OrderStore>()(
           }
         },
 
-        completeProduction: async (
-          planId: string,
-          producedQuantity: number,
-        ) => {
-          const { user } = useAuthStore.getState();
-
-          try {
-            if (!user?.id) {
-              throw new Error("Kullanıcı kimlik doğrulaması gerekli");
-            }
-            const response = await fetch("/api/production/complete", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                "x-user-id": user.id,
-              },
-              body: JSON.stringify({
-                productionPlanId: planId,
-                producedQuantity,
-              }),
-            });
-
-            if (!response.ok) {
-              throw new Error("Failed to complete production");
-            }
-
-            // Update production plan
-            get().actions.updateProductionPlan({
-              ...get().productionPlans.find((p) => p.id === planId)!,
-              status: "tamamlandi",
-              produced_quantity: producedQuantity,
-            });
-
-            // Update order status
-            const plan = get().productionPlans.find((p) => p.id === planId);
-            if (plan) {
-              get().actions.updateOrder({
-                ...get().orders.find((o) => o.id === plan.order_id)!,
-                status: "tamamlandi",
-              });
-            }
-          } catch (error) {
-            throw error;
-          }
-        },
 
         cancelOrder: async (orderId: string, reason: string) => {
           const { user } = useAuthStore.getState();
