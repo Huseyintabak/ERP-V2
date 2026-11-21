@@ -28,6 +28,8 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+      # İlk açılışta init scriptleri + image migration'ları zaman alır
+      start_period: 60s
     environment:
       POSTGRES_HOST: /var/run/postgresql
       PGPORT: 5432
