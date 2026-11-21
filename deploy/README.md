@@ -3,12 +3,13 @@
 Tek VPS üzerinde: **Nginx → Next.js (PM2)** + **sade self-hosted Supabase** (Docker).
 
 ```
-İnternet ──80──▶ Nginx ─┬─▶ Next.js 127.0.0.1:3000 ──▶ Kong 127.0.0.1:8000 ─┬─▶ PostgREST ─▶ Postgres
+İnternet ──443──▶ Nginx ─┬─▶ Next.js 127.0.0.1:3000 ──▶ Kong 127.0.0.1:8000 ─┬─▶ PostgREST ─▶ Postgres
                         │                                                   └─▶ Realtime ──▶ Postgres
                         └─ /realtime/v1/ (auth_request: geçerli thunder_token) ─▶ Kong
 ```
 
-- Dışarı açık tek port **80** (+ 22 SSH). Postgres, Kong, PostgREST, Next.js sadece `127.0.0.1`.
+- Dışarı açık portlar **443** (HTTPS), **80** (sadece HTTPS'e yönlendirme + sertifika doğrulama) ve 22 (SSH). Postgres, Kong, PostgREST, Next.js sadece `127.0.0.1`.
+- HTTPS domain'siz, doğrudan IP'ye Let's Encrypt sertifikasıyla (bkz. "HTTPS (IP sertifikası)").
 - `/rest/v1` (PostgREST) **asla** dışarı açılmaz; anon key bilinse bile DB'ye erişilemez.
 - Realtime websocket'i sadece login olmuş kullanıcılar açabilir (Nginx `auth_request` → `/api/auth/verify`).
 
@@ -27,7 +28,7 @@ Docker, Node 20, PM2, Nginx, UFW (22/80/443), fail2ban, 4 GB swap, `thunder` kul
 ```bash
 sudo -iu thunder
 cd /var/www/thunder-erp
-node deploy/scripts/generate-secrets.mjs --public-url http://<VPS_IP>
+node deploy/scripts/generate-secrets.mjs --public-url https://<VPS_IP>
 ```
 
 İki dosya üretir (chmod 600, git'e girmez):
@@ -58,13 +59,22 @@ deploy/scripts/migrate-data.sh 'postgresql://postgres.<ref>:<şifre>@aws-0-<böl
 
 Script kaynağa sadece okuma yapar, hedef boş değilse durur, sonunda tablo tablo satır sayısı karşılaştırır.
 
-### 5. Uygulama
+### 5. HTTPS (root)
+
+lego (go-acme/lego v5) kurulu olmalı — bkz. "HTTPS (IP sertifikası)".
+
+```bash
+sudo bash deploy/scripts/setup-tls.sh staging      # önce test
+sudo bash deploy/scripts/setup-tls.sh production   # gerçek sertifika + Nginx HTTPS + otomatik yenileme
+```
+
+### 6. Uygulama
 
 ```bash
 ./deploy.sh --no-pull
 ```
 
-### 6. Yedekleme cron'u
+### 7. Yedekleme cron'u
 
 ```bash
 crontab -e
@@ -96,12 +106,27 @@ Rollback: `git checkout <önceki-commit> && ./deploy.sh --no-pull`
 | Kur cron'unu elle tetikle | `pm2 restart exchange-rate-cron` |
 | Yedekten geri dön | `docker exec -i supabase-db pg_restore -U postgres -d postgres --clean --if-exists --no-owner < /var/backups/thunder/thunder-XXXX.dump` |
 
-## Domain + HTTPS (sonra)
+## HTTPS (IP sertifikası)
 
-1. DNS A kaydı → VPS IP
-2. `deploy/nginx/thunder-erp.conf` içinde `server_name _;` → `server_name erp.ornek.com;`
-3. `sudo apt install certbot python3-certbot-nginx && sudo certbot --nginx -d erp.ornek.com`
-4. `.env.production.local`: `USE_HTTPS=true`, `NEXT_PUBLIC_SUPABASE_URL=https://erp.ornek.com` → `./deploy.sh --no-pull`
+Domain yok; Let's Encrypt doğrudan IP adresine sertifika veriyor (yalnızca `shortlived` profil, **~6 gün** geçerli).
+Mobil barkod okuma (kamera) tarayıcıda sadece HTTPS ile çalıştığı için gerekli.
+
+- İstemci: [lego](https://github.com/go-acme/lego) v5 → `/usr/local/bin/lego` (release checksum'ı doğrulanarak kurulur)
+- Doğrulama: HTTP-01, webroot `/var/www/acme` (Nginx 80'de `/.well-known/acme-challenge/` servis eder)
+- Sertifika: `/etc/lego/certificates/<IP>.crt` → deploy hook ile `/etc/thunder-tls/{fullchain,privkey}.pem` + Nginx reload
+- Yenileme: `thunder-tls-renew.timer` 12 saatte bir; kalan süre < 3 gün ise yeniler
+- **HSTS yok** (bilerek): yenileme aksarsa HSTS kullanıcıları siteye kilitler
+
+| İş | Komut |
+|---|---|
+| Sertifika bitiş tarihi | `openssl x509 -in /etc/thunder-tls/fullchain.pem -noout -enddate` |
+| Timer durumu | `systemctl list-timers thunder-tls-renew.timer` |
+| Son yenileme logu | `journalctl -u thunder-tls-renew.service -n 50` |
+| Elle yenile | `systemctl start thunder-tls-renew.service` |
+
+⚠️ 6 gün içinde hiç yenilenemezse tarayıcılar sertifika hatası gösterir. `thunder-tls-check` (cron) kalan süre 2 günün altına düşerse `/var/log/thunder-tls-check.log` ve syslog'a uyarı yazar.
+
+İleride domain alınırsa: DNS A kaydı → `setup-tls.sh` içinde `--domains <domain>` ve `--profile` kaldırılarak klasik 90 günlük sertifikaya geçilebilir; `.env.production.local` → `NEXT_PUBLIC_SUPABASE_URL=https://<domain>` → `./deploy.sh --no-pull`.
 
 ## Bilinen notlar
 

@@ -5,7 +5,7 @@
  *   2) .env.production.local     → Next.js uygulaması (PM2)
  *
  * Kullanım (repo kökünden):
- *   node deploy/scripts/generate-secrets.mjs --public-url http://<VPS_IP>
+ *   node deploy/scripts/generate-secrets.mjs --public-url https://<VPS_IP>
  *
  * Var olan dosyaların üzerine YAZMAZ (--force verilmedikçe) — yanlışlıkla secret
  * değiştirmek DB'ye erişimi bozar.
@@ -22,7 +22,7 @@ const urlIdx = args.indexOf('--public-url');
 const publicUrl = urlIdx >= 0 ? args[urlIdx + 1] : undefined;
 
 if (!publicUrl || !/^https?:\/\/[^/]+$/.test(publicUrl)) {
-  console.error('Kullanım: node deploy/scripts/generate-secrets.mjs --public-url http://<VPS_IP>  (sonda / olmadan)');
+  console.error('Kullanım: node deploy/scripts/generate-secrets.mjs --public-url https://<VPS_IP>  (sonda / olmadan)');
   process.exit(1);
 }
 
@@ -91,8 +91,8 @@ JWT_SECRET=${APP_JWT_SECRET}
 # Cron (dolar kuru)
 CRON_SECRET=${CRON_SECRET}
 
-# HTTPS yokken false kalmalı; domain + Let's Encrypt sonrası true yap
-USE_HTTPS=false
+# Nginx HTTPS sonlandırıyor (setup-tls.sh) → Secure cookie
+USE_HTTPS=true
 `;
 
 function write(path, content) {

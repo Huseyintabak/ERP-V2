@@ -108,6 +108,17 @@ chown "${APP_USER}:${APP_USER}" /var/backups/thunder
 chmod 750 /var/backups/thunder
 
 log "Nginx"
+cp "${APP_DIR}/deploy/nginx/thunder-proxy-headers.conf" /etc/nginx/snippets/thunder-proxy-headers.conf
+install -d -m 0755 /var/www/acme/.well-known/acme-challenge
+# Config 443'ü dinler; gerçek sertifika setup-tls.sh ile gelene kadar geçici self-signed
+if [ ! -s /etc/thunder-tls/fullchain.pem ]; then
+  install -d -m 0700 /etc/thunder-tls
+  PUBLIC_IP="$(curl -fsS4 https://api.ipify.org || echo 127.0.0.1)"
+  openssl req -x509 -nodes -newkey ec -pkeyopt ec_paramgen_curve:P-256 -days 2 \
+    -subj "/CN=${PUBLIC_IP}" -addext "subjectAltName=IP:${PUBLIC_IP}" \
+    -keyout /etc/thunder-tls/privkey.pem -out /etc/thunder-tls/fullchain.pem 2>/dev/null
+  chmod 600 /etc/thunder-tls/privkey.pem
+fi
 cp "${APP_DIR}/deploy/nginx/thunder-erp.conf" /etc/nginx/sites-available/thunder-erp
 ln -sf /etc/nginx/sites-available/thunder-erp /etc/nginx/sites-enabled/thunder-erp
 rm -f /etc/nginx/sites-enabled/default
@@ -151,7 +162,8 @@ echo
 echo "✅ Temel kurulum tamam."
 echo
 echo "Sonraki adımlar (deploy/README.md):"
+echo "  (root) lego kur + sudo bash ${APP_DIR}/deploy/scripts/setup-tls.sh production"
 echo "  sudo -iu ${APP_USER}"
 echo "  cd ${APP_DIR}"
-echo "  node deploy/scripts/generate-secrets.mjs --public-url http://$(curl -fsS4 https://ifconfig.me 2>/dev/null || echo '<VPS_IP>')"
+echo "  node deploy/scripts/generate-secrets.mjs --public-url https://$(curl -fsS4 https://ifconfig.me 2>/dev/null || echo '<VPS_IP>')"
 echo "  cd deploy/supabase && docker compose up -d"
