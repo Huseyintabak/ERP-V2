@@ -29,9 +29,11 @@ interface CustomerDialogProps {
   customer?: Customer;
   onSuccess: () => void;
   trigger?: React.ReactNode;
+  /** Tetikleyici olarak children da verilebilir (çağıranların çoğu böyle kullanıyor) */
+  children?: React.ReactNode;
 }
 
-export function CustomerDialog({ customer, onSuccess, trigger }: CustomerDialogProps) {
+export function CustomerDialog({ customer, onSuccess, trigger, children }: CustomerDialogProps) {
   const [open, setOpen] = useState(false);
 
   const handleSuccess = () => {
@@ -46,8 +48,9 @@ export function CustomerDialog({ customer, onSuccess, trigger }: CustomerDialogP
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        {trigger || (
-          <Button>
+        {trigger || children || (
+          // type="button": form içinde (örn. sipariş formu) submit tetiklemesin
+          <Button type="button">
             <Plus className="h-4 w-4 mr-2" />
             {customer ? 'Düzenle' : 'Yeni Müşteri'}
           </Button>
