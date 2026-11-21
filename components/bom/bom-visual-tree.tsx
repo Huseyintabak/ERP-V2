@@ -18,7 +18,7 @@ import {
   RotateCcw
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { ReactFlow, Node, Edge, addEdge, Connection, useNodesState, useEdgesState, Controls, Background, MiniMap, EdgeLabelRenderer, getBezierPath, Handle } from '@xyflow/react';
+import { ReactFlow, Node, Edge, addEdge, Connection, useNodesState, useEdgesState, Controls, Background, MiniMap, EdgeLabelRenderer, getBezierPath, Handle, Position } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { logger } from '@/lib/utils/logger';
 
@@ -38,6 +38,9 @@ interface BomNode {
   position: { x: number; y: number };
 }
 
+/** React Flow node'u; data alanı BomNode ile aynı */
+type FlowNode = Node<BomNode['data']>;
+
 interface BomVisualTreeProps {
   productId: string;
   productName: string;
@@ -51,11 +54,11 @@ export function BomVisualTree({
   onSave, 
   initialData 
 }: BomVisualTreeProps) {
-  const [nodes, setNodes, onNodesChange] = useNodesState([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  const [nodes, setNodes, onNodesChange] = useNodesState<FlowNode>([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [selectedNode, setSelectedNode] = useState<BomNode | null>(null);
+  const [selectedNode, setSelectedNode] = useState<FlowNode | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [materials, setMaterials] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -585,13 +588,13 @@ export function BomVisualTree({
         {/* Add handles for connections */}
         <Handle
           type="source"
-          position="bottom"
+          position={Position.Bottom}
           id="bottom"
           style={{ background: '#555' }}
         />
         <Handle
           type="target"
-          position="top"
+          position={Position.Top}
           id="top"
           style={{ background: '#555' }}
         />

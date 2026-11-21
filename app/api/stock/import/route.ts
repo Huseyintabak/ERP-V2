@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
     const workbook = XLSX.read(buffer, { type: 'array' });
     const sheetName = workbook.SheetNames[0];
     const worksheet = workbook.Sheets[sheetName];
-    const data = XLSX.utils.sheet_to_json(worksheet);
+    const data = XLSX.utils.sheet_to_json<Record<string, unknown>>(worksheet);
 
     if (!data || data.length === 0) {
       return NextResponse.json({ error: 'No data found in file' }, { status: 400 });
@@ -90,8 +90,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate and process data based on type
-    let schema;
-    let tableName;
+    let schema: z.ZodTypeAny;
+    let tableName: 'raw_materials' | 'semi_finished_products' | 'finished_products';
     let results = {
       success: 0,
       errors: 0,
@@ -166,7 +166,8 @@ export async function POST(request: NextRequest) {
         }
 
         // Validate row data
-        const validatedData = schema.parse(processedRow);
+        // Şema `type`'a göre değişir (unit_price / unit_cost / sale_price)
+        const validatedData = schema.parse(processedRow) as Record<string, any>;
 
         // Check if code already exists
         const { data: existing } = await supabase

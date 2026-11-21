@@ -197,7 +197,9 @@ export async function POST(request: NextRequest) {
     result.totalRows = data.length;
 
     // Get schema and table info
-    let schema, tableName, validationRules: string[] = [];
+    let schema: z.ZodTypeAny;
+    let tableName: 'raw_materials' | 'semi_finished_products' | 'finished_products' | 'bom';
+    let validationRules: string[] = [];
     
     switch (type) {
       case 'raw':
@@ -220,6 +222,8 @@ export async function POST(request: NextRequest) {
         tableName = 'bom';
         validationRules = ['Ürün kodu kontrolü', 'Malzeme kodu kontrolü', 'Miktar kontrolü'];
         break;
+      default:
+        return NextResponse.json({ error: 'Geçersiz import tipi' }, { status: 400 });
     }
 
     result.summary.validationRules = validationRules;
@@ -365,7 +369,8 @@ export async function POST(request: NextRequest) {
         }
 
         // Schema validation
-        const validatedData = schema.parse(processedRow);
+        // Şema `type`'a göre değişir; alanlara dinamik erişiliyor
+        const validatedData = schema.parse(processedRow) as Record<string, any>;
 
         // Database validation
         if (type === 'bom') {

@@ -48,14 +48,18 @@ const importSchema = z.object({
 
 type ImportFormData = z.infer<typeof importSchema>;
 
+/** /api/stock/import cevabı */
 interface ImportResult {
-  success: number;
-  errors: number;
-  errorDetails: Array<{
-    row: number;
-    code: string;
-    error: string;
-  }>;
+  message: string;
+  results: {
+    success: number;
+    errors: number;
+    errorDetails: Array<{
+      row: number;
+      code: string;
+      error: string;
+    }>;
+  };
   totalRows: number;
 }
 

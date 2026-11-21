@@ -21,7 +21,15 @@ const exportConfigSchema = z.object({
 });
 
 // Template definitions
-const TEMPLATES = {
+type ExportType = z.infer<typeof exportConfigSchema>['type'];
+interface ExportTemplate {
+  headers: string[];
+  sampleData: (string | number)[][];
+  validation: Record<string, string>;
+}
+
+// Her export tipinin şablonu yok; olmayanlar için 400 dönülür
+const TEMPLATES: Partial<Record<ExportType, ExportTemplate>> = {
   raw: {
     headers: ['Kod', 'Ad', 'Barkod', 'Miktar', 'Birim', 'Birim Fiyat', 'Açıklama'],
     sampleData: [
@@ -160,8 +168,9 @@ export async function POST(request: NextRequest) {
     // Prepare worksheet data
     let worksheetData: any[][] = [];
 
-    if (config.includeHeaders && TEMPLATES[config.type]) {
-      worksheetData.push(TEMPLATES[config.type].headers);
+    const typeTemplate = TEMPLATES[config.type];
+    if (config.includeHeaders && typeTemplate) {
+      worksheetData.push(typeTemplate.headers);
     }
 
     worksheetData.push(...data);
@@ -180,8 +189,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Add validation info for templates
-    if (config.template) {
-      const template = TEMPLATES[config.type];
+    if (config.template && typeTemplate) {
+      const template = typeTemplate;
       worksheetData.push(['']);
       worksheetData.push(['Validasyon Kuralları']);
       Object.entries(template.validation).forEach(([field, rule]) => {
@@ -196,7 +205,10 @@ export async function POST(request: NextRequest) {
       // Header row styling
       const headerRow = config.includeMetadata ? 6 : 0; // Adjust for metadata
       worksheet['!rows'] = [{ hpt: 20 }];
-      worksheet['!cols'] = TEMPLATES[config.type].headers.map(() => ({ wch: 15 }));
+      // stock/production/audit için şablon yok → kolon sayısını ilk satırdan al
+      // (önceden TEMPLATES[type].headers undefined'da TypeError → 500)
+      const columnCount = typeTemplate?.headers.length ?? worksheetData[0]?.length ?? 0;
+      worksheet['!cols'] = Array.from({ length: columnCount }, () => ({ wch: 15 }));
     }
 
     // Add worksheet to workbook
@@ -347,7 +359,7 @@ async function exportStockReport(supabase: any, config: any) {
     .select('code, name, quantity, critical_level, unit, sale_price')
     .order('code');
 
-  const data = [];
+  const data: unknown[][] = [];
 
   // Add raw materials
   rawMaterials?.forEach((item: any) => {
