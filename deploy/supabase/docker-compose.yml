@@ -14,7 +14,7 @@ name: thunder-supabase
 services:
   db:
     container_name: supabase-db
-    image: supabase/postgres:${POSTGRES_IMAGE_TAG:-15.8.1.060}
+    image: supabase/postgres:${POSTGRES_IMAGE_TAG:-17.11.0.017}
     restart: unless-stopped
     ports:
       - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
