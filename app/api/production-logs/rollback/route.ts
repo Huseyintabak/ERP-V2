@@ -53,6 +53,11 @@ export async function POST(request: NextRequest) {
     const isOperator = payload.role === 'operator';
     const isLogOwner = log.operator_id === payload.userId;
 
+    // Varsayılan red: sadece yönetici/planlama ve (aşağıdaki kurallarla) operatör geri alabilir
+    if (!isAdmin && !isOperator) {
+      return NextResponse.json({ error: 'Bu işlem için yetkiniz yok' }, { status: 403 });
+    }
+
     // Check time restrictions for operators
     if (isOperator && !isAdmin) {
       // production_logs'ta zaman `timestamp` kolonunda (created_at yok → eskiden NaN, kural hiç

@@ -9,6 +9,11 @@ import { logger } from '@/lib/utils/logger';
  */
 export async function GET(request: NextRequest) {
   try {
+    // Raporlar sadece yöneticiye açık. x-user-role'ü middleware JWT'den yazar (istemci header'ı silinir).
+    if (request.headers.get('x-user-role') !== 'yonetici') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     const { searchParams } = new URL(request.url);
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');

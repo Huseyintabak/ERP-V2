@@ -7,8 +7,13 @@ import { logger } from '@/lib/utils/logger';
  * GET /api/reports/export/stock
  * Stok raporunu Excel formatında export eder
  */
-export async function GET(_request: NextRequest) {
+export async function GET(request: NextRequest) {
   try {
+    // Raporlar sadece yöneticiye açık. x-user-role'ü middleware JWT'den yazar (istemci header'ı silinir).
+    if (request.headers.get('x-user-role') !== 'yonetici') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     const supabase = await createClient();
 
     // Tüm stok verilerini çek
