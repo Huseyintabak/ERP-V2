@@ -3,6 +3,7 @@ import "./globals.css";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { Toaster } from "@/components/ui/sonner";
 import { WebSocketErrorSuppressor } from "@/components/websocket-error-suppressor";
+import { PwaCacheCleanup } from "@/components/pwa-cache-cleanup";
 
 // Google Fonts yerine sistem fontları kullanılıyor (sunucu network sorunu için)
 // Inter font fallback olarak system-ui kullanılacak
@@ -48,6 +49,7 @@ export default function RootLayout({
       <body className="font-sans antialiased">
         <ErrorBoundary>
           <WebSocketErrorSuppressor />
+          <PwaCacheCleanup />
           {children}
           <Toaster position="top-right" />
         </ErrorBoundary>

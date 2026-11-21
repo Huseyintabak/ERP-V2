@@ -46,21 +46,67 @@ const nextConfig: NextConfig = {
   },
 };
 
+type MatchCtx = { url: URL; request: Request; sameOrigin: boolean };
+
 export default withPWA({
   dest: 'public',
   disable: process.env.NODE_ENV === 'development',
   register: true,
-  skipWaiting: true,
-  runtimeCaching: [
-    {
-      urlPattern: /^https?.*/,
-      handler: 'NetworkFirst',
-      options: {
-        cacheName: 'offlineCache',
-        expiration: {
-          maxEntries: 200,
+  // Paketin varsayılanları yerine sadece aşağıdaki kurallar
+  extendDefaultRuntimeCaching: false,
+  cacheOnFrontEndNav: false,
+  aggressiveFrontEndNavCaching: false,
+  workboxOptions: {
+    skipWaiting: true,
+    clientsClaim: true,
+    // Önbellek kuralları (ilk eşleşen uygulanır).
+    // ÖNCEKİ DURUM: üst seviyedeki runtimeCaching v10'da yok sayılıyordu; paketin varsayılan
+    // "apis" kuralı /api/* için NetworkFirst (10 sn timeout, 24 saat) uyguluyordu →
+    // sunucu yavaşsa eski stok/sipariş verisi sessizce gösteriliyordu.
+    runtimeCaching: [
+      {
+        // API: asla cache'leme (auth'lu, canlı veri)
+        urlPattern: ({ sameOrigin, url }: MatchCtx) => sameOrigin && url.pathname.startsWith('/api/'),
+        handler: 'NetworkOnly',
+      },
+      {
+        // Realtime / Supabase path'leri
+        urlPattern: ({ url }: MatchCtx) =>
+          url.pathname.startsWith('/realtime/') || url.pathname.startsWith('/rest/'),
+        handler: 'NetworkOnly',
+      },
+      {
+        // Next.js build çıktıları: içerik hash'li, değişmez
+        urlPattern: ({ sameOrigin, url }: MatchCtx) =>
+          sameOrigin && url.pathname.startsWith('/_next/static/'),
+        handler: 'CacheFirst',
+        options: {
+          cacheName: 'next-static',
+          expiration: { maxEntries: 300, maxAgeSeconds: 30 * 24 * 60 * 60 },
         },
       },
-    },
-  ],
+      {
+        // İkon / görsel / font
+        urlPattern: ({ sameOrigin, request }: MatchCtx) =>
+          sameOrigin && ['image', 'font'].includes(request.destination),
+        handler: 'StaleWhileRevalidate',
+        options: {
+          cacheName: 'assets',
+          expiration: { maxEntries: 100, maxAgeSeconds: 7 * 24 * 60 * 60 },
+        },
+      },
+      {
+        // Sayfa kabukları (HTML): ağı tercih et, 5 sn içinde cevap yoksa son kopyayı göster.
+        // Sayfalar statik kabuk; veri API'den canlı geldiği için kabuğun eski olması sorun değil.
+        urlPattern: ({ sameOrigin, request }: MatchCtx) => sameOrigin && request.mode === 'navigate',
+        handler: 'NetworkFirst',
+        options: {
+          cacheName: 'pages',
+          networkTimeoutSeconds: 5,
+          expiration: { maxEntries: 50, maxAgeSeconds: 24 * 60 * 60 },
+        },
+      },
+      // Diğer her şey (RSC payload'ları, cross-origin dahil): kural yok → doğrudan ağ
+    ],
+  },
 })(nextConfig);

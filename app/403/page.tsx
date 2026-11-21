@@ -5,6 +5,7 @@ import { ShieldAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useRouter } from 'next/navigation';
+import { clearPrivateCaches } from '@/lib/utils/pwa-cache';
 
 export default function ForbiddenPage() {
   const router = useRouter();
@@ -12,6 +13,7 @@ export default function ForbiddenPage() {
   const handleLogout = async () => {
     try {
       await fetch('/api/auth/logout', { method: 'POST' });
+      await clearPrivateCaches();
       router.push('/login');
     } catch (error) {
       console.error('Logout error:', error);

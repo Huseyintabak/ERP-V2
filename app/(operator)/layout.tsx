@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/auth-store';
 import { Button } from '@/components/ui/button';
 import { LogOut } from 'lucide-react';
+import { clearPrivateCaches } from '@/lib/utils/pwa-cache';
 
 export default function OperatorLayout({
   children,
@@ -46,6 +47,7 @@ export default function OperatorLayout({
 
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' });
+    await clearPrivateCaches();
     logout();
     window.location.href = '/operator-login';
   };

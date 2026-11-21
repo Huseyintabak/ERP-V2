@@ -44,6 +44,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { useState } from "react";
+import { clearPrivateCaches } from '@/lib/utils/pwa-cache';
 
 interface NavItem {
   title: string;
@@ -245,12 +246,8 @@ export function Sidebar() {
       window.location.href = "/login";
       return;
     }
-    await fetch("/api/auth/logout", {
-      method: "POST",
-      headers: {
-        "x-user-id": user.id,
-      },
-    });
+    await fetch("/api/auth/logout", { method: "POST" });
+    await clearPrivateCaches();
     logout();
     window.location.href = "/login";
   };
