@@ -23,8 +23,6 @@ import { useRoleBasedRealtime } from '@/lib/hooks/use-realtime-store';
 import { InventoryApprovalList } from '@/components/stock/inventory-approval-list';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-// import { useMemoryLeakDetector } from '@/lib/hooks/use-memory-leak-detector';
-// import { usePerformanceMonitor } from '@/lib/hooks/use-performance-monitor';
 
 export default function YoneticiDashboard() {
   const stats = useDashboardStats('yonetici');
@@ -70,8 +68,6 @@ export default function YoneticiDashboard() {
   });
 
   // Performance and memory monitoring - DISABLED FOR NOW
-  // const memoryDetector = useMemoryLeakDetector('YoneticiDashboard');
-  // const performanceMonitor = usePerformanceMonitor('YoneticiDashboard');
 
   // Real-time subscriptions for yönetici role
   useRoleBasedRealtime('yonetici');

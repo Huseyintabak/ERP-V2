@@ -17,8 +17,6 @@ import {
 } from 'lucide-react';
 import { useRealtimeUnified } from '@/lib/hooks/use-realtime-unified';
 import { useAuthStore } from '@/stores/auth-store';
-// import { useMemoryLeakDetector } from '@/lib/hooks/use-memory-leak-detector';
-// import { usePerformanceMonitor } from '@/lib/hooks/use-performance-monitor';
 
 interface PlanlamaStats {
   // Planning KPIs
@@ -49,8 +47,6 @@ export default function PlanlamaDashboard() {
   const { user } = useAuthStore();
   
   // Performance and memory monitoring - DISABLED FOR NOW
-  // const memoryDetector = useMemoryLeakDetector('PlanlamaDashboard');
-  // const performanceMonitor = usePerformanceMonitor('PlanlamaDashboard');
 
   const [stats, setStats] = useState<PlanlamaStats>({
     pendingOrders: 0,

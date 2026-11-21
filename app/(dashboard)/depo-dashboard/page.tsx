@@ -18,8 +18,6 @@ import {
 import { useRealtimeUnified } from '@/lib/hooks/use-realtime-unified';
 import { QuickStockEntryDialog } from '@/components/stock/quick-stock-entry-dialog';
 import { InventoryCountDialog } from '@/components/stock/inventory-count-dialog';
-// import { useMemoryLeakDetector } from '@/lib/hooks/use-memory-leak-detector';
-// import { usePerformanceMonitor } from '@/lib/hooks/use-performance-monitor';
 
 interface DepoStats {
   // Stock Count KPIs
@@ -58,8 +56,6 @@ export default function DepoDashboard() {
   const router = useRouter();
   
   // Performance and memory monitoring - DISABLED FOR NOW
-  // const memoryDetector = useMemoryLeakDetector('DepoDashboard');
-  // const performanceMonitor = usePerformanceMonitor('DepoDashboard');
 
   const [stats, setStats] = useState<DepoStats>({
     rawMaterials: 0,
