@@ -8,8 +8,11 @@ import { logger } from '@/lib/utils/logger';
 interface RealtimeConfig {
   maxRetries?: number;
   retryDelay?: number;
+  /** @deprecated Etkisiz — kanal seviyesinde desteklenmiyor; client'ta (lib/supabase/client.ts) ayarlanır */
   heartbeatInterval?: number;
+  /** @deprecated Etkisiz — bkz. heartbeatInterval */
   reconnectAfter?: number[];
+  /** @deprecated Etkisiz — bkz. heartbeatInterval */
   eventsPerSecond?: number;
   enableFallback?: boolean;
   fallbackInterval?: number;
@@ -35,9 +38,6 @@ export const useRealtimeUnified = (
   const {
     maxRetries = 3,
     retryDelay = 2000,
-    heartbeatInterval = 30000,
-    reconnectAfter = [2000, 5000, 10000, 20000, 30000],
-    eventsPerSecond = 1,
     enableFallback = true,
     fallbackInterval = 30000
   } = config;
@@ -56,6 +56,11 @@ export const useRealtimeUnified = (
   const fallbackIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isDestroyedRef = useRef(false);
+  // Gecikmeli (setTimeout) çalışan kodun en güncel değerleri görmesi için:
+  // - setupRealtime handleError'dan sonra tanımlanıyor ve handleError'a bağımlı (döngüsel)
+  // - CLOSED sonrası retry, kurulum anındaki değil o anki isUsingFallback'i okumalı
+  const setupRealtimeRef = useRef<(retryAttempt?: number) => void>(() => {});
+  const isUsingFallbackRef = useRef(false);
 
   // Connection health monitoring
   const { isHealthy, latency, consecutiveFailures, forceCheck } = useConnectionHealth(
@@ -147,7 +152,7 @@ export const useRealtimeUnified = (
       if (!isDestroyedRef.current) {
         logger.log(`🔔 Retrying connection for ${table} (attempt ${state.retryCount + 1})`);
         resetConnection();
-        setupRealtime();
+        setupRealtimeRef.current();
       }
     }, delay);
   }, [table, state.retryCount, maxRetries, retryDelay, startFallback, resetConnection]);
@@ -315,7 +320,7 @@ export const useRealtimeUnified = (
             }));
             // Auto-retry on close with exponential backoff
             setTimeout(() => {
-              if (!isDestroyedRef.current && !state.isUsingFallback) {
+              if (!isDestroyedRef.current && !isUsingFallbackRef.current) {
                 setupRealtime(retryAttempt + 1);
               }
             }, 3000 * (retryAttempt + 1));
@@ -343,9 +348,6 @@ export const useRealtimeUnified = (
     onInsert,
     onUpdate,
     onDelete,
-    heartbeatInterval,
-    reconnectAfter,
-    eventsPerSecond,
     handleError,
     resetConnection,
     stopFallback,
@@ -369,6 +371,14 @@ export const useRealtimeUnified = (
   }, [table, stopFallback, resetConnection, setupRealtime]);
 
   // Initialize connection
+
+  useEffect(() => {
+    setupRealtimeRef.current = setupRealtime;
+  }, [setupRealtime]);
+
+  useEffect(() => {
+    isUsingFallbackRef.current = state.isUsingFallback;
+  }, [state.isUsingFallback]);
   useEffect(() => {
     if (state.isRealtimeEnabled && isHealthy) {
       setupRealtime();
