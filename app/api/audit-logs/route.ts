@@ -90,14 +90,20 @@ export async function GET(request: NextRequest) {
     }
 
     // Build query without join (we'll fetch users separately)
+    // count: 'exact' → toplam kayıt sayısı aynı istekte döner (sayfalama için)
     let query = supabase
       .from('audit_logs')
-      .select('*')
+      .select('*', { count: 'exact' })
       .order('created_at', { ascending: false });
 
     // Apply filters
     if (search) {
-      query = query.or(`description.ilike.%${search}%,table_name.ilike.%${search}%`);
+      // PostgREST filtre sözdizimini bozabilecek karakterleri temizle (`,` `(` `)` ile
+      // kullanıcı .or() içine kendi koşulunu ekleyebiliyordu)
+      const safeSearch = search.replace(/[,()*\\]/g, ' ').trim();
+      if (safeSearch) {
+        query = query.or(`description.ilike.%${safeSearch}%,table_name.ilike.%${safeSearch}%`);
+      }
     }
 
     if (action && action !== 'all') {
@@ -124,16 +130,15 @@ export async function GET(request: NextRequest) {
       query = query.lte('created_at', dateTo);
     }
 
-    // Get total count for pagination
-    const { count } = await query.select('*', { count: 'exact', head: true });
-    const totalPages = Math.ceil((count || 0) / limit);
-
     // Apply pagination
+    // (Önceden filtrelerden sonra ayrı bir .select('*', { count }) çağrılıyordu; transform
+    // builder'da count seçeneği yok sayıldığı için count hep undefined → totalPages 0'dı.)
     const from = (page - 1) * limit;
     const to = from + limit - 1;
     query = query.range(from, to);
 
-    const { data: logs, error } = await query;
+    const { data: logs, count, error } = await query;
+    const totalPages = Math.ceil((count || 0) / limit);
 
     if (error) {
       logger.error('Error fetching audit logs:', error);

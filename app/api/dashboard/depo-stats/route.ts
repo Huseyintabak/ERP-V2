@@ -108,7 +108,7 @@ export async function GET(request: NextRequest) {
       
       // 11. Total stock value
       Promise.all([
-        supabase.from('raw_materials').select('quantity, unit_price'),
+        supabase.from('raw_materials').select('code, name, quantity, unit_price'),
         supabase.from('semi_finished_products').select('quantity, unit_cost'),
         supabase.from('finished_products').select('quantity, sale_price'),
       ]),
@@ -146,9 +146,17 @@ export async function GET(request: NextRequest) {
     let totalStockValue = 0;
     
     if (stockValue[0].data) {
-      totalStockValue += stockValue[0].data.reduce((sum, item) => 
-        sum + (item.quantity * (item.unit_cost || 0)), 0
-      );
+      // Hammadde maliyeti unit_price'tır (önceden seçilmeyen unit_cost okunuyordu → hep 0).
+      // İşçilik / genel gider kalemleri fiziksel stok değil; ana dashboard ile aynı kural.
+      const EXCLUDED_RAW_CODES = ['trx_iscilik', 'genel_gider'];
+      totalStockValue += stockValue[0].data
+        .filter((item) => {
+          const code = (item.code || '').toLowerCase().trim();
+          const name = (item.name || '').toLowerCase();
+          const isExcluded = EXCLUDED_RAW_CODES.some((c) => code === c || name.includes(c.replace('_', ' ')));
+          return !isExcluded && !code.includes('iscilik') && !name.includes('iscilik');
+        })
+        .reduce((sum, item) => sum + (item.quantity || 0) * (item.unit_price || 0), 0);
     }
     if (stockValue[1].data) {
       totalStockValue += stockValue[1].data.reduce((sum, item) => 
