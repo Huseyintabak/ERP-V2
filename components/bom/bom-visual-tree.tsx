@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -59,6 +59,10 @@ export function BomVisualTree({
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedNode, setSelectedNode] = useState<FlowNode | null>(null);
+  const nodeActionsRef = useRef<{ edit: (id: string) => void; remove: (id: string) => void }>({
+    edit: () => {},
+    remove: () => {},
+  });
   const [searchTerm, setSearchTerm] = useState('');
   const [materials, setMaterials] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -71,7 +75,8 @@ export function BomVisualTree({
   });
 
   // Initialize with root product node and BOM data
-  useMemo(() => {
+  // (Önceden useMemo içinde setState yapılıyordu — render sırasında yan etki; effect olmalı)
+  useEffect(() => {
     if (productId && !nodes.length) {
       const rootNode: BomNode = {
         id: productId,
@@ -171,7 +176,7 @@ export function BomVisualTree({
       setNodes(initialNodes);
       setEdges(initialEdges);
     }
-  }, [productId, productName, nodes.length, initialData]);
+  }, [productId, productName, nodes.length, initialData, setNodes, setEdges]);
 
   // Update nodes when initialData changes
   useEffect(() => {
@@ -271,7 +276,7 @@ export function BomVisualTree({
       setNodes(updatedNodes);
       setEdges(updatedEdges);
     }
-  }, [initialData, productId, productName]);
+  }, [initialData, productId, productName, setEdges, setNodes]);
 
   // Load materials for selection
   const loadMaterials = useCallback(async () => {
@@ -541,7 +546,15 @@ export function BomVisualTree({
   };
 
   // Custom node component
-  const NodeComponent = ({ data, id }: { data: any; id: string }) => {
+  // React Flow nodeTypes'ın sabit kalmasını ister; NodeComponent bu yüzden bir kez oluşturulur.
+  // Handler'lar (state okuyan) her render'da bu ref'e yazılır → düğme her zaman güncel state'i görür.
+  // (Önceden ilk render'daki handleEditMaterial kullanılıyordu; nodes o an boş olduğundan
+  // "düzenle" butonu hiçbir şey yapmıyordu.)
+  useEffect(() => {
+    nodeActionsRef.current = { edit: handleEditMaterial, remove: handleRemoveMaterial };
+  });
+
+  const NodeComponent = useCallback(({ data, id }: { data: any; id: string }) => {
     const isRoot = data.isRoot;
     
     return (
@@ -560,7 +573,7 @@ export function BomVisualTree({
               <Button
                 size="sm"
                 variant="ghost"
-                onClick={() => handleEditMaterial(id)}
+                onClick={() => nodeActionsRef.current.edit(id)}
                 className="h-6 w-6 p-0"
               >
                 <Edit className="h-3 w-3" />
@@ -568,7 +581,7 @@ export function BomVisualTree({
               <Button
                 size="sm"
                 variant="ghost"
-                onClick={() => handleRemoveMaterial(id)}
+                onClick={() => nodeActionsRef.current.remove(id)}
                 className="h-6 w-6 p-0 text-red-600"
               >
                 <Trash2 className="h-3 w-3" />
@@ -600,13 +613,13 @@ export function BomVisualTree({
         />
       </div>
     );
-  };
+  }, []);
 
   const nodeTypes = useMemo(() => ({
     product: NodeComponent,
     raw: NodeComponent,
     semi: NodeComponent
-  }), []);
+  }), [NodeComponent]);
 
   const edgeTypes = useMemo(() => ({
     custom: EdgeComponent,
