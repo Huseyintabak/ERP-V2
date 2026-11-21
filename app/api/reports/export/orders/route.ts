@@ -21,13 +21,15 @@ export async function GET(request: NextRequest) {
 
     const supabase = await createClient();
 
+    // Sipariş kalemleri order_items'ta; tutar = adet × ürün satış fiyatı (siparişte fiyat saklanmıyor).
+    // (Eski sorgu orders üzerinde olmayan finished_product/quantity/total_price alanlarını istiyordu → hep 500.)
     let query = supabase
       .from('orders')
       .select(`
         *,
-        customer:customers(name, contact_person, phone, email),
-        finished_product:finished_products(code, name, unit, sale_price),
-        created_by_user:users!orders_created_by_fkey(name)
+        customer:customers(name, company, phone, email),
+        items:order_items(quantity, product:finished_products(code, name, unit, sale_price)),
+        created_by_user:users!created_by(name)
       `);
 
     if (startDate) {
@@ -35,7 +37,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (endDate) {
-      query = query.lte('created_at', endDate);
+      query = query.lte('created_at', `${endDate}T23:59:59`);
     }
 
     if (status) {
@@ -48,19 +50,31 @@ export async function GET(request: NextRequest) {
 
     if (error) throw error;
 
+    const STATUS_LABELS: Record<string, string> = {
+      beklemede: 'Beklemede',
+      onaylandi: 'Onaylandı',
+      uretimde: 'Üretimde',
+      tamamlandi: 'Tamamlandı',
+      iptal: 'İptal',
+    };
+    const customerName = (o: any) => o.customer?.name || o.customer_name || 'Bilinmiyor';
+    const itemTotal = (i: any) => Number(i.quantity || 0) * Number(i.product?.sale_price || 0);
+    const orderTotal = (o: any) => (o.items || []).reduce((sum: number, i: any) => sum + itemTotal(i), 0);
+
     // Workbook oluştur
     const workbook = XLSX.utils.book_new();
 
     // SAYFA 1: Özet
-    const totalValue = orders?.reduce((sum, o) => sum + parseFloat(o.total_price || '0'), 0) || 0;
+    const totalValue = orders?.reduce((sum, o) => sum + orderTotal(o), 0) || 0;
+    const countBy = (st: string) => orders?.filter((o) => o.status === st).length || 0;
 
     const summary = {
       'Toplam Sipariş': orders?.length || 0,
-      'Onay Bekleyen': orders?.filter(o => o.status === 'pending').length || 0,
-      'Onaylandı': orders?.filter(o => o.status === 'approved').length || 0,
-      'Üretimde': orders?.filter(o => o.status === 'in_production').length || 0,
-      'Tamamlandı': orders?.filter(o => o.status === 'completed').length || 0,
-      'İptal': orders?.filter(o => o.status === 'cancelled').length || 0,
+      'Beklemede': countBy('beklemede'),
+      'Onaylandı': countBy('onaylandi'),
+      'Üretimde': countBy('uretimde'),
+      'Tamamlandı': countBy('tamamlandi'),
+      'İptal': countBy('iptal'),
       'Toplam Tutar (₺)': totalValue.toFixed(2),
       'Ortalama Sipariş Tutarı (₺)': orders?.length ? (totalValue / orders.length).toFixed(2) : '0',
       'Rapor Tarihi': new Date().toLocaleString('tr-TR')
@@ -70,39 +84,40 @@ export async function GET(request: NextRequest) {
     summarySheet['!cols'] = [{ wch: 30 }, { wch: 20 }];
     XLSX.utils.book_append_sheet(workbook, summarySheet, 'Özet');
 
-    // SAYFA 2: Sipariş Detayları
-    const detailData = orders?.map(o => ({
-      'Sipariş No': o.order_number,
-      'Müşteri': o.customer?.name || '-',
-      'İletişim': o.customer?.contact_person || '-',
-      'Telefon': o.customer?.phone || '-',
-      'Ürün': o.finished_product?.name || '-',
-      'Ürün Kodu': o.finished_product?.code || '-',
-      'Miktar': parseFloat(o.quantity || '0'),
-      'Birim': o.unit,
-      'Birim Fiyat (₺)': parseFloat(o.unit_price || '0'),
-      'Toplam Fiyat (₺)': parseFloat(o.total_price || '0'),
-      'Teslim Tarihi': new Date(o.delivery_date).toLocaleDateString('tr-TR'),
-      'Durum': o.status,
-      'Öncelik': o.priority,
-      'Oluşturan': o.created_by_user?.name || '-',
-      'Oluşturma Tarihi': new Date(o.created_at).toLocaleDateString('tr-TR'),
-      'Notlar': o.notes || '-'
-    })) || [];
+    // SAYFA 2: Sipariş Detayları (kalem başına bir satır)
+    const detailData = (orders || []).flatMap((o: any) =>
+      (o.items?.length ? o.items : [null]).map((i: any) => ({
+        'Sipariş No': o.order_number,
+        'Müşteri': customerName(o),
+        'Firma': o.customer?.company || '-',
+        'Telefon': o.customer?.phone || '-',
+        'Ürün': i?.product?.name || '-',
+        'Ürün Kodu': i?.product?.code || '-',
+        'Miktar': Number(i?.quantity || 0),
+        'Birim': i?.product?.unit || '-',
+        'Birim Fiyat (₺)': Number(i?.product?.sale_price || 0),
+        'Toplam Fiyat (₺)': i ? itemTotal(i) : 0,
+        'Teslim Tarihi': o.delivery_date ? new Date(o.delivery_date).toLocaleDateString('tr-TR') : '-',
+        'Durum': STATUS_LABELS[o.status] || o.status,
+        'Öncelik': o.priority,
+        'Oluşturan': o.created_by_user?.name || '-',
+        'Oluşturma Tarihi': new Date(o.created_at).toLocaleDateString('tr-TR'),
+      }))
+    );
 
     const detailSheet = XLSX.utils.json_to_sheet(detailData);
-    detailSheet['!cols'] = Array(16).fill({ wch: 15 });
+    detailSheet['!cols'] = Array(15).fill({ wch: 15 });
     XLSX.utils.book_append_sheet(workbook, detailSheet, 'Sipariş Detay');
 
     // SAYFA 3: Müşteri Bazlı Analiz
     const customerStats: { [key: string]: { count: number; total: number } } = {};
-    orders?.forEach(o => {
-      const customerName = o.customer?.name || 'Bilinmiyor';
-      if (!customerStats[customerName]) {
-        customerStats[customerName] = { count: 0, total: 0 };
+    orders?.forEach((o) => {
+      const name = customerName(o);
+      if (!customerStats[name]) {
+        customerStats[name] = { count: 0, total: 0 };
       }
-      customerStats[customerName].count++;
-      customerStats[customerName].total += parseFloat(o.total_price || '0');
+      customerStats[name].count++;
+      customerStats[name].total += orderTotal(o);
     });
 
     const customerData = Object.entries(customerStats).map(([name, stats]) => ({
