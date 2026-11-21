@@ -19,7 +19,7 @@ import {
   CheckCircle,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { ProductionLogRollbackDialog } from '@/components/production/production-log-rollback-dialog';
+import { ProductionLogRollbackDialog, type ProductionLog as RollbackProductionLog } from '@/components/production/production-log-rollback-dialog';
 import { logger } from '@/lib/utils/logger';
 import { useAuthStore } from '@/stores/auth-store';
 
@@ -48,26 +48,8 @@ interface ProductionTask {
   };
 }
 
-interface ProductionLog {
-  id: string;
-  plan_id: string;
-  barcode_scanned: string;
-  quantity_produced: number;
-  timestamp?: string; // production_logs tablosunda timestamp column'u var
-  created_at?: string; // Fallback için
-  operator_id: string;
-  operator?: {
-    name: string;
-    email: string;
-  };
-  production_plans?: {
-    id: string;
-    product_name: string;
-    target_quantity: number;
-    produced_quantity: number;
-    status: string;
-  };
-}
+// Rollback dialog ile aynı tip (timestamp / created_at alanları LogTimeFields'tan)
+type ProductionLog = RollbackProductionLog;
 
 interface BomMaterial {
   material_id: string;
@@ -77,6 +59,7 @@ interface BomMaterial {
   quantity_needed: number;
   consumption_per_unit: number;
   current_stock: number;
+  unit?: string;
 }
 
 interface TaskDetailPanelProps {
@@ -420,7 +403,7 @@ export function TaskDetailPanel({ task, onRefresh }: TaskDetailPanelProps) {
       }
 
       toast.success('Malzeme rezervasyonu başarıyla oluşturuldu');
-      onRefresh();
+      onRefresh?.();
     } catch (error: any) {
       logger.error('Reservation creation error:', error);
       toast.error(error.message || 'Rezervasyon oluşturulamadı');

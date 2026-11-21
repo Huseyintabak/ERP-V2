@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { verifyJWT } from '@/lib/auth/jwt';
 
 import { logger } from '@/lib/utils/logger';
+import { isWithinOperatorRollbackWindow } from '@/lib/production/rollback-policy';
 export async function POST(request: NextRequest) {
   try {
     const token = request.cookies.get('thunder_token')?.value;
@@ -54,11 +55,9 @@ export async function POST(request: NextRequest) {
 
     // Check time restrictions for operators
     if (isOperator && !isAdmin) {
-      const logTime = new Date(log.created_at);
-      const now = new Date();
-      const timeDiffMinutes = (now.getTime() - logTime.getTime()) / (1000 * 60);
-
-      if (timeDiffMinutes > 5) {
+      // production_logs'ta zaman `timestamp` kolonunda (created_at yok → eskiden NaN, kural hiç
+      // uygulanmıyordu). Zaman okunamazsa izin verilmez.
+      if (!isWithinOperatorRollbackWindow(log)) {
         return NextResponse.json({ 
           error: 'Operatörler sadece son 5 dakika içindeki kayıtları geri alabilir' 
         }, { status: 403 });

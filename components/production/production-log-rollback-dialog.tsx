@@ -11,13 +11,13 @@ import { Clock, User, Package, AlertTriangle, Undo2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuthStore } from '@/stores/auth-store';
 import { logger } from '@/lib/utils/logger';
+import { isWithinOperatorRollbackWindow, minutesSinceLog, getLogTime, type LogTimeFields } from '@/lib/production/rollback-policy';
 
-interface ProductionLog {
+export interface ProductionLog extends LogTimeFields {
   id: string;
   plan_id: string;
   quantity_produced: number;
   barcode_scanned: string;
-  created_at: string;
   operator_id: string;
   operator?: {
     name: string;
@@ -52,9 +52,7 @@ export function ProductionLogRollbackDialog({
   if (!log) return null;
 
   const canRollback = checkRollbackPermission(log, user);
-  const timeDiffMinutes = Math.floor(
-    (new Date().getTime() - new Date(log.created_at).getTime()) / (1000 * 60)
-  );
+  const timeDiffMinutes = Math.floor(minutesSinceLog(log) ?? Infinity);
 
   const handleRollback = async () => {
     if (!reason.trim()) {
@@ -161,7 +159,7 @@ export function ProductionLogRollbackDialog({
                 <Label className="text-sm font-medium">Kayıt Zamanı</Label>
                 <div className="flex items-center gap-2">
                   <Clock className="h-4 w-4 text-gray-500" />
-                  <span className="text-sm">{formatDate(log.created_at)}</span>
+                  <span className="text-sm">{getLogTime(log) ? formatDate(getLogTime(log)!.toISOString()) : '-'}</span>
                 </div>
               </div>
 
@@ -169,7 +167,7 @@ export function ProductionLogRollbackDialog({
                 <Label className="text-sm font-medium">Geçen Süre</Label>
                 <div className="flex items-center gap-2">
                   <span className="text-sm">
-                    {timeDiffMinutes} dakika önce
+                    {Number.isFinite(timeDiffMinutes) ? `${timeDiffMinutes} dakika önce` : 'zaman bilinmiyor'}
                   </span>
                   {timeDiffMinutes > 5 && user?.role === 'operator' && (
                     <Badge variant="destructive" className="text-xs">
@@ -273,12 +271,8 @@ function checkRollbackPermission(log: ProductionLog, user: any) {
       return { allowed: false, reason: 'Sadece kendi kayıtlarınızı geri alabilirsiniz' };
     }
 
-    // Zaman kontrolü (5 dakika)
-    const timeDiffMinutes = Math.floor(
-      (new Date().getTime() - new Date(log.created_at).getTime()) / (1000 * 60)
-    );
-
-    if (timeDiffMinutes > 5) {
+    // Zaman kontrolü (5 dakika) — zaman bilinmiyorsa izin yok
+    if (!isWithinOperatorRollbackWindow(log)) {
       return { allowed: false, reason: 'Operatörler sadece son 5 dakika içindeki kayıtları geri alabilir' };
     }
 
