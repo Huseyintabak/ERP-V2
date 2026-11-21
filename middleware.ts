@@ -90,6 +90,15 @@ async function handleApi(request: NextRequest, pathname: string) {
   return NextResponse.next({ request: { headers } });
 }
 
+/**
+ * Relative Location ile yönlendirme (RFC 7231 geçerli).
+ * Nginx arkasında `request.url` iç adresi (127.0.0.1:3000) taşıdığından mutlak URL
+ * kullanmak kullanıcıyı localhost'a yönlendiriyordu.
+ */
+function redirectTo(path: string): NextResponse {
+  return new NextResponse(null, { status: 307, headers: { Location: path } });
+}
+
 async function handlePage(request: NextRequest, pathname: string) {
   if (PUBLIC_PAGES.includes(pathname)) {
     return NextResponse.next();
@@ -98,13 +107,13 @@ async function handlePage(request: NextRequest, pathname: string) {
   const user = await verifyToken(request.cookies.get(AUTH_COOKIE)?.value);
   if (!user) {
     const loginPath = pathname.startsWith('/operator') ? '/operator-login' : '/login';
-    const response = NextResponse.redirect(new URL(loginPath, request.url));
+    const response = redirectTo(loginPath);
     response.cookies.delete(AUTH_COOKIE);
     return response;
   }
 
   if (!AI_ENABLED && AI_PAGE_PREFIXES.some((p) => pathname.startsWith(p))) {
-    return NextResponse.redirect(new URL('/dashboard', request.url));
+    return redirectTo('/dashboard');
   }
 
   return NextResponse.next();

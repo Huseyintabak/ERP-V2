@@ -122,18 +122,27 @@ describe('middleware — pages', () => {
   it('redirects to /login with invalid cookie', async () => {
     const res = await middleware(req('/dashboard', { cookie: 'garbage' }));
     expect(res.status).toBe(307);
-    expect(res.headers.get('location')).toBe('http://localhost:3000/login');
+    expect(res.headers.get('location')).toBe('/login');
   });
 
   it('redirects operator pages to /operator-login', async () => {
     const res = await middleware(req('/operator-dashboard'));
-    expect(res.headers.get('location')).toBe('http://localhost:3000/operator-login');
+    expect(res.headers.get('location')).toBe('/operator-login');
   });
 
   it('redirects AI pages to /dashboard when AI is disabled', async () => {
     const token = await sign({ userId: 'u1', role: 'yonetici' });
     const res = await middleware(req('/ai-dashboard', { cookie: token }));
-    expect(res.headers.get('location')).toBe('http://localhost:3000/dashboard');
+    expect(res.headers.get('location')).toBe('/dashboard');
+  });
+
+  it('uses relative redirects so proxied requests never leak the internal host', async () => {
+    // Nginx arkasında Next, request.url'i iç adresle (127.0.0.1:3000) görür
+    const internal = new NextRequest(new URL('/dashboard', 'http://127.0.0.1:3000'), {
+      headers: new Headers({ host: '45.143.97.57' }),
+    });
+    const res = await middleware(internal);
+    expect(res.headers.get('location')).toBe('/login');
   });
 
   it('passes valid token on normal pages', async () => {
