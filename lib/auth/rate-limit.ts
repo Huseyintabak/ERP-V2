@@ -67,12 +67,21 @@ function increment(key: string, max: number, now: number) {
 const ipKey = (ip: string, email: string) => `ip|${ip}|${email.toLowerCase()}`;
 const emailKey = (email: string) => `em|${email.toLowerCase()}`;
 
+export interface LoginReservation {
+  /** Blokluysa kalan saniye; 0 ise deneme hakkı ayrıldı */
+  blockedSeconds: number;
+  /**
+   * Ayrılan hakkı iade eder (sadece bu rezervasyonun artırdığı sayaçlar, en fazla bir kez).
+   * YALNIZCA kullanıcı girdisinden bağımsız altyapı hatalarında (DB/JWT) çağrılmalı.
+   */
+  release: () => void;
+}
+
 /**
- * Deneme hakkını atomik olarak (senkron) ayırır.
- * Blokluysa kalan saniyeyi döndürür ve sayaç artırılmaz; değilse 0 döndürür ve
- * denemeyi başarısız sayar (başarılı olursa clearLoginFailures çağrılmalı).
+ * Deneme hakkını atomik olarak (senkron) ayırır ve denemeyi başarısız sayar;
+ * başarılı login'de clearLoginFailures çağrılmalı.
  */
-export function reserveLoginAttempt(ip: string, email: string): number {
+export function reserveLoginAttempt(ip: string, email: string): LoginReservation {
   const now = Date.now();
   cleanup(now);
   const trusted = isTrustedIp(ip, email, now);
@@ -82,10 +91,27 @@ export function reserveLoginAttempt(ip: string, email: string): number {
     blockedSeconds(ipKey(ip, email), now),
     trusted ? 0 : blockedSeconds(emailKey(email), now)
   );
-  if (blocked > 0) return blocked;
+  if (blocked > 0) return { blockedSeconds: blocked, release: () => {} };
+
+  const incremented: string[] = [ipKey(ip, email)];
   increment(ipKey(ip, email), MAX_PER_IP_EMAIL, now);
-  if (!trusted) increment(emailKey(email), MAX_PER_EMAIL, now);
-  return 0;
+  if (!trusted) {
+    increment(emailKey(email), MAX_PER_EMAIL, now);
+    incremented.push(emailKey(email));
+  }
+
+  let released = false;
+  return {
+    blockedSeconds: 0,
+    release: () => {
+      if (released) return;
+      released = true;
+      for (const key of incremented) {
+        const a = attempts.get(key);
+        if (a && a.count > 0 && a.blockedUntil === 0) a.count -= 1;
+      }
+    },
+  };
 }
 
 /** Başarılı login: bu IP+email sayacını sıfırla ve IP'yi hesap için güvenilir işaretle */
@@ -95,14 +121,6 @@ export function clearLoginFailures(ip: string, email: string): void {
   let ips = trustedIps.get(key);
   if (!ips) trustedIps.set(key, (ips = new Map()));
   ips.set(ip, Date.now());
-}
-
-/** Sunucu hatası (5xx) gibi kullanıcıdan kaynaklanmayan durumlarda ayrılan hakkı iade et */
-export function releaseLoginAttempt(ip: string, email: string): void {
-  for (const key of [ipKey(ip, email), emailKey(email)]) {
-    const a = attempts.get(key);
-    if (a && a.count > 0 && a.blockedUntil === 0) a.count -= 1;
-  }
 }
 
 /**

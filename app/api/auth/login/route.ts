@@ -3,36 +3,28 @@ import { createAdminClient } from '@/lib/supabase/server';
 import { comparePassword } from '@/lib/auth/password';
 import { signJWT } from '@/lib/auth/jwt';
 import { logger } from '@/lib/utils/logger';
-import {
-  reserveLoginAttempt,
-  clearLoginFailures,
-  releaseLoginAttempt,
-  getClientIp,
-} from '@/lib/auth/rate-limit';
+import { reserveLoginAttempt, clearLoginFailures, getClientIp } from '@/lib/auth/rate-limit';
 
-interface RateCtx {
-  ip?: string;
-  email?: string;
-}
+const MAX_EMAIL_LEN = 254;
+const MAX_PASSWORD_LEN = 128; // bcrypt zaten 72 byte'tan sonrasını kullanmaz
 
 export async function POST(request: NextRequest) {
-  const ctx: RateCtx = {};
-  const response = await handleLogin(request, ctx);
-  // Sunucu hatasında (5xx) kullanıcının deneme hakkını yakma
-  if (response.status >= 500 && ctx.ip && ctx.email) {
-    releaseLoginAttempt(ctx.ip, ctx.email);
-  }
-  return response;
-}
-
-async function handleLogin(request: NextRequest, ctx: RateCtx): Promise<NextResponse> {
   try {
     logger.log('🔐 Login attempt started');
     const { email, password } = await request.json();
     logger.log('📧 Email:', email);
 
-    if (!email || !password) {
-      logger.log('❌ Missing email or password');
+    // Girdi doğrulaması deneme hakkı ayrılmadan ÖNCE: hatalı tipler 500'e düşüp
+    // limiti etkilemesin
+    if (
+      typeof email !== 'string' ||
+      typeof password !== 'string' ||
+      !email ||
+      !password ||
+      email.length > MAX_EMAIL_LEN ||
+      password.length > MAX_PASSWORD_LEN
+    ) {
+      logger.log('❌ Missing or invalid email/password');
       return NextResponse.json(
         { error: 'Email ve şifre gerekli' },
         { status: 400 }
@@ -42,15 +34,14 @@ async function handleLogin(request: NextRequest, ctx: RateCtx): Promise<NextResp
     // Brute-force koruması: deneme hakkı herhangi bir await'ten ÖNCE senkron düşülür
     // (paralel isteklerle limit aşılmasın). Başarılı login'de sıfırlanır.
     const clientIp = getClientIp(request.headers);
-    const blockedFor = reserveLoginAttempt(clientIp, String(email));
+    const reservation = reserveLoginAttempt(clientIp, email);
+    const blockedFor = reservation.blockedSeconds;
     if (blockedFor > 0) {
       return NextResponse.json(
         { error: `Çok fazla başarısız deneme. ${Math.ceil(blockedFor / 60)} dakika sonra tekrar deneyin.` },
         { status: 429, headers: { 'Retry-After': String(blockedFor) } }
       );
     }
-    ctx.ip = clientIp;
-    ctx.email = String(email);
 
     // Check environment variables
     if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
@@ -77,6 +68,7 @@ async function handleLogin(request: NextRequest, ctx: RateCtx): Promise<NextResp
       logger.log('✅ Supabase admin client created successfully');
     } catch (clientError: any) {
       logger.error('❌ Error creating Supabase admin client:', clientError);
+      reservation.release(); // altyapı hatası — kullanıcının hakkını yakma
       return NextResponse.json(
         {
           error: 'Failed to initialize database connection',
@@ -152,7 +144,7 @@ async function handleLogin(request: NextRequest, ctx: RateCtx): Promise<NextResp
     }
 
     logger.log('✅ Password is valid');
-    clearLoginFailures(clientIp, String(email));
+    clearLoginFailures(clientIp, email);
 
     // JWT oluştur
     let token: string;
@@ -164,6 +156,7 @@ async function handleLogin(request: NextRequest, ctx: RateCtx): Promise<NextResp
       });
     } catch (jwtError: any) {
       logger.error('JWT signing error:', jwtError);
+      reservation.release(); // altyapı hatası — kullanıcının hakkını yakma
       return NextResponse.json(
         { error: 'Token oluşturma hatası' },
         { status: 500 }

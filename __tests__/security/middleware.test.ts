@@ -99,6 +99,7 @@ describe('middleware — matcher', () => {
   it('runs on every /api path, including ones ending with a file extension', async () => {
     const { config } = await import('@/middleware');
     // Next.js matcher'ı path-to-regexp ile derler; aynı davranışı burada simüle ediyoruz
+    // @ts-expect-error — Next'in derlenmiş kopyası tip tanımı içermiyor
     const { pathToRegexp } = await import('next/dist/compiled/path-to-regexp');
     const matches = (path: string) =>
       (config.matcher as string[]).some((m) => pathToRegexp(m).test(path));
