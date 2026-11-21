@@ -27,10 +27,11 @@ export async function GET(request: NextRequest) {
     await supabase.rpc('set_user_context', { user_id: userId });
 
     // Get BOM data
-    const { data: bomData } = await supabase
+    const { data: bomData, error: bomError } = await supabase
       .from('bom')
       .select('*')
       .order('finished_product_id');
+    if (bomError) throw new Error(`BOM okunamadı: ${bomError.message}`);
 
     if (!bomData || bomData.length === 0) {
       // Create empty template
@@ -51,16 +52,19 @@ export async function GET(request: NextRequest) {
     const productIds = [...new Set(bomData.map(b => b.finished_product_id))];
     
     // Fetch finished products
-    const { data: finishedProducts } = await supabase
+    // Sorgu hataları yutulursa (örn. uzun .in() → 414) ürün kodları sessizce boş kalıyordu
+    const { data: finishedProducts, error: finishedError } = await supabase
       .from('finished_products')
       .select('id, name, code')
       .in('id', productIds);
+    if (finishedError) throw new Error(`Nihai ürünler okunamadı: ${finishedError.message}`);
     
     // Fetch semi-finished products
-    const { data: semiProducts } = await supabase
+    const { data: semiProducts, error: semiProductsError } = await supabase
       .from('semi_finished_products')
       .select('id, name, code')
       .in('id', productIds);
+    if (semiProductsError) throw new Error(`Yarı mamuller okunamadı: ${semiProductsError.message}`);
     
     // Get all material IDs
     const rawMaterialIds = bomData.filter(b => b.material_type === 'raw').map(b => b.material_id);
@@ -69,25 +73,31 @@ export async function GET(request: NextRequest) {
     // Fetch raw materials
     let rawMaterials: any[] = [];
     if (rawMaterialIds.length > 0) {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('raw_materials')
         .select('id, name, code, unit')
-        .in('id', rawMaterialIds);
+        .in('id', [...new Set(rawMaterialIds)]);
+      if (error) throw new Error(`Hammaddeler okunamadı: ${error.message}`);
       rawMaterials = data || [];
     }
     
     // Fetch semi-finished materials
     let semiMaterials: any[] = [];
     if (semiMaterialIds.length > 0) {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('semi_finished_products')
         .select('id, name, code, unit')
-        .in('id', semiMaterialIds);
+        .in('id', [...new Set(semiMaterialIds)]);
+      if (error) throw new Error(`Yarı mamul malzemeler okunamadı: ${error.message}`);
       semiMaterials = data || [];
     }
 
-    // Prepare data for export
-    const exportData = bomData.map(item => {
+    // Prepare data for export (silinmiş ürüne ait yetim BOM satırları hariç)
+    const knownProductIds = new Set([
+      ...(finishedProducts || []).map(p => p.id),
+      ...(semiProducts || []).map(p => p.id),
+    ]);
+    const exportData = bomData.filter(item => knownProductIds.has(item.finished_product_id)).map(item => {
       // Find product (check both finished and semi)
       const product = finishedProducts?.find(p => p.id === item.finished_product_id) || 
                       semiProducts?.find(p => p.id === item.finished_product_id);
