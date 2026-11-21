@@ -6,7 +6,6 @@ import { Wifi, WifiOff } from 'lucide-react';
 
 export function RealtimeStatus() {
   const [isConnected, setIsConnected] = useState(true); // Default to connected
-  const [isConnecting, setIsConnecting] = useState(false);
 
   useEffect(() => {
     // Simple connection check without creating realtime subscriptions

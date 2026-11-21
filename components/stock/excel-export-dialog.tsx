@@ -128,15 +128,6 @@ export function ExcelExportDialog({ onExportComplete }: ExcelExportDialogProps) 
     }
   };
 
-  const getTypeLabel = (type: string) => {
-    switch (type) {
-      case 'raw': return 'Hammadde';
-      case 'semi': return 'Yarı Mamul';
-      case 'finished': return 'Nihai Ürün';
-      case 'all': return 'Tüm Stok';
-      default: return type;
-    }
-  };
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>

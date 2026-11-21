@@ -114,20 +114,6 @@ export default function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
     }
   };
 
-  const getRoleDisplayName = (role: string) => {
-    switch (role) {
-      case 'yonetici':
-        return 'Yönetici';
-      case 'planlama':
-        return 'Planlama';
-      case 'depo':
-        return 'Depo';
-      case 'operator':
-        return 'Operatör';
-      default:
-        return role;
-    }
-  };
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">

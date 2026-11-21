@@ -199,36 +199,6 @@ export default function UretimPlanlariPage() {
     setCancelDialogOpen(true);
   };
 
-  const handleResume = async (planId: string) => {
-    try {
-      if (!user?.id) {
-        throw new Error('Kullanıcı kimlik doğrulaması gerekli');
-      }
-      const response = await fetch('/api/production/plan-status', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-user-id': user.id
-        },
-        body: JSON.stringify({
-          plan_id: planId,
-          action: 'resume'
-        }),
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        toast.success('Üretim planı devam ettirildi');
-        actions.fetchProductionPlans();
-      } else {
-        toast.error(data.error || 'Plan devam ettirilemedi');
-      }
-    } catch (error) {
-      console.error('Resume error:', error);
-      toast.error('Bir hata oluştu');
-    }
-  };
 
   const handleCancelSuccess = () => {
     actions.fetchProductionPlans();

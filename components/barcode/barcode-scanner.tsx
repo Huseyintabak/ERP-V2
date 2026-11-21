@@ -133,7 +133,7 @@ export function BarcodeScanner({
               });
             }
           },
-          (errorMessage: string) => {
+          (_errorMessage: string) => {
             // Error callback - ignore scanning errors
           }
         );

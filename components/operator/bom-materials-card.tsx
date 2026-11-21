@@ -22,7 +22,7 @@ interface BomMaterialsCardProps {
   plannedQuantity: number;
 }
 
-export function BomMaterialsCard({ planId, producedQuantity, plannedQuantity }: BomMaterialsCardProps) {
+export function BomMaterialsCard({ planId, producedQuantity }: BomMaterialsCardProps) {
   const [materials, setMaterials] = useState<BomMaterial[]>([]);
   const [loading, setLoading] = useState(true);
   const { user } = useAuthStore();

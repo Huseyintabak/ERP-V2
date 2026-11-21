@@ -82,25 +82,6 @@ interface ProductionTask {
   task_type?: 'production' | 'semi_production';
 }
 
-interface SemiProductionTask {
-  id: string;
-  order_number: string;
-  product_id: string;
-  planned_quantity: number;
-  produced_quantity: number;
-  status: 'planlandi' | 'devam_ediyor' | 'tamamlandi' | 'iptal';
-  assigned_operator_id?: string;
-  priority: 'dusuk' | 'orta' | 'yuksek';
-  notes?: string;
-  created_at: string;
-  updated_at: string;
-  product?: {
-    id: string;
-    name: string;
-    code: string;
-    unit: string;
-  };
-}
 
 const mapSemiProductionTask = (task: any) => {
   const deliveryDate = task?.completed_at ?? task?.started_at ?? task?.created_at ?? null;
@@ -607,7 +588,6 @@ export default function OperatorDashboardClient() {
                 ) : (
                   activeTasks.map(task => {
                     const progress = Math.round((task.produced_quantity / task.planned_quantity) * 100);
-                    const remaining = task.planned_quantity - task.produced_quantity;
                     
                     return (
                       <div 

@@ -186,7 +186,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const payload = await verifyJWT(token);
+    await verifyJWT(token);
     const supabase = await createClient();
 
     const { searchParams } = new URL(request.url);
@@ -237,7 +237,7 @@ export async function GET(request: NextRequest) {
       }
 
       // Get all reservations first (we'll sort and paginate after formatting)
-      const { data: allReservations, error: reservationError, count } = await reservationQuery;
+      const { data: allReservations, error: reservationError } = await reservationQuery;
 
       if (reservationError) {
         logger.error('Error fetching semi production reservations:', reservationError);

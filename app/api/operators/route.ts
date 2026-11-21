@@ -5,7 +5,7 @@ import { hashPassword } from '@/lib/auth/password';
 
 import { logger } from '@/lib/utils/logger';
 // GET - List Operators
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
     const supabase = await createClient();
 

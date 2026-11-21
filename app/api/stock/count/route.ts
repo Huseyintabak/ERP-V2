@@ -24,7 +24,6 @@ export async function POST(request: NextRequest) {
     const supabase = await createClient();
 
     // Malzeme bilgilerini al
-    let materialQuery;
     let materialTable;
 
     switch (validated.materialType) {

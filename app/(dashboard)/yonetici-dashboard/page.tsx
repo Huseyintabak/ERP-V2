@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -21,7 +20,6 @@ import {
 } from 'lucide-react';
 import { useDashboardStats, useDashboardActions, useDashboardLoading } from '@/stores/dashboard-stats-store';
 import { useRoleBasedRealtime } from '@/lib/hooks/use-realtime-store';
-import { useAuthStore } from '@/stores/auth-store';
 import { InventoryApprovalList } from '@/components/stock/inventory-approval-list';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -29,8 +27,6 @@ import { Label } from '@/components/ui/label';
 // import { usePerformanceMonitor } from '@/lib/hooks/use-performance-monitor';
 
 export default function YoneticiDashboard() {
-  const router = useRouter();
-  const { user } = useAuthStore();
   const stats = useDashboardStats('yonetici');
   const loading = useDashboardLoading('yonetici');
   const actions = useDashboardActions();

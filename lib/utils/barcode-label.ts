@@ -316,7 +316,6 @@ export async function generatePDFLabels(
         currentY += 3;
 
         // 2. Middle Section: QR + Info
-        const sectionStartY = currentY;
 
         if (options.includeQR) {
           // QR Code on LEFT
@@ -699,15 +698,6 @@ export function generateZPLLabels(
 /**
  * Get ZPL barcode command for barcode type
  */
-function getBarcodeZPLCommand(type: string): string {
-  const commands: Record<string, string> = {
-    CODE128: 'BCN',
-    EAN13: 'BEN',
-    CODE39: 'B3N',
-    ITF14: 'BIN',
-  };
-  return commands[type] || 'BCN';
-}
 
 /**
  * Truncate text to max length

@@ -63,7 +63,6 @@ export default function KullanicilarPage() {
     setUsers,
     setPagination,
     setFilters,
-    updateUser,
     removeUser,
   } = useUserStore();
 

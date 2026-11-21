@@ -63,7 +63,7 @@ interface ScanResult {
 
 export default function MobileProductSearchPage() {
   const router = useRouter();
-  const [isLoading, setIsLoading] = useState(false);
+  const [, setIsLoading] = useState(false);
   const [scanResult, setScanResult] = useState<ScanResult | null>(null);
   const [showScanner, setShowScanner] = useState(true);
 

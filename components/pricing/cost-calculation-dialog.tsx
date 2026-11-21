@@ -66,8 +66,6 @@ export function CostCalculationDialog({
   productId,
   productCode,
   productName,
-  currentSalePrice,
-  currentCostPrice = 0,
   trigger,
   usdRateFromParent
 }: CostCalculationDialogProps) {

@@ -401,7 +401,7 @@ export default function YoneticiDashboard() {
                     </tr>
                   </thead>
                   <tbody>
-                    {stockLevels.map((stock, index) => (
+                    {stockLevels.map((stock, _index) => (
                       <tr key={stock.material} className="border-b transition-colors hover:bg-muted/50">
                         <td className="p-4 align-middle">
                           <div 

@@ -42,7 +42,7 @@ export default function BarcodeScannerPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [scanHistory, setScanHistory] = useState<string[]>([]);
   const [showPermissionHelp, setShowPermissionHelp] = useState(false);
-  const [hasPermission, setHasPermission] = useState<boolean | null>(null);
+  const [, setHasPermission] = useState<boolean | null>(null);
   const [isHTTPS, setIsHTTPS] = useState(true);
 
   const videoRef = useRef<HTMLVideoElement>(null);

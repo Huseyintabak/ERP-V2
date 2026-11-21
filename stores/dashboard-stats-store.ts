@@ -700,13 +700,13 @@ export const useDashboardStatsStore = create<DashboardStatsStore>()(
           const roles: Array<keyof RoleBasedStats> = ['yonetici', 'planlama', 'depo', 'operator'];
           
           // Set all loading states to true
-          set((state) => ({
+          set(() => ({
             loading: Object.fromEntries(
               roles.map(role => [role, true])
-            ) as typeof state.loading,
+            ) as DashboardStatsStore['loading'],
             errors: Object.fromEntries(
               roles.map(role => [role, null])
-            ) as typeof state.errors,
+            ) as DashboardStatsStore['errors'],
           }));
           
           try {
@@ -718,23 +718,23 @@ export const useDashboardStatsStore = create<DashboardStatsStore>()(
               roles.map((role, index) => [role, statsResults[index]])
             ) as unknown as RoleBasedStats;
             
-            set((state) => ({
+            set(() => ({
               stats: newStats,
               loading: Object.fromEntries(
                 roles.map(role => [role, false])
-              ) as typeof state.loading,
+              ) as DashboardStatsStore['loading'],
               lastUpdated: Object.fromEntries(
                 roles.map(role => [role, Date.now()])
-              ) as typeof state.lastUpdated,
+              ) as DashboardStatsStore['lastUpdated'],
             }));
           } catch (error) {
-            set((state) => ({
+            set(() => ({
               loading: Object.fromEntries(
                 roles.map(role => [role, false])
-              ) as typeof state.loading,
+              ) as DashboardStatsStore['loading'],
               errors: Object.fromEntries(
                 roles.map(role => [role, error instanceof Error ? error.message : 'Unknown error'])
-              ) as typeof state.errors,
+              ) as DashboardStatsStore['errors'],
             }));
           }
         },

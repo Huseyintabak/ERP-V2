@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { product_id, barcode, quantity, location, notes, type } = body;
+    const { product_id, quantity, location, notes, type } = body;
 
     // Validation
     if (!product_id || !quantity || quantity <= 0) {
@@ -103,7 +103,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
     const supabase = await createClient();
 

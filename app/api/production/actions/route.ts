@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
 
 async function handleStartTask(supabase: any, adminSupabase: any, operatorId: string, body: any) {
   try {
-    const { planId, quantity } = startTaskSchema.parse(body);
+    const { planId } = startTaskSchema.parse(body);
 
     // Verify the task is assigned to this operator
     const { data: plan, error: planError } = await supabase

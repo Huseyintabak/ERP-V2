@@ -6,11 +6,9 @@ import { logger } from '@/lib/utils/logger';
 // POST - Save BOM for a product
 export async function POST(
   request: NextRequest,
-  { params: paramsPromise }: { params: Promise<{ productId: string }> }
+  _ctx: { params: Promise<{ productId: string }> }
 ) {
-  const params = await paramsPromise;
   try {
-    const { productId } = params;
     const userId = request.headers.get('x-user-id');
     
     if (!userId) {

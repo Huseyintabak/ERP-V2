@@ -78,7 +78,6 @@ interface ZoneListProps {
 export function ZoneList({ 
   zones, 
   onViewInventory, 
-  onTransfer, 
   onCreateZone,
   allZones,
   onTransferComplete

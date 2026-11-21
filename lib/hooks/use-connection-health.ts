@@ -36,7 +36,7 @@ export const useConnectionHealth = (
       const supabase = createClient();
       
       // Simple query to test connection
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('production_plans')
         .select('id')
         .limit(1);

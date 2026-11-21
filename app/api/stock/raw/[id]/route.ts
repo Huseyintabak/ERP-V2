@@ -14,7 +14,7 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const payload = await verifyJWT(token);
+    await verifyJWT(token);
     const { id } = params;
     const supabase = await createClient();
 
@@ -56,13 +56,6 @@ export async function PUT(
     }
 
     const updateData = await request.json();
-
-    // Get current material data before update
-    const { data: currentMaterial } = await supabase
-      .from('raw_materials')
-      .select('*')
-      .eq('id', id)
-      .single();
 
     const { data: material, error } = await supabase
       .from('raw_materials')

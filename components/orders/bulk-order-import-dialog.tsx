@@ -216,7 +216,7 @@ export function BulkOrderImportDialog({ onImportComplete }: BulkOrderImportDialo
     let processedCustomers = 0;
 
     // Her müşteri için tek bir sipariş oluştur
-    for (const [customerKey, customerOrders] of ordersByCustomer.entries()) {
+    for (const [, customerOrders] of ordersByCustomer.entries()) {
       const firstOrder = customerOrders[0]; // İlk siparişten müşteri bilgilerini al
       
       try {
@@ -531,7 +531,7 @@ export function BulkOrderImportDialog({ onImportComplete }: BulkOrderImportDialo
                 <CardContent>
                   <div className="max-h-60 overflow-y-auto">
                     <div className="space-y-3">
-                      {previewArray.map(([customerKey, orders], index) => (
+                      {previewArray.map(([, orders], index) => (
                         <div key={index} className="p-3 border rounded-lg bg-gray-50">
                           <div className="font-medium text-sm mb-2">{orders[0].customer_name}</div>
                           <div className="space-y-1 ml-2">

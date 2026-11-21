@@ -203,7 +203,6 @@ export async function POST(request: NextRequest) {
     // Style the worksheet
     if (config.includeHeaders) {
       // Header row styling
-      const headerRow = config.includeMetadata ? 6 : 0; // Adjust for metadata
       worksheet['!rows'] = [{ hpt: 20 }];
       // stock/production/audit için şablon yok → kolon sayısını ilk satırdan al
       // (önceden TEMPLATES[type].headers undefined'da TypeError → 500)
@@ -319,7 +318,7 @@ async function exportFinishedProducts(supabase: any, config: any) {
   ]);
 }
 
-async function exportBOM(supabase: any, config: any) {
+async function exportBOM(supabase: any, _config: any) {
   const { data, error } = await supabase
     .from('bom')
     .select(`
@@ -342,7 +341,7 @@ async function exportBOM(supabase: any, config: any) {
   ]);
 }
 
-async function exportStockReport(supabase: any, config: any) {
+async function exportStockReport(supabase: any, _config: any) {
   // Get all stock data with critical level information
   const { data: rawMaterials } = await supabase
     .from('raw_materials')
@@ -409,7 +408,7 @@ async function exportStockReport(supabase: any, config: any) {
   return data;
 }
 
-async function exportProductionReport(supabase: any, config: any) {
+async function exportProductionReport(supabase: any, _config: any) {
   const { data, error } = await supabase
     .from('production_plans')
     .select(`

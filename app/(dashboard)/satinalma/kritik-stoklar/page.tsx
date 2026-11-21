@@ -44,7 +44,7 @@ interface PurchaseRequest {
 
 export default function KritikStoklarPage() {
   const [requests, setRequests] = useState<PurchaseRequest[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const { user } = useAuthStore();

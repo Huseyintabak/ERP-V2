@@ -75,7 +75,7 @@ interface ZoneInventory {
 export default function DepoZoneYonetimiPage() {
   const [zones, setZones] = useState<WarehouseZone[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const { user } = useAuthStore();
 
@@ -85,7 +85,7 @@ export default function DepoZoneYonetimiPage() {
   const [isCenterInventoryDialogOpen, setIsCenterInventoryDialogOpen] = useState(false);
   const [isTransferDialogOpen, setIsTransferDialogOpen] = useState(false);
   const [selectedZoneId, setSelectedZoneId] = useState<string>('');
-  const [selectedProductIdForTransfer, setSelectedProductIdForTransfer] = useState<string>('');
+  const [, setSelectedProductIdForTransfer] = useState<string>('');
   const [selectedZoneInventory, setSelectedZoneInventory] = useState<ZoneInventory[]>([]);
   const [selectedZone, setSelectedZone] = useState<WarehouseZone | null>(null);
   const [centerInventory, setCenterInventory] = useState<ZoneInventory[]>([]);

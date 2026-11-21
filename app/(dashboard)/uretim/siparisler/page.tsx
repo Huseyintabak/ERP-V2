@@ -39,10 +39,8 @@ import {
   type Order,
 } from "@/stores/order-store";
 import { useRoleBasedRealtime } from "@/lib/hooks/use-realtime-store";
-import { useAuthStore } from "@/stores/auth-store";
 
 export default function SiparislerPage() {
-  const { user } = useAuthStore();
   const orders = useOrders();
   const loading = useOrderLoading();
   const actions = useOrderActions();
@@ -100,32 +98,6 @@ export default function SiparislerPage() {
     }
   };
 
-  const handleOrderSubmit = async (data: any) => {
-    try {
-      if (!user?.id) {
-        throw new Error("Kullanıcı kimlik doğrulaması gerekli");
-      }
-
-      const response = await fetch("/api/orders", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-user-id": user.id,
-        },
-        body: JSON.stringify(data),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) throw new Error(result.error);
-
-      toast.success("Sipariş oluşturuldu");
-      setIsOrderFormOpen(false);
-      actions.fetchOrders();
-    } catch (error: any) {
-      toast.error(error.message || "Sipariş oluşturma hatası");
-    }
-  };
 
   const getStatusBadge = (status: string) => {
     const variants = {

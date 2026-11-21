@@ -236,7 +236,7 @@ export function ExcelImportDialog({ onImportComplete }: ExcelImportDialogProps) 
             <FormField
               control={form.control}
               name="file"
-              render={({ field: { onChange, ...field } }) => (
+              render={({ field: { onChange } }) => (
                 <FormItem>
                   <FormLabel>Excel Dosyası</FormLabel>
                   <FormControl>

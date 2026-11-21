@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const payload = await verifyJWT(token);
+    await verifyJWT(token);
     const userId = request.headers.get('x-user-id');
     
     if (!userId) {

@@ -223,13 +223,6 @@ export default function AdvancedImportExport() {
     }
   };
 
-  const getSeverityIcon = (severity: 'error' | 'warning') => {
-    return severity === 'error' ? (
-      <XCircle className="h-4 w-4 text-red-500" />
-    ) : (
-      <AlertTriangle className="h-4 w-4 text-yellow-500" />
-    );
-  };
 
   const getSeverityBadge = (severity: 'error' | 'warning') => {
     return severity === 'error' ? (

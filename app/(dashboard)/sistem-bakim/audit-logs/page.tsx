@@ -18,7 +18,6 @@ import {
   BarChart3
 } from 'lucide-react';
 import { AuditLogViewer } from '@/components/audit/audit-log-viewer';
-import { useAuthStore } from '@/stores/auth-store';
 
 interface AuditStats {
   todayCount: number;
@@ -36,7 +35,6 @@ interface CriticalEvent {
 }
 
 export default function AuditLogsPage() {
-  const { user } = useAuthStore();
   const [activeTab, setActiveTab] = useState('viewer');
   const [stats, setStats] = useState<AuditStats>({
     todayCount: 0,
@@ -47,7 +45,7 @@ export default function AuditLogsPage() {
   const [criticalEvents, setCriticalEvents] = useState<CriticalEvent[]>([]);
   const [analyticsData, setAnalyticsData] = useState<any>(null);
   const [alerts, setAlerts] = useState<any[]>([]);
-  const [settings, setSettings] = useState({
+  const [settings] = useState({
     retentionDays: 90,
     alertThreshold: 5,
     autoDelete: false

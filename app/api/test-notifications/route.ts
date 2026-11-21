@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 
 import { logger } from '@/lib/utils/logger';
 // Test endpoint to check notifications without authentication
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
     const supabase = await createClient();
 

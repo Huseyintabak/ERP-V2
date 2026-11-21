@@ -164,8 +164,6 @@ export async function POST(request: NextRequest) {
       const requiredQuantity = quantityPerUnit * planned_quantity;
       
       logger.log(`🔍 Checking material: ${bomItem.material_id}, type: ${bomItem.material_type}, quantity_per_unit: ${quantityPerUnit}, required: ${requiredQuantity}`);
-      
-      const material: any = null;
       let availableStock = 0;
       let materialName = '';
       let materialCode = '';

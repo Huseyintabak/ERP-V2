@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient, createAdminClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/server';
 import { verifyJWT } from '@/lib/auth/jwt';
 
 import { logger } from '@/lib/utils/logger';
@@ -50,8 +50,6 @@ export async function POST(request: NextRequest) {
         }, { status: 400 });
       }
     }
-
-    const supabase = await createClient();
     const adminSupabase = await createAdminClient();
 
     // Get source zone info to determine if it's center zone

@@ -39,7 +39,6 @@ export function RawMaterialForm({
   onSubmit,
   initialData,
   isLoading,
-  isEdit = false,
 }: Props) {
   const {
     register,

@@ -158,7 +158,7 @@ export async function GET(request: NextRequest) {
     const estimatedCompletion = '14:30'; // Mock data for now
 
     // Get work status from operator table
-    const { data: operator, error: operatorError } = await supabase
+    const { data: operator } = await supabase
       .from('operators')
       .select('current_status')
       .eq('id', operatorId)

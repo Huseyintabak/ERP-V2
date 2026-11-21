@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { 
   Clock, 
@@ -47,7 +46,6 @@ interface PlanlamaStats {
 }
 
 export default function PlanlamaDashboard() {
-  const router = useRouter();
   const { user } = useAuthStore();
   
   // Performance and memory monitoring - DISABLED FOR NOW
@@ -72,7 +70,7 @@ export default function PlanlamaDashboard() {
     reservedMaterials: 0,
   });
   
-  const [operators, setOperators] = useState<any[]>([]);
+  const [, setOperators] = useState<any[]>([]);
 
   // Real-time subscriptions
   // Real-time updates with unified system
@@ -138,8 +136,6 @@ export default function PlanlamaDashboard() {
         completedPlans,
         allPlans,
         operators,
-        reservations,
-        movements,
         criticalStockCount
       ] = await Promise.all([
         // Stok sayıları ve rezerve miktarları için tüm veriler
@@ -273,7 +269,6 @@ export default function PlanlamaDashboard() {
         : 0;
 
       // Planlama doğruluğu (tamamlanan / toplam * 100)
-      const totalPlansThisWeek = weeklyOrders || 1;
       const planningAccuracy = weeklyOrders > 0 
         ? (weeklyCompleted / weeklyOrders) * 100 
         : 0;

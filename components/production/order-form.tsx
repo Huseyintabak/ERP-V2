@@ -48,7 +48,6 @@ export function OrderForm({ onSuccess }: Props) {
     formState: { errors },
     setValue,
     watch,
-    control,
   } = useForm<OrderFormData>({
     resolver: zodResolver(orderSchema),
     defaultValues: {
@@ -345,7 +344,7 @@ export function OrderForm({ onSuccess }: Props) {
         <Button 
           type="submit" 
           disabled={loading}
-          onClick={(e) => {
+          onClick={(_e) => {
             logger.log('Button clicked!', { selectedCustomerId, loading });
             logger.log('Form data:', watch());
           }}

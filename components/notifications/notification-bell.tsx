@@ -68,12 +68,7 @@ export default function NotificationBell() {
   } = useSmartNotificationsUnified(true); // Disable polling to avoid conflicts
 
   // Real-time updates for notifications with unified system
-  const { 
-    isConnected: notificationsConnected, 
-    isRealtimeEnabled: notificationsRealtimeEnabled,
-    isUsingFallback: notificationsUsingFallback,
-    retryRealtime: retryNotificationsRealtime
-  } = useRealtimeUnified('notifications', 
+  useRealtimeUnified('notifications', 
     (newNotification) => {
       logger.log('🔔 Bell: New notification received:', newNotification);
       refreshNotifications();

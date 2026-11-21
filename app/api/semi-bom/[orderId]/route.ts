@@ -51,13 +51,6 @@ export async function GET(
         return NextResponse.json({ error: 'Ürün bulunamadı' }, { status: 404 });
       }
 
-      // Mock order oluştur
-      const mockOrder = {
-        id: orderId,
-        product_id: productId,
-        planned_quantity: plannedQuantity,
-        product: product
-      };
 
       // BOM'u getir - semi_bom tablosundan
       const { data: bomItems, error: bomError } = await supabase

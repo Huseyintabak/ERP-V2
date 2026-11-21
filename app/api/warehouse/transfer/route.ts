@@ -41,8 +41,6 @@ export async function POST(request: NextRequest) {
         error: 'Quantity must be greater than 0' 
       }, { status: 400 });
     }
-
-    const supabase = await createClient();
     const adminSupabase = await createAdminClient();
 
     // Check if source zone has enough inventory

@@ -83,7 +83,7 @@ export function WebSocketErrorSuppressor() {
 
     // Override fetch to silently handle 401 errors from /api/auth/me
     window.fetch = async function(...args: Parameters<typeof fetch>): Promise<Response> {
-      const [input, init] = args;
+      const [input] = args;
       const url = typeof input === 'string' ? input : input instanceof Request ? input.url : input.toString();
       
       try {

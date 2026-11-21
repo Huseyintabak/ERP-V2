@@ -14,14 +14,6 @@ const userCreateSchema = z.object({
   is_active: z.boolean().default(true),
 });
 
-const userUpdateSchema = z.object({
-  name: z.string().min(1).max(255).optional(),
-  email: z.string().email().optional(),
-  password: z.string().min(6).optional(),
-  role: z.enum(['yonetici', 'planlama', 'depo', 'operator']).optional(),
-  is_active: z.boolean().optional(),
-});
-
 // GET - List all users (admin only)
 export async function GET(request: NextRequest) {
   try {

@@ -31,7 +31,6 @@ import {
 } from "lucide-react";
 import { useAuthStore } from "@/stores/auth-store";
 import { Button } from "@/components/ui/button";
-import { useRouter } from "next/navigation";
 import {
   Collapsible,
   CollapsibleContent,
@@ -208,7 +207,6 @@ const navItems: NavItem[] = [
 
 export function Sidebar() {
   const pathname = usePathname();
-  const router = useRouter();
   const { user, logout } = useAuthStore();
   const [openMenus, setOpenMenus] = useState<string[]>([]);
 

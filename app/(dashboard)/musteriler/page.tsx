@@ -58,7 +58,7 @@ export default function MusterilerPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [deleteCustomerId, setDeleteCustomerId] = useState<string | null>(null);
+  const [, setDeleteCustomerId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchCustomers();

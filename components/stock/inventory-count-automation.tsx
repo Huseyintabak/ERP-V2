@@ -54,7 +54,7 @@ export function InventoryCountAutomation({
   const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [processing, setProcessing] = useState(false);
-  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [, setUploadedFile] = useState<File | null>(null);
   const [step, setStep] = useState<'upload' | 'review' | 'process' | 'complete'>('upload');
 
   // Load current inventory

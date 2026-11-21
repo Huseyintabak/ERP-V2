@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -20,7 +19,6 @@ interface Operator {
 }
 
 export default function OperatorLoginPage() {
-  const router = useRouter();
   const setUser = useAuthStore((state) => state.setUser);
   const [operators, setOperators] = useState<Operator[]>([]);
   const [selectedOperatorId, setSelectedOperatorId] = useState('');

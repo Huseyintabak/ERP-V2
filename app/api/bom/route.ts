@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const payload = await verifyJWT(token);
+    await verifyJWT(token);
     const { searchParams } = new URL(request.url);
     const productId = searchParams.get('product_id');
 
@@ -169,7 +169,7 @@ export async function PUT(request: NextRequest) {
     const supabase = await createClient();
     
     // Önce BOM kaydının hangi tabloda olduğunu kontrol et
-    const { data: bomRecord, error: bomError } = await supabase
+    const { data: bomRecord } = await supabase
       .from('bom')
       .select('id')
       .eq('id', bomId)
@@ -249,36 +249,31 @@ export async function DELETE(request: NextRequest) {
     const supabase = await createClient();
     
     // Önce BOM kaydının hangi tabloda olduğunu kontrol et
-    const { data: bomRecord, error: bomError } = await supabase
+    const { data: bomRecord } = await supabase
       .from('bom')
       .select('id')
       .eq('id', bomId)
       .single();
 
-    let deleteResult = null;
     let deleteError = null;
 
     if (bomRecord) {
       // Nihai ürün BOM'u
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('bom')
         .delete()
         .eq('id', bomId)
         .select()
         .single();
-      
-      deleteResult = data;
       deleteError = error;
     } else {
       // Yarımmamül BOM'u
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('semi_bom')
         .delete()
         .eq('id', bomId)
         .select()
         .single();
-      
-      deleteResult = data;
       deleteError = error;
     }
 

@@ -6,7 +6,7 @@ import { logger } from '@/lib/utils/logger';
  * GET /api/dashboard/critical-stock-count
  * Kritik stok sayısını veritabanından direkt hesaplar
  */
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
     const supabase = await createClient();
     

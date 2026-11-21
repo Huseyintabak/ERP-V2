@@ -38,7 +38,7 @@ interface ReservationManagerProps {
   onReservationCreated?: () => void;
 }
 
-export default function ReservationManager({ orderId, onReservationCreated }: ReservationManagerProps) {
+export default function ReservationManager({ orderId }: ReservationManagerProps) {
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

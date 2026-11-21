@@ -144,7 +144,7 @@ describe('useBarcode', () => {
   });
 
   test('useBarcode should handle multiple scans', async () => {
-    const { result } = renderHook(() => useBarcode(onScan));
+    renderHook(() => useBarcode(onScan));
     
     // İlk barkod
     act(() => {

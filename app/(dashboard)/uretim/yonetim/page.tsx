@@ -56,7 +56,7 @@ interface Order {
 
 export default function UretimYonetimPage() {
   const [orders, setOrders] = useState<Order[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [, setLoading] = useState(true);
   const [selectedTab, setSelectedTab] = useState("active");
   const { user } = useAuthStore();
   // toast from sonner is already imported

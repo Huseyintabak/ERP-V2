@@ -49,7 +49,7 @@ interface EntryItem {
 
 export default function StokGirisPage() {
   const router = useRouter();
-  const [isLoading, setIsLoading] = useState(false);
+  const [, setIsLoading] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [centerZoneId, setCenterZoneId] = useState<string>('');

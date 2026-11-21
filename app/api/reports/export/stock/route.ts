@@ -7,7 +7,7 @@ import { logger } from '@/lib/utils/logger';
  * GET /api/reports/export/stock
  * Stok raporunu Excel formatında export eder
  */
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
     const supabase = await createClient();
 

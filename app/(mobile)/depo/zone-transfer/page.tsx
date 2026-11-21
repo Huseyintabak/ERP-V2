@@ -76,7 +76,7 @@ interface ScannedProduct {
 
 export default function MobileZoneTransferPage() {
   const router = useRouter();
-  const [isLoading, setIsLoading] = useState(false);
+  const [, setIsLoading] = useState(false);
   const [scanResult, setScanResult] = useState<ScanResult | null>(null);
   const [showScanner, setShowScanner] = useState(true);
 

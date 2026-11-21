@@ -43,8 +43,6 @@ async function handleApprove(request: NextRequest, params: { id: string }) {
     }
 
     // No need for status in request body - approval always sets status to 'uretimde'
-    const body = await request.json().catch(() => ({}));
-    const notes = body.notes;
 
     // Approval always sets status to 'uretimde' (in production)
     const status = "uretimde";

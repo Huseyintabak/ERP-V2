@@ -71,8 +71,6 @@ export function CustomerForm({ customer, onSuccess, onCancel }: CustomerFormProp
         const error = await response.json();
         throw new Error(error.error || 'Müşteri kaydedilemedi');
       }
-
-      const result = await response.json();
       toast.success(customer?.id ? 'Müşteri güncellendi' : 'Müşteri eklendi');
       onSuccess();
     } catch (error: unknown) {

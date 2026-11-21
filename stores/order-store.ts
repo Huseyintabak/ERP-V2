@@ -645,8 +645,6 @@ export const useOrderStore = create<OrderStore>()(
               throw new Error("Failed to complete production");
             }
 
-            const result = await response.json();
-
             // Update production plan
             get().actions.updateProductionPlan({
               ...get().productionPlans.find((p) => p.id === planId)!,

@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { loginSchema, type LoginFormData } from '@/types';
@@ -14,7 +13,6 @@ import { LogIn, Loader2 } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth-store';
 
 export default function LoginPage() {
-  const router = useRouter();
   const setUser = useAuthStore((state) => state.setUser);
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
