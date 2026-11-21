@@ -91,12 +91,22 @@ async function handleApi(request: NextRequest, pathname: string) {
 }
 
 /**
- * Relative Location ile yönlendirme (RFC 7231 geçerli).
- * Nginx arkasında `request.url` iç adresi (127.0.0.1:3000) taşıdığından mutlak URL
- * kullanmak kullanıcıyı localhost'a yönlendiriyordu.
+ * Nginx arkasında `request.url` iç adresi (127.0.0.1:3000) taşır; mutlak URL'yi ondan
+ * kurmak kullanıcıyı localhost'a yönlendiriyordu. Next'in middleware runtime'ı relative
+ * Location'ı da kabul etmiyor (new URL() ile parse ediyor), bu yüzden public origin'i
+ * Nginx'in ilettiği Host / X-Forwarded-Proto header'larından kuruyoruz.
  */
-function redirectTo(path: string): NextResponse {
-  return new NextResponse(null, { status: 307, headers: { Location: path } });
+function publicOrigin(request: NextRequest): string {
+  const host = request.headers.get('x-forwarded-host') || request.headers.get('host');
+  if (!host) return request.nextUrl.origin;
+  const proto =
+    request.headers.get('x-forwarded-proto')?.split(',')[0].trim() ||
+    request.nextUrl.protocol.replace(':', '');
+  return `${proto}://${host}`;
+}
+
+function redirectTo(request: NextRequest, path: string): NextResponse {
+  return NextResponse.redirect(new URL(path, publicOrigin(request)));
 }
 
 async function handlePage(request: NextRequest, pathname: string) {
@@ -107,13 +117,13 @@ async function handlePage(request: NextRequest, pathname: string) {
   const user = await verifyToken(request.cookies.get(AUTH_COOKIE)?.value);
   if (!user) {
     const loginPath = pathname.startsWith('/operator') ? '/operator-login' : '/login';
-    const response = redirectTo(loginPath);
+    const response = redirectTo(request, loginPath);
     response.cookies.delete(AUTH_COOKIE);
     return response;
   }
 
   if (!AI_ENABLED && AI_PAGE_PREFIXES.some((p) => pathname.startsWith(p))) {
-    return redirectTo('/dashboard');
+    return redirectTo(request, '/dashboard');
   }
 
   return NextResponse.next();
