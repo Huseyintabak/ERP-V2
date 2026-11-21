@@ -13,6 +13,8 @@ export interface SearchableSelectOption {
   description?: string;
   badge?: string;
   disabled?: boolean;
+  /** Aynı value'lu seçenekler için benzersiz React key */
+  key?: string;
 }
 
 interface SearchableSelectProps {

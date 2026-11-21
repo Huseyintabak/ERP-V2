@@ -4,7 +4,6 @@ import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { rawMaterialSchema, type RawMaterialFormData } from '@/types';
-import { useStockActions } from '@/stores/stock-store';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -43,7 +42,6 @@ export function RawMaterialForm({
   isLoading,
   isEdit = false,
 }: Props) {
-  const stockActions = useStockActions();
   const {
     register,
     handleSubmit,
@@ -87,47 +85,18 @@ export function RawMaterialForm({
         name: '',
         unit: 'adet',
         quantity: 0,
-        min_level: 10,
-        max_level: 100,
         critical_level: 5,
         unit_price: 0,
-        supplier: '',
         description: ''
       });
     }
   }, [open, initialData, reset]);
 
   const handleFormSubmit = async (data: RawMaterialFormData) => {
-    try {
-      // Optimistic update for new materials
-      if (!isEdit && initialData?.id) {
-        const tempMaterial = {
-          id: `temp-${Date.now()}`,
-          ...data,
-          quantity: data.quantity || 0,
-          min_level: data.min_level || 0,
-          max_level: data.max_level || 0,
-          critical_level: data.critical_level || 0,
-          unit_price: data.unit_price || 0,
-          supplier: data.supplier || '',
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        };
-        
-        stockActions.optimisticUpdateRawMaterial(initialData.id, tempMaterial);
-        toast.success('Hammadde güncelleniyor...');
-      }
-      
-      await onSubmit(data);
-      reset();
-    } catch (error) {
-      // Revert optimistic update on error
-      if (!isEdit && initialData?.id) {
-        stockActions.fetchRawMaterials();
-        toast.error('Güncelleme başarısız oldu, geri alınıyor...');
-      }
-      throw error;
-    }
+    // (Kaldırıldı: `!isEdit && initialData?.id` koşuluna bağlı optimistic update bloğu —
+    // koşul hiç sağlanmıyordu ve DB'de olmayan min_level/max_level/supplier alanlarını yazıyordu)
+    await onSubmit(data);
+    reset();
   };
 
   return (

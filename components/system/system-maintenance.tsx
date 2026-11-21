@@ -42,6 +42,7 @@ interface HealthMetrics {
   active_production_plans: number;
   recent_errors: number;
   timestamp: string;
+  last_check?: string;
 }
 
 export default function SystemMaintenance() {

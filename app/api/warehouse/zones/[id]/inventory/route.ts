@@ -3,6 +3,7 @@ import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { verifyJWT } from '@/lib/auth/jwt';
 
 import { logger } from '@/lib/utils/logger';
+import { relationOne } from '@/lib/utils/supabase-relation';
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -166,7 +167,7 @@ export async function GET(
           unit_price: product.sale_price // Map sale_price to unit_price
         } : null,
         latest_transfer_date: latestTransfer?.transfer_date || null,
-        latest_transfer_from: latestTransfer?.from_zone?.name || null
+        latest_transfer_from: relationOne(latestTransfer?.from_zone)?.name || null
       };
     });
 

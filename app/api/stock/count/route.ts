@@ -3,6 +3,8 @@ import { createClient } from '@/lib/supabase/server';
 import { z } from 'zod';
 
 import { logger } from '@/lib/utils/logger';
+import { AgentOrchestrator } from '@/lib/ai/orchestrator';
+import { agentLogger } from '@/lib/ai/utils/logger';
 // Validation schema
 const inventoryCountSchema = z.object({
   materialType: z.enum(['raw', 'semi', 'finished']),

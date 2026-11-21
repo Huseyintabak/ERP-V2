@@ -49,7 +49,9 @@ interface FinishedProduct {
 interface ZoneInventory {
   id: string;
   zone_id: string;
-  product_id: string;
+  // zone_inventories kaydı material_id taşır; bazı API cevapları product_id olarak döner
+  product_id?: string;
+  material_id?: string;
   quantity: number;
   product: FinishedProduct;
 }

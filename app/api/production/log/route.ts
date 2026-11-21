@@ -168,7 +168,7 @@ export async function POST(request: NextRequest) {
             totalProduced: totalProduced,
             barcodeScanned: barcode_scanned,
             operatorId: operatorId,
-            bomSnapshot: bomSnapshot,
+            // bomSnapshot burada henüz yüklenmedi (aşağıda sorgulanıyor); önceden TDZ ReferenceError'du
           },
           urgency: 'high',
           severity: 'high',

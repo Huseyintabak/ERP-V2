@@ -153,7 +153,7 @@ export async function POST(request: NextRequest) {
 
     // 7. Operatör Status Güncelle (accept/pause/resume için)
     if (['accept', 'pause', 'resume'].includes(action)) {
-      let operatorStatus: string;
+      let operatorStatus: string | undefined;
       
       if (action === 'accept' || action === 'resume') {
         operatorStatus = 'active';

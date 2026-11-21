@@ -124,7 +124,7 @@ export async function GET(request: NextRequest) {
     let averageWorkTime = 0;
     if (completedPlans.length > 0) {
       const totalWorkTime = completedPlans.reduce((sum, plan) => {
-        const duration = new Date(plan.completed_at) - new Date(plan.started_at);
+        const duration = new Date(plan.completed_at).getTime() - new Date(plan.started_at).getTime();
         return sum + duration;
       }, 0);
       averageWorkTime = (totalWorkTime / completedPlans.length) / (1000 * 60 * 60); // Convert to hours

@@ -202,7 +202,7 @@ async function handleApprove(request: NextRequest, params: { id: string }) {
             );
             logger.warn(
               "🧠 Agent reasoning:",
-              agentResult.protocolResult?.decision?.reasoning,
+              agentResult.protocolResult?.decisions?.[0]?.reasoning,
             );
 
             // Agent reddetse bile yönetici override edebilir (graceful degradation)
@@ -236,7 +236,7 @@ async function handleApprove(request: NextRequest, params: { id: string }) {
             logger.log("✅ AI Agent sipariş onayını onayladı");
             logger.log(
               "📊 Agent reasoning:",
-              agentResult.protocolResult?.decision?.reasoning,
+              agentResult.protocolResult?.decisions?.[0]?.reasoning,
             );
           }
 

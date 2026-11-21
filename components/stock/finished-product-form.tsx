@@ -21,7 +21,7 @@ interface Props {
   open: boolean;
   onClose: () => void;
   onSubmit: (data: FinishedProductFormData) => Promise<void>;
-  initialData?: Partial<FinishedProductFormData>;
+  initialData?: Partial<FinishedProductFormData> & { id?: string };
   isLoading?: boolean;
 }
 

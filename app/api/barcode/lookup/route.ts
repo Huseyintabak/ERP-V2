@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/server";
 import { verifyJWT } from "@/lib/auth/jwt";
 import { logger } from "@/lib/utils/logger";
+import { relationOne } from '@/lib/utils/supabase-relation';
 
 export async function GET(request: NextRequest) {
   try {
@@ -115,7 +116,11 @@ export async function GET(request: NextRequest) {
       .limit(5);
 
     // Get zone inventory if finished product
-    let zoneInventory = null;
+    type ZoneInventoryRow = {
+      quantity: number;
+      zone: { id: string; name: string; zone_type: string } | null;
+    };
+    let zoneInventory: ZoneInventoryRow[] | null = null;
     if (materialType === "finished") {
       // Get zone inventories from zone_inventories table
       const { data: zones } = await supabase
@@ -129,7 +134,8 @@ export async function GET(request: NextRequest) {
         .eq("material_type", "finished")
         .eq("material_id", product.id);
 
-      zoneInventory = zones || [];
+      // zone çoka-bir join → runtime'da tek obje
+      zoneInventory = (zones || []).map((z) => ({ quantity: z.quantity, zone: relationOne(z.zone) }));
 
       // Also get center zone inventory from finished_products table
       // Find the center zone

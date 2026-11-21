@@ -3,6 +3,7 @@ import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { verifyJWT } from '@/lib/auth/jwt';
 
 import { logger } from '@/lib/utils/logger';
+import { relationOne } from '@/lib/utils/supabase-relation';
 export async function POST(request: NextRequest) {
   try {
     // Auth check
@@ -63,7 +64,7 @@ export async function POST(request: NextRequest) {
     }
 
     logger.log('📦 Order found:', {
-      id: order.id,
+      id: order_id,
       assigned_operator_id: order.assigned_operator_id,
       current_operator_id: operatorId,
       status: order.status,
@@ -105,7 +106,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Barkod doğrulaması
-    const product = order.semi_finished_products;
+    const product = relationOne(order.semi_finished_products);
     if (product) {
       const expectedIdentifier = product.barcode || product.code;
       if (barcode_scanned.trim() !== expectedIdentifier) {

@@ -374,7 +374,12 @@ export async function GET(
 
         // Silinmiş malzeme için material null gelebilir; UI'da .name okunmasın diye her zaman obje döndür
         const materialPayload = material
-          ? { ...material, unit_price: material.unit_price ?? 0, unit_cost: material.unit_cost ?? 0 }
+          ? {
+              ...material,
+              // material raw/semi/finished tablolarından gelir; fiyat alanı tabloya göre değişir
+              unit_price: ('unit_price' in material ? material.unit_price : undefined) ?? 0,
+              unit_cost: ('unit_cost' in material ? material.unit_cost : undefined) ?? 0,
+            }
           : {
               id: record.material_id,
               name: 'Silinmiş / Bilinmeyen Malzeme',

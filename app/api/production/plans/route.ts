@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
 import { logger } from '@/lib/utils/logger';
+import { relationOne } from '@/lib/utils/supabase-relation';
 // GET - List Production Plans
 export async function GET(request: NextRequest) {
   try {
@@ -97,7 +98,7 @@ export async function GET(request: NextRequest) {
               plan.operator = {
                 id: operator.id,
                 series: operator.series,
-                name: operator.user?.name || '',
+                name: relationOne(operator.user)?.name || '',
                 user: operator.user
               };
             }

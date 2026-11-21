@@ -3,6 +3,7 @@ import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { verifyJWT } from '@/lib/auth/jwt';
 
 import { logger } from '@/lib/utils/logger';
+import { relationOne } from '@/lib/utils/supabase-relation';
 interface TransferItem {
   productId: string;
   quantity: number;
@@ -111,8 +112,8 @@ export async function POST(request: NextRequest) {
           availableQuantity = sourceInventory?.quantity || 0;
           return {
             productId: item.productId,
-            productName: sourceInventory?.product?.name,
-            productCode: sourceInventory?.product?.code,
+            productName: relationOne(sourceInventory?.product)?.name,
+            productCode: relationOne(sourceInventory?.product)?.code,
             availableQuantity,
             requestedQuantity: item.quantity,
             hasEnough: availableQuantity >= item.quantity
