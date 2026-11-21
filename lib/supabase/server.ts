@@ -44,11 +44,11 @@ export async function createClient() {
 // Service role için (admin işlemleri)
 // Service role key için @supabase/supabase-js kullan (cookie handling gerekmez)
 export function createAdminClient() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseUrl = getServerSupabaseUrl();
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   if (!supabaseUrl) {
-    throw new Error('NEXT_PUBLIC_SUPABASE_URL is not set');
+    throw new Error('SUPABASE_INTERNAL_URL / NEXT_PUBLIC_SUPABASE_URL is not set');
   }
 
   if (!serviceRoleKey) {
