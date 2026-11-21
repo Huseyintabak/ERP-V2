@@ -110,7 +110,7 @@ export async function GET(request: NextRequest) {
       Promise.all([
         supabase.from('raw_materials').select('code, name, quantity, unit_price'),
         supabase.from('semi_finished_products').select('quantity, unit_cost'),
-        supabase.from('finished_products').select('quantity, sale_price'),
+        supabase.from('finished_products').select('quantity, cost_price'),
       ]),
       
       // 12. Stock age analysis
@@ -164,8 +164,10 @@ export async function GET(request: NextRequest) {
       );
     }
     if (stockValue[2].data) {
-      totalStockValue += stockValue[2].data.reduce((sum, item) => 
-        sum + (item.quantity * (item.sale_price || 0)), 0
+      // Stok değeri MALİYETLE hesaplanır (ana dashboard ile aynı kural): cost_price, yoksa 0.
+      // Önceden sale_price kullanılıyordu → depo ekranı stok değerini satış fiyatından gösteriyordu.
+      totalStockValue += stockValue[2].data.reduce((sum, item) =>
+        sum + (item.quantity || 0) * (item.cost_price || 0), 0
       );
     }
 
