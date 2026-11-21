@@ -3,6 +3,12 @@ import { createAdminClient } from '@/lib/supabase/server';
 import { comparePassword } from '@/lib/auth/password';
 import { signJWT } from '@/lib/auth/jwt';
 import { logger } from '@/lib/utils/logger';
+import {
+  getLoginBlockSeconds,
+  recordLoginFailure,
+  clearLoginFailures,
+  getClientIp,
+} from '@/lib/auth/rate-limit';
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,6 +21,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: 'Email ve şifre gerekli' },
         { status: 400 }
+      );
+    }
+
+    // Brute-force koruması (IP + email bazlı)
+    const rateKey = `${getClientIp(request.headers)}|${String(email).toLowerCase()}`;
+    const blockedFor = getLoginBlockSeconds(rateKey);
+    if (blockedFor > 0) {
+      return NextResponse.json(
+        { error: `Çok fazla başarısız deneme. ${Math.ceil(blockedFor / 60)} dakika sonra tekrar deneyin.` },
+        { status: 429, headers: { 'Retry-After': String(blockedFor) } }
       );
     }
 
@@ -69,6 +85,7 @@ export async function POST(request: NextRequest) {
       });
 
       // Don't reveal if user exists or not for security
+      recordLoginFailure(rateKey);
       return NextResponse.json(
         { error: 'Geçersiz email veya şifre' },
         { status: 401 }
@@ -79,6 +96,7 @@ export async function POST(request: NextRequest) {
 
     if (!user) {
       logger.log('❌ User not found (null)');
+      recordLoginFailure(rateKey);
       return NextResponse.json(
         { error: 'Geçersiz email veya şifre' },
         { status: 401 }
@@ -111,6 +129,7 @@ export async function POST(request: NextRequest) {
 
     if (!isPasswordValid) {
       logger.log('❌ Invalid password');
+      recordLoginFailure(rateKey);
       return NextResponse.json(
         { error: 'Geçersiz email veya şifre' },
         { status: 401 }
@@ -118,6 +137,7 @@ export async function POST(request: NextRequest) {
     }
 
     logger.log('✅ Password is valid');
+    clearLoginFailures(rateKey);
 
     // JWT oluştur
     let token: string;
@@ -163,7 +183,6 @@ export async function POST(request: NextRequest) {
         role: user.role,
       },
       redirectUrl,
-      token,
     });
 
     // Set cookie with proper settings
