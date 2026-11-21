@@ -445,41 +445,9 @@ async function handleApprove(request: NextRequest, params: { id: string }) {
 
           logger.log("🔧 BOM items:", bomItems.length);
 
-          // OPTIMIZATION: Batch create BOM snapshots
-          logger.log("📸 Creating BOM snapshots for plan:", plan.id);
-
-          const snapshotRecords = bomItems
-            .map((bomItem: any) => {
-              const material = materialMap.get(bomItem.material_id);
-              if (!material) {
-                logger.warn(
-                  `⚠️ Material not found for snapshot: ${bomItem.material_id}`,
-                );
-                return null;
-              }
-
-              return {
-                plan_id: plan.id,
-                material_type: bomItem.material_type,
-                material_id: bomItem.material_id,
-                material_code: material.code,
-                material_name: material.name,
-                quantity_needed: bomItem.quantity_needed,
-              };
-            })
-            .filter((record: any) => record !== null);
-
-          if (snapshotRecords.length > 0) {
-            const { error: snapshotError } = await supabase
-              .from("production_plan_bom_snapshot")
-              .insert(snapshotRecords);
-
-            if (snapshotError) {
-              logger.error("❌ Error creating BOM snapshots:", snapshotError);
-            } else {
-              logger.log(`✅ Created ${snapshotRecords.length} BOM snapshots`);
-            }
-          }
+          // BOM snapshot'ı production_plans AFTER INSERT trigger'ı (create_bom_snapshot) oluşturur.
+          // Burada ikinci kez yazılması snapshot'ı ikiye katlıyor ve üretimde hammaddeler
+          // iki kat tüketiliyordu (Ekim 2025 – Ocak 2026 arası 634 plan etkilendi).
 
           // OPTIMIZATION: Batch reserve materials
           logger.log("🔒 Reserving materials for plan:", plan.id);
