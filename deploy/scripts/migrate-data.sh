@@ -66,6 +66,19 @@ pg pg_dump "${SRC_URL}" \
   --file="${DUMP_FILE}"
 ls -lh "${DUMP_FILE}"
 
+log "auth.jwt() hazırlanıyor (sade stack'te GoTrue yok; bazı policy'ler bunu kullanıyor)"
+docker exec -i supabase-db psql -U supabase_admin -d postgres -v ON_ERROR_STOP=1 -q <<'SQL'
+create or replace function auth.jwt() returns jsonb
+  language sql stable
+as $$
+  select coalesce(
+    nullif(current_setting('request.jwt.claim', true), ''),
+    nullif(current_setting('request.jwt.claims', true), '')
+  )::jsonb
+$$;
+grant execute on function auth.jwt() to anon, authenticated, service_role, postgres;
+SQL
+
 log "Restore ediliyor (log: ${RESTORE_LOG})"
 set +e
 pg pg_restore --dbname="${TARGET_URL}" --no-owner --no-privileges --role=postgres "${DUMP_FILE}" \
