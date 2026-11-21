@@ -25,12 +25,13 @@ export async function GET(request: NextRequest) {
         operator:operators(series, user:users(name))
       `);
 
+    // production_plans'ta start_date/end_date yok; tarih aralığı plan oluşturma tarihine uygulanır
     if (startDate) {
-      query = query.gte('start_date', startDate);
+      query = query.gte('created_at', startDate);
     }
 
     if (endDate) {
-      query = query.lte('end_date', endDate);
+      query = query.lte('created_at', `${endDate}T23:59:59`);
     }
 
     if (status) {
@@ -53,7 +54,7 @@ export async function GET(request: NextRequest) {
       'Devam Ediyor': productionData?.filter(p => p.status === 'devam_ediyor').length || 0,
       'Tamamlandı': productionData?.filter(p => p.status === 'tamamlandi').length || 0,
       'İptal': productionData?.filter(p => p.status === 'iptal').length || 0,
-      'Toplam Hedef': productionData?.reduce((sum, p) => sum + parseFloat(p.target_quantity || '0'), 0) || 0,
+      'Toplam Hedef': productionData?.reduce((sum, p) => sum + parseFloat(p.planned_quantity || '0'), 0) || 0,
       'Toplam Üretilen': productionData?.reduce((sum, p) => sum + parseFloat(p.produced_quantity || '0'), 0) || 0,
       'Rapor Tarihi': new Date().toLocaleString('tr-TR')
     };
@@ -69,9 +70,9 @@ export async function GET(request: NextRequest) {
       'Müşteri': p.order?.customer?.name || '-',
       'Ürün': p.finished_product?.name || '-',
       'Ürün Kodu': p.finished_product?.code || '-',
-      'Hedef Miktar': parseFloat(p.target_quantity || '0'),
+      'Hedef Miktar': parseFloat(p.planned_quantity || '0'),
       'Üretilen': parseFloat(p.produced_quantity || '0'),
-      'İlerleme %': ((parseFloat(p.produced_quantity || '0') / parseFloat(p.target_quantity || '1')) * 100).toFixed(2),
+      'İlerleme %': ((parseFloat(p.produced_quantity || '0') / parseFloat(p.planned_quantity || '1')) * 100).toFixed(2),
       'Başlangıç': new Date(p.start_date).toLocaleDateString('tr-TR'),
       'Bitiş': new Date(p.end_date).toLocaleDateString('tr-TR'),
       'Durum': p.status,

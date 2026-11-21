@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
           id,
           order_id,
           product_id,
-          target_quantity,
+          planned_quantity,
           produced_quantity,
           status
         )

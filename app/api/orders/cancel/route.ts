@@ -28,11 +28,11 @@ export async function POST(request: NextRequest) {
       .from('orders')
       .select(`
         *,
-        production_plans!inner(
+        production_plans(
           id,
           status,
           produced_quantity,
-          target_quantity
+          planned_quantity
         )
       `)
       .eq('id', orderId)
@@ -43,7 +43,9 @@ export async function POST(request: NextRequest) {
     }
 
     const order = orderData;
-    const plans = order.production_plans;
+    // target_quantity diye bir kolon yok (API çıktısındaki takma ad); seçilince sorgu 400 dönüyor ve
+    // her iptal "Order not found" oluyordu. !inner de kaldırıldı: planı olmayan sipariş de iptal edilebilir.
+    const plans: any[] = order.production_plans || [];
 
     // Check if user has permission to cancel
     const isAdmin = payload.role === 'yonetici' || payload.role === 'planlama';

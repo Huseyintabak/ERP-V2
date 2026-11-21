@@ -19,7 +19,7 @@ export async function GET(_request: NextRequest) {
         active_productions:production_plans!operators_id_fkey(
           id,
           status,
-          target_quantity,
+          planned_quantity,
           produced_quantity
         )
       `)
