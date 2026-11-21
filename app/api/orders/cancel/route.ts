@@ -49,6 +49,13 @@ export async function POST(request: NextRequest) {
     const isAdmin = payload.role === 'yonetici' || payload.role === 'planlama';
     const isOrderOwner = order.created_by === payload.userId;
 
+    // can_cancel_order / can_cancel_plan DB fonksiyonlarıyla aynı kural: yönetici/planlama her
+    // kaydı, diğer roller sadece kendi siparişlerini iptal edebilir. (Önceden isOrderOwner
+    // hesaplanıp kullanılmıyordu → her oturum sahibi başkasının kaydını iptal edebiliyordu.)
+    if (!isAdmin && !isOrderOwner) {
+      return NextResponse.json({ error: 'Sadece kendi siparişlerinizi iptal edebilirsiniz' }, { status: 403 });
+    }
+
     // Check order status
     if (order.status === 'tamamlandi') {
       return NextResponse.json({ 
