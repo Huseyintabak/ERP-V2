@@ -3,7 +3,7 @@ import { subscribeWithSelector } from 'zustand/middleware';
 
 export interface Notification {
   id: string;
-  type: 'critical_stock' | 'production_delay' | 'order_update';
+  type: 'critical_stock' | 'production_delay' | 'order_update' | 'ai_approval';
   title: string;
   message: string;
   material_type?: 'raw' | 'semi' | 'finished';

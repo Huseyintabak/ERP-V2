@@ -50,6 +50,7 @@ interface BOMEntry {
   material_type: 'raw' | 'semi';
   material_id: string;
   quantity_needed: number;
+  // Silinmiş malzemede API material'ı null döndürebilir; düz alanlar yedek olarak kullanılır
   material: {
     id: string;
     name: string;
@@ -57,7 +58,10 @@ interface BOMEntry {
     unit: string;
     unit_price?: number;
     unit_cost?: number;
-  };
+  } | null;
+  material_name?: string;
+  material_code?: string;
+  unit?: string;
 }
 
 interface BOMData {
@@ -1129,7 +1133,7 @@ export default function BOMPage() {
                       <div className="text-lg font-bold text-green-600">
                         {(() => {
                           const tl = bomData.materials.reduce((total, entry) => {
-                            const unitPrice = entry.material.unit_price || entry.material.unit_cost || 0;
+                            const unitPrice = entry.material?.unit_price || entry.material?.unit_cost || 0;
                             return total + (unitPrice * entry.quantity_needed);
                           }, 0);
                           return `₺${tl.toFixed(2)}`;
@@ -1139,7 +1143,7 @@ export default function BOMPage() {
                         <div className="text-xs text-muted-foreground">
                           {(() => {
                             const tl = bomData.materials.reduce((total, entry) => {
-                              const unitPrice = entry.material.unit_price || entry.material.unit_cost || 0;
+                              const unitPrice = entry.material?.unit_price || entry.material?.unit_cost || 0;
                               return total + (unitPrice * entry.quantity_needed);
                             }, 0);
                             const usd = tl / usdRate;

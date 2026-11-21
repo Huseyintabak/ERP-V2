@@ -123,7 +123,7 @@ export default function HammaddelerPage() {
           <CardTitle>Hammadde Listesi</CardTitle>
         </CardHeader>
         <CardContent>
-          {loading.rawMaterials ? (
+          {loading ? (
             <div className="flex justify-center py-8">
               <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
             </div>

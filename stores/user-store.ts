@@ -8,6 +8,7 @@ export interface User {
   role: 'yonetici' | 'planlama' | 'depo' | 'operator';
   is_active: boolean;
   created_at: string;
+  updated_at?: string;
   last_login_at?: string;
   operators?: {
     series: string;

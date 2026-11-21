@@ -24,7 +24,6 @@ import { QuickStockEntryDialog } from '@/components/stock/quick-stock-entry-dial
 import { InventoryCountDialog } from '@/components/stock/inventory-count-dialog';
 // import { useMemoryLeakDetector } from '@/lib/hooks/use-memory-leak-detector';
 // import { usePerformanceMonitor } from '@/lib/hooks/use-performance-monitor';
-// import { useStoreSync } from '@/lib/hooks/use-store-sync';
 
 interface DepoStats {
   // Stock Count KPIs
@@ -65,12 +64,6 @@ export default function DepoDashboard() {
   // Performance and memory monitoring - DISABLED FOR NOW
   // const memoryDetector = useMemoryLeakDetector('DepoDashboard');
   // const performanceMonitor = usePerformanceMonitor('DepoDashboard');
-  // const { syncStatus, manualSync, hasSyncErrors, getSyncHealthScore } = useStoreSync({
-  //   autoSync: true,
-  //   syncInterval: 30000,
-  //   retryAttempts: 3,
-  //   retryDelay: 1000,
-  // });
 
   const [stats, setStats] = useState<DepoStats>({
     rawMaterials: 0,

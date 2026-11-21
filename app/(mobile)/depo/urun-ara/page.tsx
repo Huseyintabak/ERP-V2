@@ -260,7 +260,7 @@ export default function MobileProductSearchPage() {
                       {scanResult.product.quantity}
                     </p>
                     <p className="text-xs text-gray-600 mt-1">
-                      {scanResult.product.unit || 'adet'}
+                      {scanResult.product?.unit || 'adet'}
                     </p>
                   </div>
                   <div className="p-3 bg-gradient-to-br from-amber-50 to-amber-100 rounded-lg border border-amber-200">
@@ -272,7 +272,7 @@ export default function MobileProductSearchPage() {
                       {scanResult.product.critical_level}
                     </p>
                     <p className="text-xs text-gray-600 mt-1">
-                      {scanResult.product.unit || 'adet'}
+                      {scanResult.product?.unit || 'adet'}
                     </p>
                   </div>
                 </div>
@@ -308,7 +308,7 @@ export default function MobileProductSearchPage() {
                     Zone Dağılımı
                   </CardTitle>
                   <p className="text-sm text-gray-600 mt-1">
-                    Toplam {totalZoneInventory} {scanResult.product.unit || 'adet'} / {scanResult.zoneInventory.length} zone
+                    Toplam {totalZoneInventory} {scanResult.product?.unit || 'adet'} / {scanResult.zoneInventory.length} zone
                   </p>
                 </CardHeader>
                 <CardContent className="p-4">
@@ -332,7 +332,7 @@ export default function MobileProductSearchPage() {
                             {zi.quantity}
                           </Badge>
                           <span className="text-xs text-gray-500 mt-0.5">
-                            {scanResult.product.unit || 'adet'}
+                            {scanResult.product?.unit || 'adet'}
                           </span>
                         </div>
                       </div>
@@ -385,7 +385,7 @@ export default function MobileProductSearchPage() {
                                 : 'border-blue-500 text-blue-700'
                             }`}
                           >
-                            {movement.quantity > 0 ? '+' : ''}{movement.quantity} {scanResult.product.unit || 'adet'}
+                            {movement.quantity > 0 ? '+' : ''}{movement.quantity} {scanResult.product?.unit || 'adet'}
                           </Badge>
                         </div>
                         {movement.description && (

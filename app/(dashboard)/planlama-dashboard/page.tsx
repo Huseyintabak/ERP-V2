@@ -23,7 +23,6 @@ import { useRealtimeUnified } from '@/lib/hooks/use-realtime-unified';
 import { useAuthStore } from '@/stores/auth-store';
 // import { useMemoryLeakDetector } from '@/lib/hooks/use-memory-leak-detector';
 // import { usePerformanceMonitor } from '@/lib/hooks/use-performance-monitor';
-// import { useStoreSync } from '@/lib/hooks/use-store-sync';
 
 interface PlanlamaStats {
   // Planning KPIs
@@ -57,12 +56,6 @@ export default function PlanlamaDashboard() {
   // Performance and memory monitoring - DISABLED FOR NOW
   // const memoryDetector = useMemoryLeakDetector('PlanlamaDashboard');
   // const performanceMonitor = usePerformanceMonitor('PlanlamaDashboard');
-  // const { syncStatus, manualSync, hasSyncErrors, getSyncHealthScore } = useStoreSync({
-  //   autoSync: true,
-  //   syncInterval: 30000,
-  //   retryAttempts: 3,
-  //   retryDelay: 1000,
-  // });
 
   const [stats, setStats] = useState<PlanlamaStats>({
     pendingOrders: 0,

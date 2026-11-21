@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/client';
 import { useStockStore, type RawMaterial, type SemiFinishedProduct, type FinishedProduct, type StockMovement } from '@/stores/stock-store';
 import { useOrderStore, type Order, type ProductionPlan } from '@/stores/order-store';
 import { useDashboardStatsStore } from '@/stores/dashboard-stats-store';
-import { useNotificationStore } from '@/stores/notification-store';
+import { useNotificationStore, type Notification } from '@/stores/notification-store';
 import { useAuthStore } from '@/stores/auth-store';
 import { logger } from '@/lib/utils/logger';
 
@@ -472,7 +472,7 @@ export const useRealtimeStore = (handlers: RealtimeHandlers = {}) => {
         },
         (payload) => {
           logger.log('Notification added:', payload.new);
-          const notification = payload.new;
+          const notification = payload.new as Notification;
           if (addNotification) {
             addNotification(notification);
           }

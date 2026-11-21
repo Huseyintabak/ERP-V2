@@ -339,7 +339,8 @@ export function BulkOrderImportDialog({ onImportComplete }: BulkOrderImportDialo
 
         // Request body hazırla - ilk siparişten tarih ve öncelik bilgilerini al
         // delivery_date'i güvenli şekilde string'e çevir
-        let deliveryDate = firstOrder.delivery_date;
+        // Excel'den Date / sayı da gelebilir (tip string olsa da)
+        let deliveryDate: unknown = firstOrder.delivery_date;
         if (deliveryDate instanceof Date) {
           deliveryDate = deliveryDate.toISOString().split('T')[0];
         } else if (typeof deliveryDate === 'string') {

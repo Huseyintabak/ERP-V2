@@ -716,7 +716,7 @@ export const useDashboardStatsStore = create<DashboardStatsStore>()(
             
             const newStats = Object.fromEntries(
               roles.map((role, index) => [role, statsResults[index]])
-            ) as RoleBasedStats;
+            ) as unknown as RoleBasedStats;
             
             set((state) => ({
               stats: newStats,

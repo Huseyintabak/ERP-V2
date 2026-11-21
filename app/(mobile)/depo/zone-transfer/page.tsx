@@ -657,7 +657,7 @@ export default function MobileZoneTransferPage() {
                 <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
                   <span className="text-sm text-gray-600">Toplam Stok</span>
                   <span className="text-lg font-bold text-blue-700">
-                    {scanResult.product.quantity} {scanResult.product.unit || 'adet'}
+                    {scanResult.product.quantity} {scanResult.product?.unit || 'adet'}
                   </span>
                 </div>
 
@@ -679,7 +679,7 @@ export default function MobileZoneTransferPage() {
                             <span className="text-sm font-medium">{zi.zone.name}</span>
                           </div>
                           <Badge variant="secondary" className="text-xs">
-                            {zi.quantity} {scanResult.product.unit || 'adet'}
+                            {zi.quantity} {scanResult.product?.unit || 'adet'}
                           </Badge>
                         </div>
                       ))}
@@ -760,7 +760,7 @@ export default function MobileZoneTransferPage() {
                   Miktar
                   {selectedSourceZone && (
                     <span className="text-xs text-gray-500 ml-2">
-                      (Mevcut: {getAvailableQuantity()} {scanResult.product.unit || 'adet'})
+                      (Mevcut: {getAvailableQuantity()} {scanResult.product?.unit || 'adet'})
                     </span>
                   )}
                 </Label>

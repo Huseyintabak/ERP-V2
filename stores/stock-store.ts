@@ -1,50 +1,14 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import { useAuthStore } from './auth-store';
+// Tipler DB şemasıyla uyumlu tek kaynaktan (önceki yerel tanımlar DB'de olmayan
+// min_level/max_level/supplier alanlarını ve yanlış fiyat alanlarını içeriyordu)
+import type { RawMaterial, SemiFinishedProduct, FinishedProduct } from '@/types';
+export type { RawMaterial, SemiFinishedProduct, FinishedProduct };
 
 // Types
-export interface RawMaterial {
-  id: string;
-  name: string;
-  code: string;
-  unit: string;
-  quantity: number;
-  min_level: number;
-  max_level: number;
-  critical_level: number;
-  unit_price: number;
-  supplier: string;
-  created_at: string;
-  updated_at: string;
-}
 
-export interface SemiFinishedProduct {
-  id: string;
-  name: string;
-  code: string;
-  unit: string;
-  quantity: number;
-  min_level: number;
-  max_level: number;
-  critical_level: number;
-  unit_price: number;
-  created_at: string;
-  updated_at: string;
-}
 
-export interface FinishedProduct {
-  id: string;
-  name: string;
-  code: string;
-  unit: string;
-  quantity: number;
-  min_level: number;
-  max_level: number;
-  critical_level: number;
-  unit_price: number;
-  created_at: string;
-  updated_at: string;
-}
 
 export interface StockMovement {
   id: string;

@@ -34,7 +34,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 // import { useMemoryLeakDetector } from '@/lib/hooks/use-memory-leak-detector';
 // import { usePerformanceMonitor } from '@/lib/hooks/use-performance-monitor';
-// import { useStoreSync } from '@/lib/hooks/use-store-sync';
 
 export default function YoneticiDashboard() {
   const router = useRouter();
@@ -87,12 +86,6 @@ export default function YoneticiDashboard() {
   // Performance and memory monitoring - DISABLED FOR NOW
   // const memoryDetector = useMemoryLeakDetector('YoneticiDashboard');
   // const performanceMonitor = usePerformanceMonitor('YoneticiDashboard');
-  // const { syncStatus, manualSync, hasSyncErrors, getSyncHealthScore } = useStoreSync({
-  //   autoSync: true,
-  //   syncInterval: 30000,
-  //   retryAttempts: 3,
-  //   retryDelay: 1000,
-  // });
 
   // Real-time subscriptions for yönetici role
   useRoleBasedRealtime('yonetici');
@@ -148,6 +141,7 @@ export default function YoneticiDashboard() {
     dailyRevenue: 0,
     totalOrders: 0,
     averageOrderValue: 0,
+    monthlyGrowth: 0,
     totalStockValue: 0,
     stockValueBreakdown: {
       rawMaterials: { count: 0, quantity: 0, value: 0 },

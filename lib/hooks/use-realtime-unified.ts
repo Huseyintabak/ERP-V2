@@ -226,11 +226,9 @@ export const useRealtimeUnified = (
           config: {
             broadcast: { self: false },
             presence: { key: '' },
-            realtime: {
-              heartbeat_interval_ms: heartbeatInterval,
-              reconnect_after_ms: reconnectAfter,
-              events_per_second: eventsPerSecond
-            }
+            // Not: heartbeat / reconnect / eventsPerSecond kanal seviyesinde desteklenmiyor
+            // (supabase-js bu alanı yok sayıyordu); bunlar client oluşturulurken verilir
+            // (lib/supabase/client.ts → realtime.params).
           }
         })
         .on('postgres_changes', {

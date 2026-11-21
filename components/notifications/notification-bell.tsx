@@ -86,7 +86,9 @@ export default function NotificationBell() {
       logger.log('🔔 Bell: Notification deleted:', deletedNotification);
       refreshNotifications();
     },
-    () => refreshNotifications(), // fallback fetch
+    async () => {
+      refreshNotifications();
+    }, // fallback fetch
     {
       maxRetries: 3,
       retryDelay: 2000,

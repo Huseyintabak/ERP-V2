@@ -241,7 +241,7 @@ export function ProductSelector({
                             {(product.barcode.startsWith('FIN-') ||
                               product.barcode.startsWith('SFP-') ||
                               product.barcode.startsWith('RAW-')) && (
-                              <Sparkles className="w-3 h-3 text-yellow-500" title="Otomatik oluşturulmuş barkod" />
+                              <span title="Otomatik oluşturulmuş barkod"><Sparkles className="w-3 h-3 text-yellow-500" aria-hidden="true" /></span>
                             )}
                           </div>
                         </div>
