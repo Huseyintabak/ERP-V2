@@ -5,8 +5,9 @@ const nextConfig: NextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
+  // Tip hataları build'i durdurur (2026-11: 527 hata temizlendi; tekrar birikmesin)
   typescript: {
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: false,
   },
   // Source map ayarları - production'da devre dışı
   productionBrowserSourceMaps: false,
