@@ -5,8 +5,9 @@ import { verifyJWT } from '@/lib/auth/jwt';
 import { logger } from '@/lib/utils/logger';
 export async function GET(
   request: NextRequest,
-  { params }: { params: { planId: string } }
+  { params: paramsPromise }: { params: Promise<{ planId: string }> }
 ) {
+  const params = await paramsPromise;
   try {
     // Auth check
     const token = request.cookies.get('thunder_token')?.value;

@@ -3,8 +3,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/utils/logger';
 export async function GET(
   request: NextRequest,
-  { params }: { params: { orderId: string } }
+  { params: paramsPromise }: { params: Promise<{ orderId: string }> }
 ) {
+  const params = await paramsPromise;
   try {
     logger.log('🔍 Simple Semi BOM API called');
     

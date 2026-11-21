@@ -41,8 +41,9 @@ const companyUpdateSchema = z.object({
 // GET - Get company details
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params: paramsPromise }: { params: Promise<{ id: string }> }
 ) {
+  const params = await paramsPromise;
   try {
     const token = request.cookies.get('thunder_token')?.value;
     if (!token) {
@@ -100,8 +101,9 @@ export async function GET(
 // PUT - Update company
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params: paramsPromise }: { params: Promise<{ id: string }> }
 ) {
+  const params = await paramsPromise;
   try {
     const token = request.cookies.get('thunder_token')?.value;
     if (!token) {
@@ -164,8 +166,9 @@ export async function PUT(
 // DELETE - Delete company (Super Admin only)
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params: paramsPromise }: { params: Promise<{ id: string }> }
 ) {
+  const params = await paramsPromise;
   try {
     const token = request.cookies.get('thunder_token')?.value;
     if (!token) {

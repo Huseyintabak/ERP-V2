@@ -8,16 +8,16 @@ import { logger } from "@/lib/utils/logger";
 // Support both POST and PATCH for flexibility
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
-  return handleApprove(request, params);
+  return handleApprove(request, await params);
 }
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
-  return handleApprove(request, params);
+  return handleApprove(request, await params);
 }
 
 async function handleApprove(request: NextRequest, params: { id: string }) {

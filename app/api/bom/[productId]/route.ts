@@ -6,8 +6,9 @@ import { logger } from '@/lib/utils/logger';
 // POST - Save BOM for a product
 export async function POST(
   request: NextRequest,
-  { params }: { params: { productId: string } }
+  { params: paramsPromise }: { params: Promise<{ productId: string }> }
 ) {
+  const params = await paramsPromise;
   try {
     const { productId } = params;
     const userId = request.headers.get('x-user-id');
@@ -217,8 +218,9 @@ export async function POST(
 // GET - Get BOM for a finished product
 export async function GET(
   request: NextRequest,
-  { params }: { params: { productId: string } }
+  { params: paramsPromise }: { params: Promise<{ productId: string }> }
 ) {
+  const params = await paramsPromise;
   try {
     const { productId } = params;
     const supabase = await createClient();

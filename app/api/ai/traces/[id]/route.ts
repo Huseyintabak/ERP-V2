@@ -10,8 +10,9 @@ import { getTraceTracker } from '@/lib/ai/utils/trace-tracker';
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params: paramsPromise }: { params: Promise<{ id: string }> }
 ) {
+  const params = await paramsPromise;
   try {
     const token = request.cookies.get('thunder_token')?.value;
     if (!token) {

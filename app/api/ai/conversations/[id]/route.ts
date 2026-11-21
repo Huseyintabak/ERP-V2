@@ -10,8 +10,9 @@ import { logger } from '@/lib/utils/logger';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params: paramsPromise }: { params: Promise<{ id: string }> }
 ) {
+  const params = await paramsPromise;
   try {
     // Authentication check
     const token = request.cookies.get('thunder_token')?.value;

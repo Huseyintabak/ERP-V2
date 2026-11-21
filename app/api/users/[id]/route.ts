@@ -16,8 +16,9 @@ const userUpdateSchema = z.object({
 // GET - Get specific user
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params: paramsPromise }: { params: Promise<{ id: string }> }
 ) {
+  const params = await paramsPromise;
   try {
     const { id } = params;
     const token = request.cookies.get('thunder_token')?.value;
@@ -73,8 +74,9 @@ export async function GET(
 // PUT - Update user
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params: paramsPromise }: { params: Promise<{ id: string }> }
 ) {
+  const params = await paramsPromise;
   try {
     const { id } = params;
     const token = request.cookies.get('thunder_token')?.value;
@@ -170,8 +172,9 @@ export async function PUT(
 // DELETE - Delete user (admin only)
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params: paramsPromise }: { params: Promise<{ id: string }> }
 ) {
+  const params = await paramsPromise;
   try {
     const { id } = params;
     const token = request.cookies.get('thunder_token')?.value;

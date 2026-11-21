@@ -8,8 +8,9 @@ import { logger } from '@/lib/utils/logger';
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { productId: string } }
+  { params: paramsPromise }: { params: Promise<{ productId: string }> }
 ) {
+  const params = await paramsPromise;
   try {
     const { productId } = params;
 

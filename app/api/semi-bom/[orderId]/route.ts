@@ -4,8 +4,9 @@ import { createClient } from '@/lib/supabase/server';
 import { logger } from '@/lib/utils/logger';
 export async function GET(
   request: NextRequest,
-  { params }: { params: { orderId: string } }
+  { params: paramsPromise }: { params: Promise<{ orderId: string }> }
 ) {
+  const params = await paramsPromise;
   try {
     logger.log('🔍 Real Semi BOM API called');
     
