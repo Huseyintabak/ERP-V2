@@ -131,6 +131,9 @@ services:
       KONG_PLUGINS: request-transformer,cors,key-auth,acl
       KONG_NGINX_PROXY_PROXY_BUFFER_SIZE: 160k
       KONG_NGINX_PROXY_PROXY_BUFFERS: 64 160k
+      # Uzun `.in(...)` filtreleri (örn. 249 UUID ≈ 9 KB) varsayılan 8 KB istek satırını aşıp
+      # 414 alıyordu (BOM export'ta tüm ürün kodları boş çıkıyordu). Supabase Cloud ile uyumlu.
+      KONG_NGINX_PROXY_LARGE_CLIENT_HEADER_BUFFERS: 4 64k
       SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY}
       SUPABASE_SERVICE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
     # kong.yml içindeki $SUPABASE_* değişkenlerini doldurup başlat
