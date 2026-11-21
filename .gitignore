@@ -56,3 +56,6 @@ public/swe-worker-*.js
 
 # one-off script outputs
 missing-stock-movements.json
+
+# Claude Code MCP sunucu ayarları (kişisel, token içerebilir)
+.mcp.json
