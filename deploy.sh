@@ -35,7 +35,9 @@ NODE_OPTIONS="--max-old-space-size=2048" npm run build
 
 log "PM2 reload"
 if pm2 describe thunder-erp >/dev/null 2>&1; then
-  pm2 reload ecosystem.config.js --update-env
+  # Sadece web uygulaması; kur cron'u (exchange-rate-cron) reload'da tetiklenip
+  # yeniden başlayan uygulamaya istek atıyordu (HTTP 000). Cron kendi zamanında çalışır.
+  pm2 reload ecosystem.config.js --only thunder-erp --update-env
 else
   pm2 start ecosystem.config.js
 fi

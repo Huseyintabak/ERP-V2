@@ -20,14 +20,18 @@ CRON_SECRET="${CRON_SECRET:-}"
 
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] Dolar kuru güncelleniyor: ${ENDPOINT}"
 
-if [ -n "$CRON_SECRET" ]; then
-  RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "${ENDPOINT}" \
-    -H "Authorization: Bearer ${CRON_SECRET}" \
+# Uygulama yeniden başlıyorsa (deploy / reboot) bağlantı kurulamaz (HTTP 000) → birkaç kez dene
+AUTH_HEADER=()
+[ -n "$CRON_SECRET" ] && AUTH_HEADER=(-H "Authorization: Bearer ${CRON_SECRET}")
+for attempt in 1 2 3 4 5 6; do
+  RESPONSE=$(curl -s -m 30 -w "\n%{http_code}" -X POST "${ENDPOINT}" \
+    "${AUTH_HEADER[@]}" \
     -H "Content-Type: application/json")
-else
-  RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "${ENDPOINT}" \
-    -H "Content-Type: application/json")
-fi
+  CODE=$(echo "$RESPONSE" | tail -n1)
+  [ "$CODE" != "000" ] && break
+  echo "[$(date '+%Y-%m-%d %H:%M:%S')] Uygulama hazır değil (deneme ${attempt}/6), 10 sn sonra tekrar..."
+  sleep 10
+done
 
 HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
 BODY=$(echo "$RESPONSE" | sed '$d')
