@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
         *,
         order:orders(order_number, customer:customers(name)),
         finished_product:finished_products(code, name, unit),
-        operator:operators(series, user:users(name))
+        operator:users!production_plans_assigned_operator_id_fkey(name, operators(series, location))
       `);
 
     // production_plans'ta start_date/end_date yok; tarih aralığı plan oluşturma tarihine uygulanır
@@ -82,8 +82,8 @@ export async function GET(request: NextRequest) {
       'Bitiş': new Date(p.end_date).toLocaleDateString('tr-TR'),
       'Durum': p.status,
       'Öncelik': p.priority,
-      'Operatör': p.operator?.user?.name || '-',
-      'Lokasyon': p.operator?.location || '-',
+      'Operatör': p.operator?.name || '-',
+      'Lokasyon': p.operator?.operators?.location || '-',
       'Oluşturma': new Date(p.created_at).toLocaleDateString('tr-TR'),
       'Notlar': p.notes || '-'
     })) || [];

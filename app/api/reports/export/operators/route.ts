@@ -20,12 +20,15 @@ export async function GET(request: NextRequest) {
       .from('operators')
       .select(`
         *,
-        user:users(name, email),
-        active_productions:production_plans!operators_id_fkey(
-          id,
-          status,
-          planned_quantity,
-          produced_quantity
+        user:users!operators_id_fkey(
+          name,
+          email,
+          plans:production_plans!production_plans_assigned_operator_id_fkey(
+            id,
+            status,
+            planned_quantity,
+            produced_quantity
+          )
         )
       `)
       .order('series');
@@ -65,9 +68,9 @@ export async function GET(request: NextRequest) {
       'Lokasyon': o.location,
       'Aktif Üretim Sayısı': o.active_productions_count || 0,
       'Durum': o.current_status === 'working' ? 'Çalışıyor' : o.current_status === 'idle' ? 'Boşta' : 'Mola',
-      'Toplam Üretim': o.active_productions?.length || 0,
-      'Tamamlanan': o.active_productions?.filter((p: any) => p.status === 'tamamlandi').length || 0,
-      'Devam Eden': o.active_productions?.filter((p: any) => p.status === 'devam_ediyor').length || 0,
+      'Toplam Üretim': o.user?.plans?.length || 0,
+      'Tamamlanan': o.user?.plans?.filter((p: any) => p.status === 'tamamlandi').length || 0,
+      'Devam Eden': o.user?.plans?.filter((p: any) => p.status === 'devam_ediyor').length || 0,
       'Kapasite Kullanımı %': o.active_productions_count > 0 ? '100' : '0'
     })) || [];
 
