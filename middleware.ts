@@ -120,11 +120,13 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
+    // API: İSTİSNASIZ her path (örn. /api/bom/x.json gibi uzantılı dinamik segmentler dahil)
+    '/api/:path*',
     /*
-     * API dahil tüm path'ler; statik dosyalar hariç:
-     * _next/static, _next/image, icons/ ve public/ altındaki uzantılı dosyalar
-     * (favicon, manifest, svg, PWA worker, örnek xlsx vb.)
+     * Sayfalar: statik dosyalar hariç — _next/static, _next/image, icons/ ve public/ altındaki
+     * uzantılı dosyalar (favicon, manifest, svg, PWA worker, örnek xlsx vb.).
+     * `api/` burada negatif lookahead ile hariç; API yukarıdaki matcher'a düşer.
      */
-    '/((?!_next/static|_next/image|icons/|.*\\.(?:svg|png|jpg|jpeg|gif|ico|webp|json|js|map|xlsx|txt|webmanifest)$).*)',
+    '/((?!api/|_next/static|_next/image|icons/|.*\\.(?:svg|png|jpg|jpeg|gif|ico|webp|json|js|map|xlsx|txt|webmanifest)$).*)',
   ],
 };

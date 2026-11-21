@@ -82,10 +82,33 @@ describe('middleware — API auth', () => {
     expect(forwardedHeader(res, 'x-user-id')).toBeNull();
   });
 
+  it('protects /api/auth/verify (used by nginx auth_request for realtime)', async () => {
+    expect((await middleware(req('/api/auth/verify'))).status).toBe(401);
+    const token = await sign({ userId: 'u1', role: 'operator' });
+    expect((await middleware(req('/api/auth/verify', { cookie: token }))).status).toBe(200);
+  });
+
   it('returns 404 for AI routes when AI is disabled, even with valid token', async () => {
     const token = await sign({ userId: 'u1', role: 'yonetici' });
     const res = await middleware(req('/api/ai/dashboard', { cookie: token }));
     expect(res.status).toBe(404);
+  });
+});
+
+describe('middleware — matcher', () => {
+  it('runs on every /api path, including ones ending with a file extension', async () => {
+    const { config } = await import('@/middleware');
+    // Next.js matcher'ı path-to-regexp ile derler; aynı davranışı burada simüle ediyoruz
+    const { pathToRegexp } = await import('next/dist/compiled/path-to-regexp');
+    const matches = (path: string) =>
+      (config.matcher as string[]).some((m) => pathToRegexp(m).test(path));
+
+    expect(matches('/api/bom/abc.json')).toBe(true);
+    expect(matches('/api/products/by-barcode/123.png')).toBe(true);
+    expect(matches('/api/stock/raw')).toBe(true);
+    expect(matches('/dashboard')).toBe(true);
+    expect(matches('/favicon.svg')).toBe(false);
+    expect(matches('/_next/static/chunks/x.js')).toBe(false);
   });
 });
 
