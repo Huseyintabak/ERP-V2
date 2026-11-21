@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Upload, Download, FileSpreadsheet, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import { Upload, Download, FileSpreadsheet, CheckCircle, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
 import { logger } from '@/lib/utils/logger';
@@ -277,12 +277,12 @@ export function BulkOrderImportDialog({ onImportComplete }: BulkOrderImportDialo
         for (const orderItem of customerOrders) {
           // Ürünü bul - önce tam eşleşme, sonra partial search
           const productCode = orderItem.product_code.trim();
-          let productResponse = await fetch(`/api/stock/finished?search=${encodeURIComponent(productCode)}&limit=100`, {
+          const productResponse = await fetch(`/api/stock/finished?search=${encodeURIComponent(productCode)}&limit=100`, {
             headers: {
               'x-user-id': user.id
             }
           });
-          let productData = await productResponse.json();
+          const productData = await productResponse.json();
           
           // Önce tam eşleşme ara
           let product = productData.data?.find((p: any) => 

@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
     // Validate and process data based on type
     let schema: z.ZodTypeAny;
     let tableName: 'raw_materials' | 'semi_finished_products' | 'finished_products';
-    let results = {
+    const results = {
       success: 0,
       errors: 0,
       errorDetails: [] as Array<{ row: number; code: string; error: string }>,
@@ -178,7 +178,7 @@ export async function POST(request: NextRequest) {
 
         if (existing) {
           // Update existing record - only update price fields based on type
-          let updateData: any = {};
+          const updateData: any = {};
           
           if (type === 'raw' && validatedData.unit_price !== undefined) {
             // For raw materials, update unit_price

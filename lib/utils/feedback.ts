@@ -99,8 +99,8 @@ const createFlash = (color: string, duration: number = 200) => {
 
   document.body.appendChild(flash);
 
-  // Trigger reflow
-  flash.offsetHeight;
+  // Trigger reflow (bilinçli: opacity geçişinin animasyonlu olması için)
+  void flash.offsetHeight;
 
   // Fade out
   flash.style.opacity = '0';

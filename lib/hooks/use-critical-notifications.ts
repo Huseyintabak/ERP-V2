@@ -2,7 +2,6 @@ import { useEffect } from 'react';
 import { toast } from 'sonner';
 import { useRealtimeStore } from './use-realtime-store';
 import { useNotificationStore } from '@/stores/notification-store';
-import { useAuthStore } from '@/stores/auth-store';
 
 interface CriticalNotification {
   id: string;

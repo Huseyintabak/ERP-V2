@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Calculator, 
@@ -154,7 +153,7 @@ export default function EnvanterSayimPage() {
                 <li>• Farklar otomatik hesaplanır (fazla/eksik)</li>
                 <li>• Değer farkları birim fiyatlara göre hesaplanır</li>
                 <li>• Onaylandığında stok otomatik güncellenir</li>
-                <li>• Tüm işlemler audit log'a kaydedilir</li>
+                <li>• Tüm işlemler audit log&apos;a kaydedilir</li>
               </ul>
             </div>
 

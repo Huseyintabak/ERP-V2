@@ -116,7 +116,7 @@ export const useMemoryLeakDetector = (componentName: string) => {
 };
 
 // Global memory leak detector for the entire app
-let globalMemoryLeakDetector: {
+const globalMemoryLeakDetector: {
   activeComponents: Set<string>;
   activeSubscriptions: Set<string>;
   totalMemoryUsage: number;

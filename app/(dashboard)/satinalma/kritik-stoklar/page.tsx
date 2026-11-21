@@ -11,14 +11,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
 import { 
   AlertTriangle, 
-  Package, 
-  ShoppingCart,
+  Package,
   Clock,
   CheckCircle,
-  TrendingDown,
   Filter,
   Search
 } from 'lucide-react';

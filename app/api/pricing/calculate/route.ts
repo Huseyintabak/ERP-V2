@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
     let semiFinishedCost = 0;
     let totalCost = 0;
     let itemCount = 0;
-    let breakdown: any[] = [];
+    const breakdown: any[] = [];
 
     if (productType === 'semi') {
       // semi_bom üzerinden hesap

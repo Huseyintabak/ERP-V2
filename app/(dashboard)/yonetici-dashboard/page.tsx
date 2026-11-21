@@ -15,11 +15,7 @@ import {
   AlertTriangle,
   BarChart3,
   Factory,
-  Target,
   Activity,
-  Zap,
-  MessageSquare,
-  Sparkles,
   Calendar,
   Package
 } from 'lucide-react';

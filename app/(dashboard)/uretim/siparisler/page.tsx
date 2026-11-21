@@ -22,19 +22,14 @@ import {
 import {
   Plus,
   CheckCircle,
-  Clock,
   Factory,
   Edit,
   Trash2,
-  Users,
   XCircle,
-  Upload,
-  Download,
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatDate } from "@/lib/utils";
 import { OrderForm } from "@/components/production/order-form";
-import { CustomerDialog } from "@/components/customers/customer-dialog";
 import { OrderCancelDialog } from "@/components/orders/order-cancel-dialog";
 import { BulkOrderImportDialog } from "@/components/orders/bulk-order-import-dialog";
 import {

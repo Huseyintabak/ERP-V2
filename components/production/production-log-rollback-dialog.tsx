@@ -213,7 +213,7 @@ export function ProductionLogRollbackDialog({
               disabled={!canRollback.allowed}
             />
             <p className="text-xs text-muted-foreground">
-              Bu sebep audit log'da kaydedilecektir.
+              Bu sebep audit log&apos;da kaydedilecektir.
             </p>
           </div>
 
@@ -225,7 +225,7 @@ export function ProductionLogRollbackDialog({
                 <ul className="text-sm space-y-1">
                   <li>• <strong>Nihai ürün stoku:</strong> {log.quantity_produced} adet azalacak</li>
                   <li>• <strong>Plan ilerlemesi:</strong> Üretilen miktar düşürülecek</li>
-                  <li>• <strong>Hammadde stoku:</strong> BOM'a göre geri eklenecek</li>
+                  <li>• <strong>Hammadde stoku:</strong> BOM&apos;a göre geri eklenecek</li>
                   <li>• <strong>Bu kayıt:</strong> Tamamen silinecek</li>
                 </ul>
               </div>

@@ -567,7 +567,7 @@ export default function BarkodTaraPage() {
                     </Select>
                     {sourceZones.length === 0 && (
                       <p className="text-sm text-red-600">
-                        Hiçbir zone'da stok yok
+                        Hiçbir zone&apos;da stok yok
                       </p>
                     )}
                   </div>

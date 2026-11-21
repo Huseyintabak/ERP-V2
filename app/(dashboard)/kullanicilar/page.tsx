@@ -38,7 +38,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Plus, Search, Edit, Trash2, Eye, EyeOff, UserPlus } from 'lucide-react';
+import { Search, Edit, Trash2, Eye, EyeOff, UserPlus } from 'lucide-react';
 import { toast } from 'sonner';
 import { useUserStore } from '@/stores/user-store';
 import { useAuthStore } from '@/stores/auth-store';

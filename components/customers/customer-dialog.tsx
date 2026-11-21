@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { CustomerForm } from './customer-form';
-import { Plus, Edit } from 'lucide-react';
+import { Plus } from 'lucide-react';
 
 interface Customer {
   id: string;

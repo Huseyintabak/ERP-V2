@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Calculator, TrendingUp, TrendingDown, AlertCircle, CheckCircle } from 'lucide-react';
+import { Calculator, TrendingUp, TrendingDown, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuthStore } from '@/stores/auth-store';
 
@@ -386,7 +386,7 @@ export function CostCalculationDialog({
                 <div>
                   <p className="font-semibold text-yellow-800">Düşük Kar Marjı</p>
                   <p className="text-sm text-yellow-700">
-                    Kar marjınız %10'un altında. Fiyat artırımı değerlendirmeniz önerilir.
+                    Kar marjınız %10&apos;un altında. Fiyat artırımı değerlendirmeniz önerilir.
                   </p>
                 </div>
               </div>

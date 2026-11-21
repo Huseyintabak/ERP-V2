@@ -10,13 +10,9 @@ import {
   TrendingUp, 
   TrendingDown,
   AlertTriangle,
-  CheckCircle,
-  Clock,
   BarChart3,
   Zap,
   ArrowUpDown,
-  Calendar,
-  DollarSign,
   Activity
 } from 'lucide-react';
 import { useRealtimeUnified } from '@/lib/hooks/use-realtime-unified';

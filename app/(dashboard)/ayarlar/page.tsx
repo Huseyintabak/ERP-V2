@@ -7,16 +7,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Textarea } from '@/components/ui/textarea';
 import { 
   Settings, 
   Users, 
   Bell, 
   ArrowRight,
   Save,
-  RefreshCw,
-  AlertTriangle,
-  CheckCircle
+  RefreshCw
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuthStore } from '@/stores/auth-store';

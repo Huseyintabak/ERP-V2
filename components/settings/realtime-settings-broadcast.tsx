@@ -11,17 +11,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
-import { logger } from '@/lib/utils/logger';
 import { 
   Radio, 
-  Settings, 
-  Users, 
   Clock, 
   CheckCircle, 
   AlertTriangle,
   RefreshCw,
   Send,
-  Eye,
   Check
 } from 'lucide-react';
 

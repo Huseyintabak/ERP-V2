@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/table";
 import { Package, TrendingUp, Users } from "lucide-react";
 import { toast } from "sonner";
-import { formatDate, formatCurrency } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
 import { useRealtimeUnified } from "@/lib/hooks/use-realtime-unified";
 import { useAuthStore } from "@/stores/auth-store";
 

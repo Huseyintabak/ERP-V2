@@ -27,8 +27,7 @@ import {
   TrendingDown,
   ArrowRight,
   Filter,
-  Search,
-  Plus
+  Search
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuthStore } from '@/stores/auth-store';

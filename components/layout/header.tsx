@@ -1,6 +1,5 @@
 'use client';
 
-import { Button } from '@/components/ui/button';
 import NotificationBell from '@/components/notifications/notification-bell';
 import { RealtimeStatus } from '@/components/ui/realtime-status';
 

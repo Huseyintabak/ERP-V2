@@ -22,7 +22,6 @@ import {
   User,
   Clock,
   CheckCircle,
-  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuthStore } from "@/stores/auth-store";
@@ -326,7 +325,7 @@ export function OrderCancelDialog({
               disabled={!permissionCheck?.allowed}
             />
             <p className="text-xs text-muted-foreground">
-              Bu sebep audit log'da kaydedilecektir.
+              Bu sebep audit log&apos;da kaydedilecektir.
             </p>
           </div>
 
@@ -337,7 +336,7 @@ export function OrderCancelDialog({
               <div className="bg-red-50 border border-red-200 rounded-lg p-4">
                 <ul className="text-sm space-y-1">
                   <li>
-                    • <strong>Sipariş durumu:</strong> "iptal" olarak
+                    • <strong>Sipariş durumu:</strong> &quot;iptal&quot; olarak
                     değiştirilecek
                   </li>
                   <li>

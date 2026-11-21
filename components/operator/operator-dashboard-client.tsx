@@ -5,25 +5,16 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { 
-  Target,
+import {
   CheckCircle,
   Clock,
   TrendingUp,
   Activity,
-  Award,
   Timer,
-  Zap,
   Factory,
-  BarChart3,
-  Calendar,
-  User,
   Play,
   Pause,
   PlayCircle,
-  Eye,
-  AlertCircle,
-  Package,
   RefreshCcw
 } from 'lucide-react';
 import { usePolling } from '@/lib/hooks/use-polling';

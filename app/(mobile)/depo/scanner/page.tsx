@@ -8,8 +8,6 @@ import { Badge } from '@/components/ui/badge';
 import {
   Camera,
   CameraOff,
-  Flashlight,
-  FlashlightOff,
   Keyboard,
   X,
   Package,
@@ -293,18 +291,18 @@ export default function BarcodeScannerPage() {
                 <div>
                   <h3 className="font-bold text-red-900 mb-2">🚫 HTTP Bağlantı - Kamera Çalışmaz!</h3>
                   <p className="text-sm text-red-800 mb-3">
-                    Şu anda HTTP bağlantı kullanıyorsunuz. Kamera API'si güvenlik nedeniyle sadece HTTPS'te çalışır.
+                    Şu anda HTTP bağlantı kullanıyorsunuz. Kamera API&apos;si güvenlik nedeniyle sadece HTTPS&apos;te çalışır.
                   </p>
                   <div className="bg-white rounded p-3 mb-3">
                     <p className="text-xs font-bold text-gray-900 mb-2">✅ Çözüm: ngrok Kullanın</p>
                     <div className="space-y-1 text-xs text-gray-700">
                       <p>1. Terminal açın: <code className="bg-gray-200 px-1 rounded">ngrok http 3001</code></p>
-                      <p>2. Çıkan HTTPS URL'i kopyalayın</p>
-                      <p>3. Bu URL'i mobil cihazda açın</p>
+                      <p>2. Çıkan HTTPS URL&apos;i kopyalayın</p>
+                      <p>3. Bu URL&apos;i mobil cihazda açın</p>
                     </div>
                   </div>
                   <p className="text-xs text-red-700">
-                    <strong>Not:</strong> localhost'ta test ediyorsanız sorun yok, ancak mobil cihazdan erişmek için ngrok gerekli.
+                    <strong>Not:</strong> localhost&apos;ta test ediyorsanız sorun yok, ancak mobil cihazdan erişmek için ngrok gerekli.
                   </p>
                 </div>
               </div>
@@ -331,11 +329,11 @@ export default function BarcodeScannerPage() {
                         ⚠️ HTTPS Gerekli!
                       </p>
                       <p className="text-red-800 mt-1">
-                        Kamera API'si sadece HTTPS bağlantıda çalışır.
+                        Kamera API&apos;si sadece HTTPS bağlantıda çalışır.
                       </p>
                     </div>
                     <p>
-                      <strong>Çözüm:</strong> Terminal'de <code className="bg-gray-200 px-1 rounded">ngrok http 3001</code> çalıştırın ve çıkan HTTPS URL'ini kullanın.
+                      <strong>Çözüm:</strong> Terminal&apos;de <code className="bg-gray-200 px-1 rounded">ngrok http 3001</code> çalıştırın ve çıkan HTTPS URL&apos;ini kullanın.
                     </p>
                     <p className="mt-2">
                       <strong>iOS Safari:</strong>

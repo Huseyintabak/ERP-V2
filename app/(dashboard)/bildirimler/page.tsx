@@ -36,13 +36,11 @@ import {
   Trash2, 
   Eye, 
   EyeOff,
-  Filter,
-  Plus
+  Filter
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import { useSmartNotificationsUnified } from '@/lib/hooks/use-smart-notifications-unified';
-import { toast } from 'sonner';
 import { usePolling } from '@/lib/hooks/use-polling';
 import { RefreshCcw } from 'lucide-react';
 

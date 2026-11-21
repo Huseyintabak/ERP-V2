@@ -26,13 +26,11 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { 
-  AlertTriangle, 
   CheckCircle, 
   XCircle, 
   Clock, 
@@ -43,7 +41,6 @@ import {
   Eye,
   Edit
 } from 'lucide-react';
-import { toast } from 'sonner';
 
 interface PurchaseRequest {
   id: string;

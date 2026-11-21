@@ -7,13 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+
+
 import {
   Dialog,
   DialogContent,
@@ -29,7 +24,6 @@ import {
   AlertCircle,
   Loader2,
   Trash2,
-  Search,
   Plus,
   Package,
 } from 'lucide-react';
@@ -508,7 +502,7 @@ export default function StokGirisPage() {
                 <div className="flex items-center gap-2">
                   <AlertCircle className="h-4 w-4 text-blue-600" />
                   <p className="text-sm text-blue-800 font-medium">
-                    Tüm ürünler <strong>Merkez Depo</strong>'ya eklenecek
+                    Tüm ürünler <strong>Merkez Depo</strong>&apos;ya eklenecek
                   </p>
                 </div>
               </div>

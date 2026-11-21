@@ -166,7 +166,7 @@ export async function POST(request: NextRequest) {
     const workbook = XLSX.utils.book_new();
 
     // Prepare worksheet data
-    let worksheetData: any[][] = [];
+    const worksheetData: any[][] = [];
 
     const typeTemplate = TEMPLATES[config.type];
     if (config.includeHeaders && typeTemplate) {

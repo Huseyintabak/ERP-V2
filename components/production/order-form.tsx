@@ -13,7 +13,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { SimpleSearchableSelect, type SearchableSelectOption } from '@/components/ui/simple-searchable-select';
-import { orderSchema, orderItemSchema, type OrderFormData, type OrderItemFormData } from '@/types';
+import { orderSchema, type OrderFormData, type OrderItemFormData } from '@/types';
 import { CustomerSelect } from '@/components/customers/customer-select';
 import { CustomerDialog } from '@/components/customers/customer-dialog';
 import { toast } from 'sonner';

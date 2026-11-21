@@ -403,7 +403,7 @@ export default function DepoZoneYonetimiPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Depo Zone Yönetimi</h1>
-          <p className="text-muted-foreground">Warehouse zone'larını yönetin ve ürün transferi yapın</p>
+          <p className="text-muted-foreground">Warehouse zone&apos;larını yönetin ve ürün transferi yapın</p>
         </div>
       </div>
 
@@ -656,7 +656,7 @@ export default function DepoZoneYonetimiPage() {
 
             {selectedZoneInventory.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
-                Bu zone'da henüz ürün bulunmuyor
+                Bu zone&apos;da henüz ürün bulunmuyor
               </div>
             ) : (
               <div className="rounded-md border flex-1 overflow-hidden flex flex-col">
@@ -739,7 +739,7 @@ export default function DepoZoneYonetimiPage() {
               Nihai Stoklar Merkez
             </DialogTitle>
             <DialogDescription>
-              Tüm üretilen ürünler merkez depoda - İlgi zone'a sevk edilecek
+              Tüm üretilen ürünler merkez depoda - İlgi zone&apos;a sevk edilecek
             </DialogDescription>
           </DialogHeader>
 
@@ -749,7 +749,7 @@ export default function DepoZoneYonetimiPage() {
               <div className="min-w-0">
                 <h3 className="font-semibold text-lg">Merkez Depo</h3>
                 <p className="text-sm text-gray-600">
-                  Tüm üretilen ürünler burada toplanır ve ilgi zone'lara sevk edilir
+                  Tüm üretilen ürünler burada toplanır ve ilgi zone&apos;lara sevk edilir
                 </p>
               </div>
             </div>

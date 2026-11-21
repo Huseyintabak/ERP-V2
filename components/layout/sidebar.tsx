@@ -26,13 +26,7 @@ import {
   FileText,
   Radio,
   ScrollText,
-  Bot,
-  DollarSign,
-  Activity,
-  MessageSquare,
-  Code,
   Camera,
-  Zap,
   Printer,
 } from "lucide-react";
 import { useAuthStore } from "@/stores/auth-store";

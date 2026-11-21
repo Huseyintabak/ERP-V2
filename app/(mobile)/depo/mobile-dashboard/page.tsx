@@ -1,12 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
   PackagePlus,
-  PackageMinus,
   ClipboardList,
   ArrowLeftRight,
   Search,
@@ -369,7 +368,7 @@ export default function MobileDashboardPage() {
                   </p>
                   <p className="text-blue-700 text-xs mt-1">
                     Daha hızlı erişim için uygulamayı ana ekranınıza ekleyin.
-                    Tarayıcınızın menüsünden "Ana ekrana ekle" seçeneğini
+                    Tarayıcınızın menüsünden &quot;Ana ekrana ekle&quot; seçeneğini
                     kullanın.
                   </p>
                 </div>

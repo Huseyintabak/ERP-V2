@@ -10,16 +10,10 @@ import { Badge } from '@/components/ui/badge';
 import { 
   Search, 
   Filter, 
-  Calendar, 
-  User, 
-  Package, 
-  Clock,
+  Calendar,
   Play,
   Pause,
-  CheckCircle,
   XCircle,
-  UserPlus,
-  MoreHorizontal,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { CompleteProductionDialog } from '@/components/production/complete-production-dialog';

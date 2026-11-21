@@ -165,7 +165,7 @@ export async function POST(request: NextRequest) {
       
       logger.log(`🔍 Checking material: ${bomItem.material_id}, type: ${bomItem.material_type}, quantity_per_unit: ${quantityPerUnit}, required: ${requiredQuantity}`);
       
-      let material: any = null;
+      const material: any = null;
       let availableStock = 0;
       let materialName = '';
       let materialCode = '';

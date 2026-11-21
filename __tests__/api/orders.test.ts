@@ -5,7 +5,7 @@
 
 import { NextRequest } from 'next/server';
 import { GET, POST } from '@/app/api/orders/route';
-import { createMockSupabaseClient, createMockOrder } from '../utils/test-helpers';
+import { createMockSupabaseClient } from '../utils/test-helpers';
 
 // Mock Supabase
 jest.mock('@/lib/supabase/server', () => ({

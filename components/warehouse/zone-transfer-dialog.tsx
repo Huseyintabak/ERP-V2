@@ -394,7 +394,7 @@ export function ZoneTransferDialog({
             Sevk Et
           </DialogTitle>
           <DialogDescription>
-            Ürünleri bir zone'dan diğerine sevk edin
+            Ürünleri bir zone&apos;dan diğerine sevk edin
           </DialogDescription>
         </DialogHeader>
 
@@ -611,8 +611,8 @@ export function ZoneTransferDialog({
                   <div className="text-sm">
                     <p className="font-medium text-amber-800">Dikkat!</p>
                     <p className="text-amber-700 mt-1">
-                      Bu işlem geri alınamaz. Transfer işlemi kaynak zone'dan ürünleri çıkaracak 
-                      ve hedef zone'a ekleyecektir.
+                      Bu işlem geri alınamaz. Transfer işlemi kaynak zone&apos;dan ürünleri çıkaracak 
+                      ve hedef zone&apos;a ekleyecektir.
                     </p>
                   </div>
                 </div>

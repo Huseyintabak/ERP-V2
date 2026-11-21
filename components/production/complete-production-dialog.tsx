@@ -210,7 +210,7 @@ export function CompleteProductionDialog({ plan, onComplete }: CompleteProductio
                 Üretim tamamlandığında:
               </p>
               <ul className="list-disc list-inside text-amber-700 mt-2 space-y-1">
-                <li>BOM'a göre malzemeler otomatik tüketilecek</li>
+                <li>BOM&apos;a göre malzemeler otomatik tüketilecek</li>
                 <li>Nihai ürün stoka eklenecek</li>
                 <li>Stok hareketleri kaydedilecek</li>
                 <li>Bildirim gönderilecek</li>

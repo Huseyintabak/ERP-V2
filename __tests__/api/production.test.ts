@@ -6,6 +6,9 @@
 import { NextRequest } from 'next/server';
 import { POST } from '@/app/api/production/log/route';
 import { createMockSupabaseClient } from '../utils/test-helpers';
+// jest.mock çağrıları hoist edilir; bu import'lar mock'lanmış modülleri verir
+import { verifyJWT } from '@/lib/auth/jwt';
+import { createClient, createAdminClient } from '@/lib/supabase/server';
 
 // Mock Supabase
 jest.mock('@/lib/supabase/server', () => ({
@@ -59,8 +62,7 @@ describe('Production API', () => {
     });
 
     test('should reject request with invalid role', async () => {
-      const { verifyJWT } = require('@/lib/auth/jwt');
-      verifyJWT.mockResolvedValueOnce({
+      (verifyJWT as jest.Mock).mockResolvedValueOnce({
         userId: 'test-user-uuid',
         role: 'planlama', // Operator değil
       });
@@ -107,7 +109,6 @@ describe('Production API', () => {
     });
 
     test('should validate plan exists and is assigned to operator', async () => {
-      const { createClient } = require('@/lib/supabase/server');
       const mockSupabase = createMockSupabaseClient();
       
       // Mock plan query - plan bulunamadı
@@ -120,17 +121,16 @@ describe('Production API', () => {
         }),
       });
 
-      createClient.mockReturnValueOnce(mockSupabase);
+      (createClient as jest.Mock).mockReturnValueOnce(mockSupabase);
 
       // Admin client: operatör users tablosunda mevcut (route plan kontrolünden önce bakıyor)
-      const { createAdminClient } = require('@/lib/supabase/server');
       const mockAdmin = createMockSupabaseClient();
       (mockAdmin.from as jest.Mock).mockReturnValueOnce({
         select: jest.fn().mockReturnThis(),
         eq: jest.fn().mockReturnThis(),
         single: jest.fn().mockResolvedValue({ data: { id: OPERATOR_ID, role: 'operator' }, error: null }),
       });
-      createAdminClient.mockReturnValueOnce(mockAdmin);
+      (createAdminClient as jest.Mock).mockReturnValueOnce(mockAdmin);
 
       const request = new NextRequest('http://localhost:3000/api/production/log', {
         method: 'POST',

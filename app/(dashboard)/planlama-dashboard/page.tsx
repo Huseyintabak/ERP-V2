@@ -3,8 +3,6 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { 
   Clock, 
   Factory, 
@@ -16,7 +14,6 @@ import {
   BarChart3,
   TrendingDown,
   Zap,
-  DollarSign,
   Activity
 } from 'lucide-react';
 import { useRealtimeUnified } from '@/lib/hooks/use-realtime-unified';

@@ -92,7 +92,7 @@ const VALIDATION_RULES = {
 
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
-  let result: ImportResult = {
+  const result: ImportResult = {
     success: 0,
     errors: 0,
     warnings: 0,

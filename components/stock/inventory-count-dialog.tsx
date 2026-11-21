@@ -330,7 +330,7 @@ export function InventoryCountDialog({
                 <div className="bg-white border border-red-300 rounded p-3 text-sm">
                   <p className="font-semibold text-red-800">⚠️ Yüksek Sapma Tespit Edildi</p>
                   <p className="text-red-700">
-                    %10'dan fazla fark var. Lütfen sayımı kontrol edin.
+                    %10&apos;dan fazla fark var. Lütfen sayımı kontrol edin.
                   </p>
                 </div>
               )}

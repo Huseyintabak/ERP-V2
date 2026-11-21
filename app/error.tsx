@@ -59,7 +59,7 @@ export default function Error({
           </div>
           
           <p className="text-xs text-gray-500 mt-4">
-            Sorun devam ederse, lütfen browser console'u (F12) kontrol edin ve hata detaylarını paylaşın.
+            Sorun devam ederse, lütfen browser console&apos;u (F12) kontrol edin ve hata detaylarını paylaşın.
           </p>
         </CardContent>
       </Card>

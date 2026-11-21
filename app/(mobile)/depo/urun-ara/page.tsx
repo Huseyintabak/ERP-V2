@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { BarcodeScanner } from '@/components/barcode/barcode-scanner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -412,7 +412,7 @@ export default function MobileProductSearchPage() {
                     <MapPin className="h-8 w-8 text-gray-400" />
                   </div>
                   <p className="text-sm text-gray-600">
-                    Bu ürün henüz hiçbir zone'a atanmamış
+                    Bu ürün henüz hiçbir zone&apos;a atanmamış
                   </p>
                 </CardContent>
               </Card>

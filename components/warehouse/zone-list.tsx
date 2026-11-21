@@ -314,7 +314,7 @@ export function ZoneList({
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="flex items-center gap-2">
           <Building2 className="h-5 w-5" />
-          Depo Zone'ları
+          Depo Zone&apos;ları
         </CardTitle>
         {onCreateZone && (
           <Button onClick={onCreateZone} size="sm">
@@ -414,7 +414,7 @@ export function ZoneList({
               Zone Transfer
             </DialogTitle>
             <DialogDescription>
-              {sourceZoneId && allZones.find(z => z.id === sourceZoneId)?.name} → Hedef zone'a transfer yapın
+              {sourceZoneId && allZones.find(z => z.id === sourceZoneId)?.name} → Hedef zone&apos;a transfer yapın
             </DialogDescription>
           </DialogHeader>
 

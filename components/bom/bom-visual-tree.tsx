@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useMemo, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -18,7 +18,7 @@ import {
   RotateCcw
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { ReactFlow, Node, Edge, addEdge, Connection, useNodesState, useEdgesState, Controls, Background, MiniMap, EdgeLabelRenderer, getBezierPath, Handle, Position } from '@xyflow/react';
+import { ReactFlow, Node, Edge, useNodesState, useEdgesState, Controls, Background, MiniMap, EdgeLabelRenderer, getBezierPath, Handle, Position } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { logger } from '@/lib/utils/logger';
 

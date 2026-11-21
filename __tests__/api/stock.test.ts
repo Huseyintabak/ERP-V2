@@ -3,7 +3,6 @@
  * Stock management API endpoint testleri
  */
 
-import { NextRequest } from 'next/server';
 import { createMockSupabaseClient } from '../utils/test-helpers';
 
 // Mock Supabase

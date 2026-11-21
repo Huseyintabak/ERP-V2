@@ -329,7 +329,7 @@ export function ProductionPlanCancelDialog({
               disabled={!permissionCheck?.allowed}
             />
             <p className="text-xs text-muted-foreground">
-              Bu sebep audit log'da kaydedilecektir.
+              Bu sebep audit log&apos;da kaydedilecektir.
             </p>
           </div>
 
@@ -339,7 +339,7 @@ export function ProductionPlanCancelDialog({
               <Label className="text-sm font-medium">İptal Etkisi</Label>
               <div className="bg-red-50 border border-red-200 rounded-lg p-4">
                 <ul className="text-sm space-y-1">
-                  <li>• <strong>Plan durumu:</strong> "iptal" olarak değiştirilecek</li>
+                  <li>• <strong>Plan durumu:</strong> &quot;iptal&quot; olarak değiştirilecek</li>
                   <li>• <strong>Rezervasyonlar:</strong> Serbest bırakılacak</li>
                   {hasProduction && (
                     <li>• <strong>Üretilen miktar:</strong> Stoktan düşülecek</li>

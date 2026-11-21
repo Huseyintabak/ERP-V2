@@ -18,7 +18,6 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog';
 import {
   AlertDialog,
@@ -54,7 +53,6 @@ import {
   Shield,
   Clock,
   BarChart3,
-  HardDriveIcon,
 } from 'lucide-react';
 import { toast } from 'sonner';
 

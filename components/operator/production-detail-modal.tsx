@@ -14,14 +14,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import {
-  Table,
-  TableHeader,
-  TableRow,
-  TableHead,
-  TableBody,
-  TableCell,
-} from '@/components/ui/table';
+
+
 import { toast } from 'sonner';
 import { cn, formatDateTime } from '@/lib/utils';
 import { logger } from '@/lib/utils/logger';
@@ -36,7 +30,6 @@ import {
   Clock,
   Loader2,
   AlertCircle,
-  X,
 } from 'lucide-react';
 
 interface Production {

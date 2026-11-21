@@ -40,7 +40,6 @@ import {
   Users,
   AlertTriangle,
   Calendar,
-  Filter,
   FileSpreadsheet
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth-store';

@@ -20,24 +20,18 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog';
 import { 
   Search, 
   Filter, 
   Download, 
   RefreshCw, 
-  Eye, 
-  Calendar,
+  Eye,
   User,
   Database,
   Activity,
-  AlertTriangle,
   CheckCircle,
-  XCircle,
-  Clock,
-  ChevronDown,
-  ChevronUp
+  XCircle
 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { tr } from 'date-fns/locale';

@@ -213,7 +213,7 @@ export default function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
           <p className="text-sm text-blue-700">
             Bu kullanıcı operatör olarak işaretlendi. Operatör detayları 
             (seri numarası, lokasyon, vs.) kullanıcı oluşturulduktan sonra 
-            "Operatörler" sayfasından düzenlenebilir.
+            &quot;Operatörler&quot; sayfasından düzenlenebilir.
           </p>
         </div>
       )}

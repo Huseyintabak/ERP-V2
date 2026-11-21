@@ -12,10 +12,8 @@ import {
   RefreshCw,
   AlertTriangle,
   CheckCircle,
-  XCircle,
   Clock,
   Users,
-  FileText,
   Settings,
   BarChart3
 } from 'lucide-react';
