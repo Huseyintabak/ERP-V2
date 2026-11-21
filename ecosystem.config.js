@@ -10,6 +10,9 @@ module.exports = {
       cwd: APP_DIR,
       script: 'node_modules/next/dist/bin/next',
       args: 'start -p 3000 -H 127.0.0.1', // sadece localhost — dışarıya Nginx açar
+      // PostgREST yanıtı istek URL'sini Content-Location header'ında geri yollar; uzun .in() filtrelerinde
+      // (~450+ UUID) Node fetch'in 16 KB header sınırı aşılıp UND_ERR_HEADERS_OVERFLOW alınıyordu.
+      node_args: '--max-http-header-size=65536',
       // Tek instance: login rate-limit ve kur cache'i bellek içi
       instances: 1,
       exec_mode: 'fork',
