@@ -237,7 +237,6 @@ export function InventoryCountDialog({
               disabled={materialsLoading}
               loading={materialsLoading}
               allowClear
-              maxHeight="300px"
             />
             {errors.materialId && (
               <p className="text-sm text-red-600">{errors.materialId.message}</p>

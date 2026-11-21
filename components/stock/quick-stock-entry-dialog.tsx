@@ -205,7 +205,6 @@ export function QuickStockEntryDialog({ open, onClose, type }: Props) {
           searchPlaceholder="Malzeme adı veya kodu ile ara..."
           emptyText="Malzeme bulunamadı"
           allowClear
-          maxHeight="300px"
         />
           </div>
 

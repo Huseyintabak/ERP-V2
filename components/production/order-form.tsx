@@ -237,7 +237,6 @@ export function OrderForm({ onSuccess }: Props) {
                   emptyText="Ürün bulunamadı"
                   disabled={loading}
                   allowClear
-                  maxHeight="300px"
                 />
               </div>
               

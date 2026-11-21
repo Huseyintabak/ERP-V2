@@ -17,7 +17,7 @@ jest.mock('@/lib/utils/logger', () => ({ logger: { log: jest.fn(), error: jest.f
 const OWNER = '11111111-1111-1111-1111-111111111111';
 const OTHER = '22222222-2222-2222-2222-222222222222';
 
-const rpc = jest.fn(async () => ({ data: { success: true }, error: null }));
+const rpc = jest.fn(async (_fn: string, _args?: unknown) => ({ data: { success: true }, error: null }));
 
 function mockOrder(createdBy: string) {
   const query = {

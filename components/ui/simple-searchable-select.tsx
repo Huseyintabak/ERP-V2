@@ -39,7 +39,7 @@ export function SimpleSearchableSelect({
   disabled = false,
   loading = false,
   allowClear = false,
-  maxHeight = '300px',
+  maxHeight = '450px', // ~9 ürün (her biri ~50px)
 }: SearchableSelectProps) {
   const [open, setOpen] = React.useState(false);
   const [searchTerm, setSearchTerm] = React.useState('');
@@ -99,8 +99,12 @@ export function SimpleSearchableSelect({
         role="combobox"
         aria-expanded={open}
         aria-controls={listboxId}
-        className="w-full justify-between flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-        onClick={() => setOpen(!open)}
+        aria-disabled={disabled}
+        className={`w-full justify-between flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 ${disabled ? 'cursor-not-allowed opacity-50' : ''}`}
+        // disabled önceden yok sayılıyordu (örn. sipariş kaydedilirken ürün değiştirilebiliyordu)
+        onClick={() => {
+          if (!disabled) setOpen(!open);
+        }}
       >
         <span className="flex-1 text-left truncate">
           {selectedOption ? (
@@ -120,7 +124,7 @@ export function SimpleSearchableSelect({
           )}
         </span>
         <div className="flex items-center gap-1">
-          {allowClear && value && (
+          {allowClear && value && !disabled && (
             <button
               type="button"
               onClick={handleClear}
@@ -134,7 +138,7 @@ export function SimpleSearchableSelect({
         </div>
       </div>
 
-      {open && (
+      {open && !disabled && (
         <div 
           id={listboxId} 
           role="listbox" 
@@ -166,7 +170,7 @@ export function SimpleSearchableSelect({
           <div 
             className="overflow-y-auto bg-white"
             style={{ 
-              maxHeight: '450px', // 9 ürün için optimize edilmiş yükseklik (her ürün ~50px)
+              maxHeight,
               overflowX: 'hidden'
             }}
           >
