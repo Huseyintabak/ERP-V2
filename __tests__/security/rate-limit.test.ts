@@ -2,7 +2,37 @@
  * @jest-environment node
  */
 import { describe, it, expect } from '@jest/globals';
-import { reserveLoginAttempt, clearLoginFailures, getClientIp } from '@/lib/auth/rate-limit';
+import {
+  reserveLoginAttempt,
+  clearLoginFailures,
+  releaseLoginAttempt,
+  getClientIp,
+} from '@/lib/auth/rate-limit';
+
+describe('login rate limiter — lockout DoS protection', () => {
+  it('attacker on other IPs cannot lock out user from a previously-successful IP', () => {
+    // gerçek kullanıcı ofis IP'sinden daha önce giriş yapmış
+    reserveLoginAttempt('85.0.0.1', 'owner@x.com');
+    clearLoginFailures('85.0.0.1', 'owner@x.com');
+    // saldırgan farklı IP'lerden 40 deneme yapıyor → email-geneli blok devreye giriyor
+    for (let i = 0; i < 40; i++) reserveLoginAttempt(`66.6.${i}.6`, 'owner@x.com');
+    expect(reserveLoginAttempt('66.6.99.6', 'owner@x.com')).toBeGreaterThan(0);
+    // gerçek kullanıcı güvenilir IP'sinden hâlâ girebilir
+    expect(reserveLoginAttempt('85.0.0.1', 'owner@x.com')).toBe(0);
+  });
+
+  it('releaseLoginAttempt refunds an attempt on server errors', () => {
+    for (let i = 0; i < 4; i++) reserveLoginAttempt('7.7.7.7', 'srv@x.com');
+    reserveLoginAttempt('7.7.7.7', 'srv@x.com'); // 5. deneme → blok
+    expect(reserveLoginAttempt('7.7.7.7', 'srv@x.com')).toBeGreaterThan(0);
+
+    for (let i = 0; i < 4; i++) reserveLoginAttempt('7.7.7.8', 'srv2@x.com');
+    releaseLoginAttempt('7.7.7.8', 'srv2@x.com'); // 4. deneme 5xx ile bitti → iade
+    expect(reserveLoginAttempt('7.7.7.8', 'srv2@x.com')).toBe(0); // 4. hak (iade edilen)
+    expect(reserveLoginAttempt('7.7.7.8', 'srv2@x.com')).toBe(0); // 5. hak
+    expect(reserveLoginAttempt('7.7.7.8', 'srv2@x.com')).toBeGreaterThan(0); // 6. → blok
+  });
+});
 
 describe('login rate limiter', () => {
   it('allows 5 attempts per ip+email then blocks', () => {

@@ -3,9 +3,29 @@ import { createAdminClient } from '@/lib/supabase/server';
 import { comparePassword } from '@/lib/auth/password';
 import { signJWT } from '@/lib/auth/jwt';
 import { logger } from '@/lib/utils/logger';
-import { reserveLoginAttempt, clearLoginFailures, getClientIp } from '@/lib/auth/rate-limit';
+import {
+  reserveLoginAttempt,
+  clearLoginFailures,
+  releaseLoginAttempt,
+  getClientIp,
+} from '@/lib/auth/rate-limit';
+
+interface RateCtx {
+  ip?: string;
+  email?: string;
+}
 
 export async function POST(request: NextRequest) {
+  const ctx: RateCtx = {};
+  const response = await handleLogin(request, ctx);
+  // Sunucu hatasında (5xx) kullanıcının deneme hakkını yakma
+  if (response.status >= 500 && ctx.ip && ctx.email) {
+    releaseLoginAttempt(ctx.ip, ctx.email);
+  }
+  return response;
+}
+
+async function handleLogin(request: NextRequest, ctx: RateCtx): Promise<NextResponse> {
   try {
     logger.log('🔐 Login attempt started');
     const { email, password } = await request.json();
@@ -29,6 +49,8 @@ export async function POST(request: NextRequest) {
         { status: 429, headers: { 'Retry-After': String(blockedFor) } }
       );
     }
+    ctx.ip = clientIp;
+    ctx.email = String(email);
 
     // Check environment variables
     if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {

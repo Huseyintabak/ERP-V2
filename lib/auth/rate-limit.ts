@@ -23,13 +23,29 @@ const BLOCK_MS = 15 * 60 * 1000;
 const MAX_PER_IP_EMAIL = 5;
 const MAX_PER_EMAIL = 20;
 
+const TRUSTED_IP_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 gün
+
 const attempts = new Map<string, Attempt>();
+/** email → (ip → son başarılı login zamanı). Bu IP'ler email-geneli bloktan muaftır. */
+const trustedIps = new Map<string, Map<string, number>>();
 
 function cleanup(now: number) {
-  if (attempts.size < 5000) return;
-  for (const [key, a] of attempts) {
-    if (a.blockedUntil < now && now - a.firstAt > WINDOW_MS) attempts.delete(key);
+  if (attempts.size >= 5000) {
+    for (const [key, a] of attempts) {
+      if (a.blockedUntil < now && now - a.firstAt > WINDOW_MS) attempts.delete(key);
+    }
   }
+  if (trustedIps.size >= 5000) {
+    for (const [email, ips] of trustedIps) {
+      for (const [ip, at] of ips) if (now - at > TRUSTED_IP_TTL_MS) ips.delete(ip);
+      if (ips.size === 0) trustedIps.delete(email);
+    }
+  }
+}
+
+function isTrustedIp(ip: string, email: string, now: number): boolean {
+  const at = trustedIps.get(email.toLowerCase())?.get(ip);
+  return at !== undefined && now - at <= TRUSTED_IP_TTL_MS;
 }
 
 function blockedSeconds(key: string, now: number): number {
@@ -59,16 +75,34 @@ const emailKey = (email: string) => `em|${email.toLowerCase()}`;
 export function reserveLoginAttempt(ip: string, email: string): number {
   const now = Date.now();
   cleanup(now);
-  const blocked = Math.max(blockedSeconds(ipKey(ip, email), now), blockedSeconds(emailKey(email), now));
+  const trusted = isTrustedIp(ip, email, now);
+  // Email-geneli blok, hesabın daha önce başarıyla giriş yaptığı IP'lere uygulanmaz:
+  // saldırgan başka IP'lerden deneyerek gerçek kullanıcıyı kilitleyemez.
+  const blocked = Math.max(
+    blockedSeconds(ipKey(ip, email), now),
+    trusted ? 0 : blockedSeconds(emailKey(email), now)
+  );
   if (blocked > 0) return blocked;
   increment(ipKey(ip, email), MAX_PER_IP_EMAIL, now);
-  increment(emailKey(email), MAX_PER_EMAIL, now);
+  if (!trusted) increment(emailKey(email), MAX_PER_EMAIL, now);
   return 0;
 }
 
+/** Başarılı login: bu IP+email sayacını sıfırla ve IP'yi hesap için güvenilir işaretle */
 export function clearLoginFailures(ip: string, email: string): void {
   attempts.delete(ipKey(ip, email));
-  attempts.delete(emailKey(email));
+  const key = email.toLowerCase();
+  let ips = trustedIps.get(key);
+  if (!ips) trustedIps.set(key, (ips = new Map()));
+  ips.set(ip, Date.now());
+}
+
+/** Sunucu hatası (5xx) gibi kullanıcıdan kaynaklanmayan durumlarda ayrılan hakkı iade et */
+export function releaseLoginAttempt(ip: string, email: string): void {
+  for (const key of [ipKey(ip, email), emailKey(email)]) {
+    const a = attempts.get(key);
+    if (a && a.count > 0 && a.blockedUntil === 0) a.count -= 1;
+  }
 }
 
 /**
