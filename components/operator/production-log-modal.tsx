@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -60,14 +60,8 @@ export function ProductionLogModal({ task, isOpen, onClose, onSuccess }: Product
   const remaining = task ? task.planned_quantity - task.produced_quantity : 0;
   const isComplete = remaining <= 0;
 
-  useEffect(() => {
-    if (isOpen && task) {
-      fetchLogs();
-      fetchBomMaterials();
-    }
-  }, [isOpen, task]);
 
-  const fetchLogs = async () => {
+  const fetchLogs = useCallback(async () => {
     if (!task?.id) return;
     
     setFetchingLogs(true);
@@ -90,9 +84,9 @@ export function ProductionLogModal({ task, isOpen, onClose, onSuccess }: Product
     } finally {
       setFetchingLogs(false);
     }
-  };
+  }, [task?.id, user?.id]);
 
-  const fetchBomMaterials = async () => {
+  const fetchBomMaterials = useCallback(async () => {
     if (!task?.id) return;
     
     try {
@@ -112,7 +106,14 @@ export function ProductionLogModal({ task, isOpen, onClose, onSuccess }: Product
     } catch (error) {
       logger.error('Error fetching BOM materials:', error);
     }
-  };
+  }, [task?.id, user?.id]);
+
+  useEffect(() => {
+    if (isOpen && task) {
+      fetchLogs();
+      fetchBomMaterials();
+    }
+  }, [fetchBomMaterials, fetchLogs, isOpen, task]);
 
   const handleBarcodeSubmit = async () => {
     if (!barcode.trim() || !task) return;

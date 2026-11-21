@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -131,12 +131,6 @@ export default function BOMPage() {
     }
   };
 
-  useEffect(() => {
-    fetchFinishedProducts();
-    fetchRawMaterials();
-    fetchSemiFinishedProducts();
-    fetchUsdRate();
-  }, []);
 
   // Nihai + Yarı mamulleri birleştir
   useEffect(() => {
@@ -153,7 +147,7 @@ export default function BOMPage() {
     setAllProducts(combined);
   }, [finishedProducts, semiFinishedProducts]);
 
-  const fetchFinishedProducts = async () => {
+  const fetchFinishedProducts = useCallback(async () => {
     try {
       if (!user?.id) {
         throw new Error('Kullanıcı kimlik doğrulaması gerekli');
@@ -182,9 +176,9 @@ export default function BOMPage() {
       console.error('Error fetching finished products:', error);
       toast.error('Nihai ürünler yüklenirken hata oluştu');
     }
-  };
+  }, [user?.id]);
 
-  const fetchRawMaterials = async () => {
+  const fetchRawMaterials = useCallback(async () => {
     try {
       setMaterialsLoading(true);
       if (!user?.id) {
@@ -216,9 +210,9 @@ export default function BOMPage() {
     } finally {
       setMaterialsLoading(false);
     }
-  };
+  }, [user?.id]);
 
-  const fetchSemiFinishedProducts = async () => {
+  const fetchSemiFinishedProducts = useCallback(async () => {
     try {
       setMaterialsLoading(true);
       if (!user?.id) {
@@ -251,7 +245,14 @@ export default function BOMPage() {
     } finally {
       setMaterialsLoading(false);
     }
-  };
+  }, [user?.id]);
+
+  useEffect(() => {
+    fetchFinishedProducts();
+    fetchRawMaterials();
+    fetchSemiFinishedProducts();
+    fetchUsdRate();
+  }, [fetchFinishedProducts, fetchRawMaterials, fetchSemiFinishedProducts]);
 
   const fetchBOMData = async (productId: string) => {
     console.log('fetchBOMData called for product:', productId);

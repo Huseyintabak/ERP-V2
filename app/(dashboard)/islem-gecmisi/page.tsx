@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -95,11 +95,8 @@ export default function IslemGecmisiPage() {
   });
   const { user } = useAuthStore();
 
-  useEffect(() => {
-    fetchAuditLogs();
-  }, [pagination.page, filters]);
 
-  const fetchAuditLogs = async () => {
+  const fetchAuditLogs = useCallback(async () => {
     setIsLoading(true);
     try {
       if (!user?.id) {
@@ -135,7 +132,11 @@ export default function IslemGecmisiPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [filters, pagination.limit, pagination.page, user?.id]);
+
+  useEffect(() => {
+    fetchAuditLogs();
+  }, [pagination.page, filters, fetchAuditLogs]);
 
   const handleFilterChange = (key: string, value: string) => {
     setFilters(prev => ({ ...prev, [key]: value }));

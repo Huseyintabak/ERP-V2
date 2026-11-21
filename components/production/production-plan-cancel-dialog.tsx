@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -61,13 +61,8 @@ export function ProductionPlanCancelDialog({
     reason: string;
   } | null>(null);
 
-  useEffect(() => {
-    if (isOpen && plan) {
-      checkPermission();
-    }
-  }, [isOpen, plan]);
 
-  const checkPermission = async () => {
+  const checkPermission = useCallback(async () => {
     if (!plan || !user) return;
 
     try {
@@ -86,7 +81,13 @@ export function ProductionPlanCancelDialog({
       logger.error('Permission check error:', error);
       setPermissionCheck({ allowed: false, reason: 'İzin kontrolü başarısız' });
     }
-  };
+  }, [plan, user]);
+
+  useEffect(() => {
+    if (isOpen && plan) {
+      checkPermission();
+    }
+  }, [checkPermission, isOpen, plan]);
 
   const handleCancel = async () => {
     if (!reason.trim() || !plan) {

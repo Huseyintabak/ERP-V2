@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -134,40 +134,7 @@ export default function OperatorDashboardClient() {
   // Selected task for detail panel
   const [selectedTask, setSelectedTask] = useState<ProductionTask | null>(null);
 
-  // Simple polling instead of WebSocket - more reliable!
-  const { 
-    isActive: isPollingActive,
-    lastUpdate,
-    refresh: manualRefresh
-  } = usePolling(
-    async () => {
-      if (operatorId) {
-        await fetchAllData();
-      }
-    },
-    {
-      interval: 5000, // 5 saniyede bir güncelle
-      enabled: !!operatorId
-    }
-  );
-
-  useEffect(() => {
-    if (operatorId) {
-      fetchAllData();
-    }
-  }, [operatorId]);
-
-  async function fetchAllData() {
-    await Promise.all([
-      fetchStats(),
-      fetchAssignedTasks(),
-      fetchActiveTasks(),
-      fetchPausedTasks()
-    ]);
-    setLoading(false);
-  }
-
-  async function fetchStats() {
+  const fetchStats = useCallback(async () => {
     if (!operatorId) return;
     
     try {
@@ -188,9 +155,9 @@ export default function OperatorDashboardClient() {
     } catch (error) {
       logger.error('Operator Dashboard Stats fetch error:', error);
     }
-  }
+  }, [operatorId, user?.id]);
 
-  async function fetchAssignedTasks() {
+  const fetchAssignedTasks = useCallback(async () => {
     if (!operatorId) return;
     
     try {
@@ -251,9 +218,9 @@ export default function OperatorDashboardClient() {
     } catch (error) {
       logger.error('Assigned tasks fetch error:', error);
     }
-  }
+  }, [operatorId, user?.id]);
 
-  async function fetchActiveTasks() {
+  const fetchActiveTasks = useCallback(async () => {
     if (!operatorId) return;
     
     try {
@@ -292,9 +259,9 @@ export default function OperatorDashboardClient() {
     } catch (error) {
       logger.error('Active tasks fetch error:', error);
     }
-  }
+  }, [operatorId, user?.id]);
 
-  async function fetchPausedTasks() {
+  const fetchPausedTasks = useCallback(async () => {
     if (!operatorId) return;
     
     try {
@@ -333,7 +300,46 @@ export default function OperatorDashboardClient() {
     } catch (error) {
       logger.error('Paused tasks fetch error:', error);
     }
-  }
+  }, [operatorId, user?.id]);
+
+  // useCallback: polling ve effect bağımlılığı olarak kararlı referans
+  const fetchAllData = useCallback(async () => {
+    await Promise.all([
+      fetchStats(),
+      fetchAssignedTasks(),
+      fetchActiveTasks(),
+      fetchPausedTasks()
+    ]);
+    setLoading(false);
+  }, [fetchActiveTasks, fetchAssignedTasks, fetchPausedTasks, fetchStats]);
+
+  // Simple polling instead of WebSocket - more reliable!
+  const { 
+    isActive: isPollingActive,
+    lastUpdate,
+    refresh: manualRefresh
+  } = usePolling(
+    async () => {
+      if (operatorId) {
+        await fetchAllData();
+      }
+    },
+    {
+      interval: 5000, // 5 saniyede bir güncelle
+      enabled: !!operatorId
+    }
+  );
+
+  useEffect(() => {
+    if (operatorId) {
+      fetchAllData();
+    }
+  }, [fetchAllData, operatorId]);
+
+
+
+
+
 
 
   // Plan status actions - Hem normal üretim hem yarı mamul üretim

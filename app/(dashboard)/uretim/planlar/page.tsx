@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -85,12 +85,8 @@ export default function UretimPlanlariPage() {
   // Real-time updates for production plans
   useRoleBasedRealtime('planlama');
   
-  useEffect(() => {
-    actions.fetchProductionPlans();
-    fetchOperators();
-  }, [actions]);
 
-  const fetchOperators = async () => {
+  const fetchOperators = useCallback(async () => {
     try {
       if (!user?.id) {
         throw new Error('Kullanıcı kimlik doğrulaması gerekli');
@@ -106,7 +102,12 @@ export default function UretimPlanlariPage() {
     } catch (error: any) {
       console.error('Error fetching operators:', error);
     }
-  };
+  }, [user?.id]);
+
+  useEffect(() => {
+    actions.fetchProductionPlans();
+    fetchOperators();
+  }, [actions, fetchOperators]);
 
   const handleStartProduction = async (planId: string) => {
     try {

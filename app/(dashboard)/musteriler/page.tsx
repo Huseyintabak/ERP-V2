@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -60,11 +60,8 @@ export default function MusterilerPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [, setDeleteCustomerId] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchCustomers();
-  }, []);
 
-  const fetchCustomers = async () => {
+  const fetchCustomers = useCallback(async () => {
     try {
       setLoading(true);
       if (!user?.id) {
@@ -96,7 +93,11 @@ export default function MusterilerPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user?.id]);
+
+  useEffect(() => {
+    fetchCustomers();
+  }, [fetchCustomers]);
 
   const handleDelete = async (customerId: string) => {
     try {

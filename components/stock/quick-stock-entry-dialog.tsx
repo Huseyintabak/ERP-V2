@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -45,13 +45,8 @@ export function QuickStockEntryDialog({ open, onClose, type }: Props) {
     badge: `${material.quantity} ${material.unit}`,
   }));
 
-  useEffect(() => {
-    if (open) {
-      fetchMaterials();
-    }
-  }, [open, materialType]);
 
-  const fetchMaterials = async () => {
+  const fetchMaterials = useCallback(async () => {
     try {
       if (!user?.id) {
         throw new Error('Kullanıcı kimlik doğrulaması gerekli');
@@ -73,7 +68,13 @@ export function QuickStockEntryDialog({ open, onClose, type }: Props) {
       logger.error('Failed to fetch materials:', error);
       toast.error('Malzemeler yüklenemedi');
     }
-  };
+  }, [materialType, user?.id]);
+
+  useEffect(() => {
+    if (open) {
+      fetchMaterials();
+    }
+  }, [open, materialType, fetchMaterials]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

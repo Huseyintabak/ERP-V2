@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -85,7 +85,7 @@ export function AuditLogViewer({ onExport }: AuditLogViewerProps) {
   const [totalPages, setTotalPages] = useState(1);
 
   // Load audit logs
-  const loadAuditLogs = async () => {
+  const loadAuditLogs = useCallback(async () => {
     try {
       setLoading(true);
       
@@ -123,11 +123,11 @@ export function AuditLogViewer({ onExport }: AuditLogViewerProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentPage, filters.action, filters.dateFrom, filters.dateTo, filters.limit, filters.search, filters.severity, filters.table, filters.user, user?.id]);
 
   useEffect(() => {
     loadAuditLogs();
-  }, [currentPage, filters]);
+  }, [currentPage, filters, loadAuditLogs]);
 
   // Get severity badge
   const getSeverityBadge = (severity: string) => {

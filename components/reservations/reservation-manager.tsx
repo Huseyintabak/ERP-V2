@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -56,7 +56,7 @@ export default function ReservationManager({ orderId }: ReservationManagerProps)
   const { user } = useAuthStore();
 
   // Rezervasyonları getir
-  const fetchReservations = async () => {
+  const fetchReservations = useCallback(async () => {
     try {
       setLoading(true);
       if (!user?.id) {
@@ -111,7 +111,7 @@ export default function ReservationManager({ orderId }: ReservationManagerProps)
     } finally {
       setLoading(false);
     }
-  };
+  }, [filterOrderId, filterStatus, user?.id]);
 
   useEffect(() => {
     fetchReservations();
@@ -131,7 +131,7 @@ export default function ReservationManager({ orderId }: ReservationManagerProps)
         clearInterval(intervalId);
       }
     };
-  }, [filterOrderId, filterStatus, autoRefresh, pagination.page]);
+  }, [filterOrderId, filterStatus, autoRefresh, pagination.page, fetchReservations]);
 
   // Rezervasyon durumu badge'i
   const getStatusBadge = (status: string) => {

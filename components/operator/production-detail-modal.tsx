@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useBarcode } from '@/lib/hooks/use-barcode';
 import {
   Dialog,
@@ -82,13 +82,8 @@ export default function ProductionDetailModal({
     handleBarcodeScan(scannedBarcode);
   });
 
-  useEffect(() => {
-    if (isOpen) {
-      fetchProductionLogs();
-    }
-  }, [isOpen, production.id]);
 
-  const fetchProductionLogs = async () => {
+  const fetchProductionLogs = useCallback(async () => {
     try {
       if (!user?.id) {
         throw new Error('Kullanıcı kimlik doğrulaması gerekli');
@@ -105,7 +100,13 @@ export default function ProductionDetailModal({
     } catch (error) {
       logger.error('Error fetching logs:', error);
     }
-  };
+  }, [production?.id, user?.id]);
+
+  useEffect(() => {
+    if (isOpen) {
+      fetchProductionLogs();
+    }
+  }, [fetchProductionLogs, isOpen, production?.id]);
 
   const handleBarcodeScan = async (barcode: string) => {
     if (!barcode || barcode.length < 3) return;

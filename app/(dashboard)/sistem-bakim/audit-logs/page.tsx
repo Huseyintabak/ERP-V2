@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -52,6 +52,42 @@ export default function AuditLogsPage() {
   });
   const [loading, setLoading] = useState(true);
 
+
+  const fetchStats = async () => {
+    try {
+      const response = await fetch('/api/audit-logs?stats=true');
+      const data = await response.json();
+      
+      if (data.stats) {
+        setStats(data.stats);
+      }
+    } catch (error) {
+      console.error('Error fetching audit stats:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchCriticalEvents = useCallback(async () => {
+    try {
+      const response = await fetch('/api/audit-logs?limit=4&severity=high');
+      const data = await response.json();
+      
+      if (data.logs && Array.isArray(data.logs)) {
+        const events = data.logs.map((log: any) => ({
+          action: log.action || 'UNKNOWN',
+          description: log.description || 'No description',
+          user: log.user_name || 'Unknown',
+          time: formatTimeAgo(log.created_at),
+          severity: log.severity || 'medium'
+        }));
+        setCriticalEvents(events);
+      }
+    } catch (error) {
+      console.error('Error fetching critical events:', error);
+    }
+  }, []);
+
   useEffect(() => {
     fetchStats();
     fetchCriticalEvents();
@@ -71,42 +107,7 @@ export default function AuditLogsPage() {
     }, 30000);
     
     return () => clearInterval(interval);
-  }, [activeTab]);
-
-  const fetchStats = async () => {
-    try {
-      const response = await fetch('/api/audit-logs?stats=true');
-      const data = await response.json();
-      
-      if (data.stats) {
-        setStats(data.stats);
-      }
-    } catch (error) {
-      console.error('Error fetching audit stats:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchCriticalEvents = async () => {
-    try {
-      const response = await fetch('/api/audit-logs?limit=4&severity=high');
-      const data = await response.json();
-      
-      if (data.logs && Array.isArray(data.logs)) {
-        const events = data.logs.map((log: any) => ({
-          action: log.action || 'UNKNOWN',
-          description: log.description || 'No description',
-          user: log.user_name || 'Unknown',
-          time: formatTimeAgo(log.created_at),
-          severity: log.severity || 'medium'
-        }));
-        setCriticalEvents(events);
-      }
-    } catch (error) {
-      console.error('Error fetching critical events:', error);
-    }
-  };
+  }, [activeTab, fetchCriticalEvents]);
 
   const fetchAnalytics = async () => {
     try {

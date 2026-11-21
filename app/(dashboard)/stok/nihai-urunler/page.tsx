@@ -29,7 +29,7 @@ export default function NihaiUrunlerPage() {
     // İlk yüklemede tüm nihai ürünleri getir (limit yok, tümü)
     actions.fetchFinishedProducts({ page: 1, limit: 10000 });
      
-  }, []); // Sadece mount'ta çalışsın, actions dependency'den çıkarıldı
+  }, [actions]); // Sadece mount'ta çalışsın, actions dependency'den çıkarıldı
 
   const handlePageChange = (page: number) => {
     actions.fetchFinishedProducts({ page, limit: 10000 });

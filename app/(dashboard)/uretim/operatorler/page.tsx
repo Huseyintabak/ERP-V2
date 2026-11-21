@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuthStore } from '@/stores/auth-store';
 import {
   Card,
@@ -105,11 +105,8 @@ export default function OperatorlerPage() {
     },
   });
 
-  useEffect(() => {
-    fetchOperators();
-  }, []);
 
-  const fetchOperators = async () => {
+  const fetchOperators = useCallback(async () => {
     try {
       setLoading(true);
       if (!user?.id) {
@@ -130,7 +127,11 @@ export default function OperatorlerPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user?.id]);
+
+  useEffect(() => {
+    fetchOperators();
+  }, [fetchOperators]);
 
   const handleAddOperator = async (data: OperatorFormData) => {
     try {

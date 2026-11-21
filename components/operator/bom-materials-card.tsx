@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { AlertCircle, Package, Loader2 } from 'lucide-react';
@@ -27,13 +27,8 @@ export function BomMaterialsCard({ planId, producedQuantity }: BomMaterialsCardP
   const [loading, setLoading] = useState(true);
   const { user } = useAuthStore();
 
-  useEffect(() => {
-    if (planId) {
-      fetchBomMaterials();
-    }
-  }, [planId]);
 
-  const fetchBomMaterials = async () => {
+  const fetchBomMaterials = useCallback(async () => {
     setLoading(true);
     try {
       if (!user?.id) {
@@ -53,7 +48,13 @@ export function BomMaterialsCard({ planId, producedQuantity }: BomMaterialsCardP
     } finally {
       setLoading(false);
     }
-  };
+  }, [planId, user?.id]);
+
+  useEffect(() => {
+    if (planId) {
+      fetchBomMaterials();
+    }
+  }, [fetchBomMaterials, planId]);
 
   if (loading) {
     return (

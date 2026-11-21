@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -107,12 +107,8 @@ export default function DepoZoneYonetimiPage() {
     totalProducts: 0
   });
 
-  useEffect(() => {
-    fetchZones();
-    fetchCustomers();
-  }, []);
 
-  const fetchZones = async () => {
+  const fetchZones = useCallback(async () => {
     try {
       setLoading(true);
       if (!user?.id) {
@@ -154,9 +150,9 @@ export default function DepoZoneYonetimiPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user?.id]);
 
-  const fetchCustomers = async () => {
+  const fetchCustomers = useCallback(async () => {
     try {
       if (!user?.id) {
         throw new Error('Kullanıcı kimlik doğrulaması gerekli');
@@ -183,7 +179,12 @@ export default function DepoZoneYonetimiPage() {
     } catch (error) {
       console.error('Error fetching customers:', error);
     }
-  };
+  }, [user?.id]);
+
+  useEffect(() => {
+    fetchZones();
+    fetchCustomers();
+  }, [fetchCustomers, fetchZones]);
 
   const fetchZoneInventory = async (zoneId: string, startDate?: string, endDate?: string) => {
     try {

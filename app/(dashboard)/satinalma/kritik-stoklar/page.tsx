@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -62,11 +62,8 @@ export default function KritikStoklarPage() {
     approved: 0
   });
 
-  useEffect(() => {
-    fetchRequests();
-  }, [page, statusFilter, priorityFilter, search]);
 
-  const fetchRequests = async () => {
+  const fetchRequests = useCallback(async () => {
     try {
       setLoading(true);
       if (!user?.id) {
@@ -114,7 +111,11 @@ export default function KritikStoklarPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, priorityFilter, search, statusFilter, user?.id]);
+
+  useEffect(() => {
+    fetchRequests();
+  }, [page, statusFilter, priorityFilter, search, fetchRequests]);
 
   const handleUpdateRequest = async (requestId: string, updates: Partial<PurchaseRequest>) => {
     try {

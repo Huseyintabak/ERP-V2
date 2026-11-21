@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -91,12 +91,6 @@ export function InventoryCountDialog({
     badge: `${material.quantity} ${material.unit}`,
   }));
 
-  // Malzeme tipine göre malzemeleri yükle
-  useEffect(() => {
-    if (open && watchMaterialType) {
-      loadMaterials(watchMaterialType);
-    }
-  }, [watchMaterialType, open]);
 
   // Seçilen malzemeyi bul
   useEffect(() => {
@@ -108,7 +102,7 @@ export function InventoryCountDialog({
     }
   }, [watchMaterialId, materials]);
 
-  const loadMaterials = async (type: 'raw' | 'semi' | 'finished') => {
+  const loadMaterials = useCallback(async (type: 'raw' | 'semi' | 'finished') => {
     setMaterialsLoading(true);
     try {
       if (!user?.id) {
@@ -137,7 +131,14 @@ export function InventoryCountDialog({
     } finally {
       setMaterialsLoading(false);
     }
-  };
+  }, [user?.id]);
+
+  // Malzeme tipine göre malzemeleri yükle
+  useEffect(() => {
+    if (open && watchMaterialType) {
+      loadMaterials(watchMaterialType);
+    }
+  }, [watchMaterialType, open, loadMaterials]);
 
   const onSubmit = async (data: CountFormData) => {
     setLoading(true);

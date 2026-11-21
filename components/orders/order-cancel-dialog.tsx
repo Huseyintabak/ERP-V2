@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Dialog,
   DialogContent,
@@ -59,13 +59,8 @@ export function OrderCancelDialog({
     reason: string;
   } | null>(null);
 
-  useEffect(() => {
-    if (isOpen && order) {
-      checkPermission();
-    }
-  }, [isOpen, order]);
 
-  const checkPermission = async () => {
+  const checkPermission = useCallback(async () => {
     if (!order || !user) return;
 
     try {
@@ -87,7 +82,13 @@ export function OrderCancelDialog({
       logger.error("Permission check error:", error);
       setPermissionCheck({ allowed: false, reason: "İzin kontrolü başarısız" });
     }
-  };
+  }, [order, user]);
+
+  useEffect(() => {
+    if (isOpen && order) {
+      checkPermission();
+    }
+  }, [checkPermission, isOpen, order]);
 
   const handleCancel = async () => {
     if (!reason.trim() || !order) {

@@ -39,9 +39,11 @@ export function BarcodeScanner({
     };
   }, []);
 
-  // Auto-start scanner when continuous mode is enabled
+  // Auto-start scanner when continuous mode is enabled.
+  // Sadece mod değişiminde çalışır; isScanning'e bağlı olursa kullanıcı sürekli modda
+  // taramayı durduramazdı (effect hemen yeniden başlatırdı). Zaten true ise set no-op.
   useEffect(() => {
-    if (continuousMode && !isScanning) {
+    if (continuousMode) {
       setIsScanning(true);
     }
   }, [continuousMode]);

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -54,7 +54,7 @@ export default function SystemMaintenance() {
   const [auditDays, setAuditDays] = useState(90);
   const [notificationDays, setNotificationDays] = useState(30);
 
-  const fetchMetrics = async () => {
+  const fetchMetrics = useCallback(async () => {
     try {
       setLoading(true);
       if (!user?.id) {
@@ -76,9 +76,9 @@ export default function SystemMaintenance() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user?.id]);
 
-  const fetchHealth = async () => {
+  const fetchHealth = useCallback(async () => {
     try {
       setLoading(true);
       if (!user?.id) {
@@ -101,7 +101,7 @@ export default function SystemMaintenance() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user?.id]);
 
   const updateStats = async () => {
     try {
@@ -248,7 +248,7 @@ export default function SystemMaintenance() {
   useEffect(() => {
     fetchMetrics();
     fetchHealth();
-  }, []);
+  }, [fetchHealth, fetchMetrics]);
 
   const getHealthStatusColor = (status: string) => {
     switch (status) {

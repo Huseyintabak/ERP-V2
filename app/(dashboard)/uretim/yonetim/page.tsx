@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Card,
   CardContent,
@@ -61,7 +61,7 @@ export default function UretimYonetimPage() {
   const { user } = useAuthStore();
   // toast from sonner is already imported
 
-  const fetchOrders = async () => {
+  const fetchOrders = useCallback(async () => {
     try {
       setLoading(true);
       if (!user?.id) {
@@ -85,11 +85,11 @@ export default function UretimYonetimPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user?.id]);
 
   useEffect(() => {
     fetchOrders();
-  }, []);
+  }, [fetchOrders]);
 
   // Real-time updates for orders with unified system
   const realtimeStatus = useRealtimeUnified(

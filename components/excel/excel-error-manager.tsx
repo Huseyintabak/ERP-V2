@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -89,7 +89,7 @@ export default function ExcelErrorManager() {
   const [resolveDialogOpen, setResolveDialogOpen] = useState(false);
   const [resolutionNotes, setResolutionNotes] = useState('');
 
-  const fetchErrors = async () => {
+  const fetchErrors = useCallback(async () => {
     try {
       setLoading(true);
       if (!user?.id) {
@@ -118,9 +118,9 @@ export default function ExcelErrorManager() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [filters, user?.id]);
 
-  const fetchStats = async () => {
+  const fetchStats = useCallback(async () => {
     try {
       if (!user?.id) {
         throw new Error('Kullanıcı kimlik doğrulaması gerekli');
@@ -138,7 +138,7 @@ export default function ExcelErrorManager() {
     } catch (error) {
       logger.error('Error fetching stats:', error);
     }
-  };
+  }, [user?.id]);
 
   const resolveError = async (errorId: string, notes: string) => {
     try {
@@ -216,7 +216,7 @@ export default function ExcelErrorManager() {
   useEffect(() => {
     fetchErrors();
     fetchStats();
-  }, [filters]);
+  }, [fetchErrors, fetchStats, filters]);
 
   return (
     <div className="space-y-6">

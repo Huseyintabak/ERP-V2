@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -89,11 +89,8 @@ export default function RaporlarPage() {
   const [loading, setLoading] = useState(true);
   const { user } = useAuthStore();
 
-  useEffect(() => {
-    fetchReportData();
-  }, []);
 
-  const fetchReportData = async () => {
+  const fetchReportData = useCallback(async () => {
     try {
       if (!user?.id) {
         throw new Error('Kullanıcı kimlik doğrulaması gerekli');
@@ -243,7 +240,11 @@ export default function RaporlarPage() {
       console.error('Rapor verileri yüklenemedi:', error);
       setLoading(false);
     }
-  };
+  }, [user?.id]);
+
+  useEffect(() => {
+    fetchReportData();
+  }, [fetchReportData]);
 
   const exportReport = async (type: string) => {
     try {

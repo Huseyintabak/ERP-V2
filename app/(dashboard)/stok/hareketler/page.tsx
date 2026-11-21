@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -72,11 +72,8 @@ export default function StokHareketleriPage() {
     production: 0
   });
 
-  useEffect(() => {
-    fetchMovements();
-  }, [page, materialTypeFilter, movementTypeFilter, search, fromDate, toDate]);
 
-  const fetchMovements = async () => {
+  const fetchMovements = useCallback(async () => {
     try {
       setLoading(true);
       if (!user?.id) {
@@ -132,7 +129,11 @@ export default function StokHareketleriPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [fromDate, materialTypeFilter, movementTypeFilter, page, search, toDate, user?.id]);
+
+  useEffect(() => {
+    fetchMovements();
+  }, [page, materialTypeFilter, movementTypeFilter, search, fromDate, toDate, fetchMovements]);
 
   const getMovementTypeIcon = (movementType: string) => {
     switch (movementType) {

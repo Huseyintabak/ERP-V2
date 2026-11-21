@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -54,15 +54,8 @@ export function PriceHistoryDialog({
   const currentYear = new Date().getFullYear();
   const years = Array.from({ length: 5 }, (_, i) => currentYear - i);
 
-  useEffect(() => {
-    if (isOpen && materialId) {
-      fetchPriceHistory();
-      fetchYearlyAverage();
-      fetchTrendData();
-    }
-  }, [isOpen, materialId, selectedYear, selectedMonths]);
 
-  const fetchPriceHistory = async () => {
+  const fetchPriceHistory = useCallback(async () => {
     try {
       setLoading(true);
       const response = await fetch(
@@ -83,9 +76,9 @@ export function PriceHistoryDialog({
     } finally {
       setLoading(false);
     }
-  };
+  }, [materialId, materialType]);
 
-  const fetchYearlyAverage = async () => {
+  const fetchYearlyAverage = useCallback(async () => {
     try {
       const response = await fetch(
         `/api/price-history?material_type=${materialType}&material_id=${materialId}&year=${selectedYear}`
@@ -100,9 +93,9 @@ export function PriceHistoryDialog({
     } catch (error) {
       logger.error('Error fetching yearly average:', error);
     }
-  };
+  }, [materialId, materialType, selectedYear]);
 
-  const fetchTrendData = async () => {
+  const fetchTrendData = useCallback(async () => {
     try {
       const response = await fetch(
         `/api/price-history?material_type=${materialType}&material_id=${materialId}&months=${selectedMonths}`
@@ -120,7 +113,15 @@ export function PriceHistoryDialog({
       logger.error('Error fetching trend data:', error);
       setTrendData([]);
     }
-  };
+  }, [materialId, materialType, selectedMonths]);
+
+  useEffect(() => {
+    if (isOpen && materialId) {
+      fetchPriceHistory();
+      fetchYearlyAverage();
+      fetchTrendData();
+    }
+  }, [isOpen, materialId, selectedYear, selectedMonths, fetchPriceHistory, fetchYearlyAverage, fetchTrendData]);
 
   const getPriceChangeIcon = (change: number) => {
     if (change > 0) return <TrendingUp className="h-4 w-4 text-green-600" />;

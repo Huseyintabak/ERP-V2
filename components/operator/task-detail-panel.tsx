@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -80,14 +80,8 @@ export function TaskDetailPanel({ task, onRefresh }: TaskDetailPanelProps) {
   const [creatingReservation, setCreatingReservation] = useState(false);
   const { user } = useAuthStore();
 
-  useEffect(() => {
-    if (task) {
-      fetchLogs();
-      fetchBomMaterials();
-    }
-  }, [task?.id]);
 
-  const fetchLogs = async () => {
+  const fetchLogs = useCallback(async () => {
     if (!task) return;
     
     setFetchingLogs(true);
@@ -127,9 +121,9 @@ export function TaskDetailPanel({ task, onRefresh }: TaskDetailPanelProps) {
     } finally {
       setFetchingLogs(false);
     }
-  };
+  }, [task, user?.id]);
 
-  const fetchBomMaterials = async () => {
+  const fetchBomMaterials = useCallback(async () => {
     if (!task) return;
     
     try {
@@ -258,7 +252,14 @@ export function TaskDetailPanel({ task, onRefresh }: TaskDetailPanelProps) {
       logger.error('Failed to fetch BOM:', error);
       setBomMaterials([]);
     }
-  };
+  }, [task]);
+
+  useEffect(() => {
+    if (task) {
+      fetchLogs();
+      fetchBomMaterials();
+    }
+  }, [fetchBomMaterials, fetchLogs, task]);
 
   const handleBarcodeSubmit = async () => {
     if (!barcode.trim() || !task) return;

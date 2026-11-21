@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -123,16 +123,6 @@ export function ZoneTransferDialog({
     key: `${inventory.product_id || inventory.material_id}-${index}`, // Unique key için index ekle
   }));
 
-  // Load source zone inventory when fromZoneId changes
-  useEffect(() => {
-    if (fromZoneId) {
-      fetchZoneInventory(fromZoneId);
-    } else {
-      setSourceInventory([]);
-      setSelectedProduct(null);
-      setAvailableQuantity(0);
-    }
-  }, [fromZoneId]);
 
   // Update available quantity when product changes
   useEffect(() => {
@@ -153,7 +143,7 @@ export function ZoneTransferDialog({
     }
   }, [productId, sourceInventory]);
 
-  const fetchZoneInventory = async (zoneId: string) => {
+  const fetchZoneInventory = useCallback(async (zoneId: string) => {
     try {
       if (!user?.id) {
         throw new Error('Kullanıcı kimlik doğrulaması gerekli');
@@ -182,7 +172,18 @@ export function ZoneTransferDialog({
       logger.error('Error fetching zone inventory:', error);
       toast.error('Stok bilgileri yüklenirken hata oluştu');
     }
-  };
+  }, [user?.id, zones]);
+
+  // Load source zone inventory when fromZoneId changes
+  useEffect(() => {
+    if (fromZoneId) {
+      fetchZoneInventory(fromZoneId);
+    } else {
+      setSourceInventory([]);
+      setSelectedProduct(null);
+      setAvailableQuantity(0);
+    }
+  }, [fetchZoneInventory, fromZoneId]);
 
   const addProductToTransfer = () => {
     if (!productId || !quantity) {

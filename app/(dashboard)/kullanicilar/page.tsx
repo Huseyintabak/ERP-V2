@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -66,11 +66,8 @@ export default function KullanicilarPage() {
     removeUser,
   } = useUserStore();
 
-  useEffect(() => {
-    fetchUsers();
-  }, [filters, pagination.page]);
 
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     setIsLoading(true);
     try {
       const params = new URLSearchParams({
@@ -110,7 +107,11 @@ export default function KullanicilarPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [filters.is_active, filters.role, filters.search, pagination.limit, pagination.page, setPagination, setUsers, user?.id]);
+
+  useEffect(() => {
+    fetchUsers();
+  }, [fetchUsers, filters, pagination.page]);
 
   const handleSearch = (value: string) => {
     setSearchTerm(value);

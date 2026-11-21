@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { 
   Clock, 
@@ -70,54 +70,8 @@ export default function PlanlamaDashboard() {
 
   // Real-time subscriptions
   // Real-time updates with unified system
-  useRealtimeUnified('raw_materials', fetchStats, undefined, undefined, fetchStats, { maxRetries: 3, enableFallback: true });
-  useRealtimeUnified('semi_finished_products', fetchStats, undefined, undefined, fetchStats, { maxRetries: 3, enableFallback: true });
-  useRealtimeUnified('finished_products', fetchStats, undefined, undefined, fetchStats, { maxRetries: 3, enableFallback: true });
-  useRealtimeUnified('production_plans', fetchStats, undefined, undefined, fetchStats, { maxRetries: 3, enableFallback: true });
-  useRealtimeUnified('orders', fetchStats, undefined, undefined, fetchStats, { maxRetries: 3, enableFallback: true });
-
-  useEffect(() => {
-    fetchStats();
-    
-    // Smart polling for real-time updates
-    let interval: NodeJS.Timeout;
-    
-    const startPolling = () => {
-      interval = setInterval(() => {
-        fetchStats();
-      }, 30000); // 30 seconds
-    };
-    
-    const stopPolling = () => {
-      if (interval) {
-        clearInterval(interval);
-      }
-    };
-    
-    // Handle visibility changes
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        fetchStats(); // Immediate fetch when page becomes visible
-        startPolling();
-      } else {
-        stopPolling();
-      }
-    };
-    
-    // Initial setup
-    if (document.visibilityState === 'visible') {
-      startPolling();
-    }
-    
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    
-    return () => {
-      stopPolling();
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, []);
-
-  async function fetchStats() {
+  // useCallback: effect / realtime hook bağımlılığı olarak kararlı referans
+  const fetchStats = useCallback(async () => {
     console.log('🔄 Planlama Dashboard: Fetching stats...');
     try {
       if (!user?.id) {
@@ -419,7 +373,55 @@ export default function PlanlamaDashboard() {
     } catch (error) {
       console.error('Planlama Dashboard Stats fetch error:', error);
     }
-  }
+  }, [user?.id]);
+
+  useRealtimeUnified('raw_materials', fetchStats, undefined, undefined, fetchStats, { maxRetries: 3, enableFallback: true });
+  useRealtimeUnified('semi_finished_products', fetchStats, undefined, undefined, fetchStats, { maxRetries: 3, enableFallback: true });
+  useRealtimeUnified('finished_products', fetchStats, undefined, undefined, fetchStats, { maxRetries: 3, enableFallback: true });
+  useRealtimeUnified('production_plans', fetchStats, undefined, undefined, fetchStats, { maxRetries: 3, enableFallback: true });
+  useRealtimeUnified('orders', fetchStats, undefined, undefined, fetchStats, { maxRetries: 3, enableFallback: true });
+
+  useEffect(() => {
+    fetchStats();
+    
+    // Smart polling for real-time updates
+    let interval: NodeJS.Timeout;
+    
+    const startPolling = () => {
+      interval = setInterval(() => {
+        fetchStats();
+      }, 30000); // 30 seconds
+    };
+    
+    const stopPolling = () => {
+      if (interval) {
+        clearInterval(interval);
+      }
+    };
+    
+    // Handle visibility changes
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        fetchStats(); // Immediate fetch when page becomes visible
+        startPolling();
+      } else {
+        stopPolling();
+      }
+    };
+    
+    // Initial setup
+    if (document.visibilityState === 'visible') {
+      startPolling();
+    }
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    return () => {
+      stopPolling();
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [fetchStats]);
+
 
   return (
     <div className="space-y-6">

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -51,11 +51,8 @@ export function InventoryApprovalList() {
   const [rejectReason, setRejectReason] = useState('');
   const { user } = useAuthStore();
 
-  useEffect(() => {
-    fetchPendingCounts();
-  }, []);
 
-  const fetchPendingCounts = async () => {
+  const fetchPendingCounts = useCallback(async () => {
     setLoading(true);
     try {
       if (!user?.id) {
@@ -77,7 +74,11 @@ export function InventoryApprovalList() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user?.id]);
+
+  useEffect(() => {
+    fetchPendingCounts();
+  }, [fetchPendingCounts]);
 
   const handleApprove = async (countId: string, autoAdjust: boolean = true) => {
     if (!confirm(`Bu sayımı onaylıyor musunuz?${autoAdjust ? ' Stok otomatik güncellenecek.' : ''}`)) {
