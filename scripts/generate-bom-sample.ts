@@ -67,16 +67,13 @@ worksheet['!cols'] = columnWidths;
 
 XLSX.utils.book_append_sheet(workbook, worksheet, 'BOM Listesi');
 
-// Save to public and root directory
+// Save to public/ (sayfa buradan indiriyor)
 const publicPath = path.join(process.cwd(), 'public', 'bom-sample-data.xlsx');
-const rootPath = path.join(process.cwd(), 'bom-sample-data.xlsx');
 
 XLSX.writeFile(workbook, publicPath);
-XLSX.writeFile(workbook, rootPath);
 
 console.log('✅ BOM sample Excel dosyası oluşturuldu:');
 console.log('  - public/bom-sample-data.xlsx');
-console.log('  - bom-sample-data.xlsx');
 console.log('\n📋 Kolonlar (7 adet):');
 console.log('  - Ürün Kodu, Ürün Adı, Ürün Tipi');
 console.log('  - Malzeme Tipi, Malzeme Kodu, Malzeme Adı');

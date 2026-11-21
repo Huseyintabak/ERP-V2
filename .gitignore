@@ -53,3 +53,6 @@ cookies*.txt
 public/sw.js
 public/workbox-*.js
 public/swe-worker-*.js
+
+# one-off script outputs
+missing-stock-movements.json
