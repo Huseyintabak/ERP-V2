@@ -1,81 +1,55 @@
-#!/bin/bash
+#!/usr/bin/env bash
+# Thunder ERP — güncelleme deploy'u (VPS'te 'thunder' kullanıcısıyla çalıştır)
+#   cd /var/www/thunder-erp && ./deploy.sh
+#
+# Rollback: git log ile önceki commit'i bul →  git checkout <commit> && ./deploy.sh --no-pull
 
-# Thunder ERP Production Deployment Script
-# Sunucuda çalıştırılacak deployment script'i
-# Kullanım: ./deploy.sh
+set -euo pipefail
 
-set -e  # Hata durumunda durdur
+APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "${APP_DIR}"
 
-echo "🚀 Thunder ERP Deployment Başlıyor..."
-echo "======================================"
-echo ""
+log() { echo -e "\n\033[1;34m==> $*\033[0m"; }
 
-# Renkler
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-RED='\033[0;31m'
-NC='\033[0m' # No Color
-
-# 1. Dizin kontrolü
-if [ ! -d "/var/www/thunder-erp" ]; then
-    echo -e "${RED}❌ /var/www/thunder-erp dizini bulunamadı!${NC}"
-    exit 1
+if [ ! -f .env.production.local ]; then
+  echo "⛔ .env.production.local yok — deploy/README.md adım 2" >&2
+  exit 1
 fi
 
-cd /var/www/thunder-erp
+PREV_COMMIT="$(git rev-parse --short HEAD)"
 
-# 2. Dosya sahipliğini düzelt
-echo -e "${YELLOW}📁 Dosya sahipliği düzeltiliyor...${NC}"
-sudo chown -R $USER:$USER . 2>/dev/null || true
+if [ "${1:-}" != "--no-pull" ]; then
+  log "git pull"
+  git pull --ff-only origin main
+fi
+NEW_COMMIT="$(git rev-parse --short HEAD)"
+echo "${PREV_COMMIT} → ${NEW_COMMIT}"
 
-# 3. Eski build ve cache'leri temizle
-echo -e "${YELLOW}🧹 Eski build ve cache'ler temizleniyor...${NC}"
-rm -rf .next 2>/dev/null || true
-rm -rf node_modules/.cache 2>/dev/null || true
-rm -rf .turbo 2>/dev/null || true
-find . -type d -name ".next" -exec rm -rf {} + 2>/dev/null || true
+log "Bağımlılıklar (npm ci)"
+npm ci --no-audit --no-fund
 
-# 4. Git pull (son değişiklikleri çek)
-echo -e "${YELLOW}📥 Git'ten son değişiklikler çekiliyor...${NC}"
-git pull origin main
+log "Build"
+# Eski build'i silmeden önce yenisini ayrı dizinde değil, yerinde üretiyoruz;
+# build başarısız olursa PM2 eski süreçle çalışmaya devam eder (.next bellekte yüklü).
+NODE_OPTIONS="--max-old-space-size=2048" npm run build
 
-# 5. Dependencies kontrol
-echo -e "${YELLOW}📦 Dependencies kontrol ediliyor...${NC}"
-if [ -f package-lock.json ]; then
-  npm ci
+log "PM2 reload"
+if pm2 describe thunder-erp >/dev/null 2>&1; then
+  pm2 reload ecosystem.config.js --update-env
 else
-  npm install
+  pm2 start ecosystem.config.js
 fi
+pm2 save
 
-# 6. Build
-echo -e "${YELLOW}🔨 Production build oluşturuluyor...${NC}"
-npm run build
-
-# 7. Build klasörüne yazma izni ver
-echo -e "${YELLOW}🔐 Build klasörüne yazma izni veriliyor...${NC}"
-sudo chmod -R u+w .next 2>/dev/null || true
-
-# 8. PM2 restart (env update ile)
-echo -e "${YELLOW}🔄 PM2 ile uygulama yeniden başlatılıyor (env update)...${NC}"
-pm2 restart thunder-erp --update-env || pm2 start ecosystem.config.js
-
-# 9. Durum kontrolü
-echo ""
-echo -e "${GREEN}✅ Deployment tamamlandı!${NC}"
-echo ""
-echo "📊 Uygulama durumu:"
-pm2 status thunder-erp
-
-echo ""
-echo "📝 Son 20 log satırı:"
-pm2 logs thunder-erp --lines 20 --nostream
-
-echo ""
-echo -e "${YELLOW}⚠️  ÖNEMLİ: Browser cache temizleme${NC}"
-echo "Browser'da şunları yapın:"
-echo "  1. Hard Refresh: Ctrl+Shift+R (Windows/Linux) veya Cmd+Shift+R (Mac)"
-echo "  2. Veya Developer Tools (F12) > Network > 'Disable cache' işaretleyin"
-echo ""
-echo "🌐 Uygulama: http://192.168.1.250"
-echo "📊 PM2 Dashboard: pm2 monit"
-echo ""
+log "Sağlık kontrolü"
+for i in $(seq 1 20); do
+  code="$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:3000/login || true)"
+  [ "${code}" = "200" ] && break
+  sleep 1
+done
+if [ "${code}" != "200" ]; then
+  echo "❌ /login ${code} döndü. Loglar: pm2 logs thunder-erp --lines 50"
+  echo "   Geri almak için: git checkout ${PREV_COMMIT} && ./deploy.sh --no-pull"
+  exit 1
+fi
+echo "✅ Deploy tamam (${NEW_COMMIT})"
