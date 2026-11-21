@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { createClient } from '@/lib/supabase/client';
 
 interface HealthCheckResult {
   isHealthy: boolean;
@@ -33,25 +32,30 @@ export const useConnectionHealth = (
     const startTime = Date.now();
     
     try {
-      const supabase = createClient();
-      
-      // Simple query to test connection
-      const { error } = await supabase
-        .from('production_plans')
-        .select('id')
-        .limit(1);
-      
+      // Sunucuya erişilebilirlik: kendi API'miz (DB'ye gitmez, 204/401 döner).
+      // Önceden tarayıcıdan PostgREST'e (/rest/v1) gidiliyordu; self-hosted kurulumda bu yol
+      // dışarı kapalı olduğundan hep 404 alınıyor ve ~90 sn sonra realtime polling'e düşüyordu.
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      let response: Response;
+      try {
+        response = await fetch('/api/auth/verify', { cache: 'no-store', signal: controller.signal });
+      } finally {
+        clearTimeout(timeoutId);
+      }
+
       const latency = Date.now() - startTime;
-      
-      if (error) {
+
+      // 2xx / 4xx: sunucu ayakta (401 = oturum düşmüş ama bağlantı sağlam). 5xx: proxy/uygulama sorunu.
+      if (response.status >= 500) {
         return {
           isHealthy: false,
           latency,
-          error: error.message,
+          error: `HTTP ${response.status}`,
           timestamp: Date.now()
         };
       }
-      
+
       return {
         isHealthy: true,
         latency,
