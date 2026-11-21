@@ -7,7 +7,14 @@
 #
 # CRON_SECRET env değişkeni varsa Authorization header ile gönderilir.
 
-APP_URL="${NEXTAUTH_URL:-${NEXT_PUBLIC_APP_URL:-http://localhost:3000}}"
+# PM2 cron ortamı uygulama env'ini yüklemez; CRON_SECRET'ı env dosyasından oku
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ENV_FILE="${SCRIPT_DIR}/../.env.production.local"
+if [ -z "${CRON_SECRET:-}" ] && [ -f "$ENV_FILE" ]; then
+  CRON_SECRET="$(grep -E '^CRON_SECRET=' "$ENV_FILE" | head -n1 | cut -d= -f2-)"
+fi
+
+APP_URL="http://127.0.0.1:3000"
 ENDPOINT="${APP_URL}/api/cron/exchange-rate"
 CRON_SECRET="${CRON_SECRET:-}"
 
@@ -23,7 +30,7 @@ else
 fi
 
 HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
-BODY=$(echo "$RESPONSE" | head -n-1)
+BODY=$(echo "$RESPONSE" | sed '$d')
 
 if [ "$HTTP_CODE" = "200" ]; then
   echo "[$(date '+%Y-%m-%d %H:%M:%S')] ✅ Güncellendi: ${BODY}"

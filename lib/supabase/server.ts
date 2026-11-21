@@ -2,11 +2,20 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
 
+/**
+ * Sunucu tarafı Supabase URL'i.
+ * Self-hosted kurulumda Next.js, Kong'a iç ağdan (SUPABASE_INTERNAL_URL, örn. http://127.0.0.1:8000)
+ * erişir; NEXT_PUBLIC_SUPABASE_URL ise tarayıcının realtime için kullandığı public adrestir.
+ */
+export function getServerSupabaseUrl(): string | undefined {
+  return process.env.SUPABASE_INTERNAL_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+}
+
 export async function createClient() {
   const cookieStore = await cookies();
 
   return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    getServerSupabaseUrl()!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
