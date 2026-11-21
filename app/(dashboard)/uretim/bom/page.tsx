@@ -18,7 +18,8 @@ import {
   Download,
   Eye,
   Edit,
-  Calculator
+  Calculator,
+  RefreshCw
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { CostCalculationDialog } from '@/components/pricing/cost-calculation-dialog';
@@ -95,6 +96,8 @@ export default function BOMPage() {
   const [editingBOM, setEditingBOM] = useState<BOMEntry | null>(null);
   const [showVisualTree, setShowVisualTree] = useState(true);
   const [usdRate, setUsdRate] = useState<number | null>(null);
+  const [usdFetchedAt, setUsdFetchedAt] = useState<string | null>(null);
+  const [usdNextUpdateAt, setUsdNextUpdateAt] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false); // BOM kaydetme durumu
   const { user } = useAuthStore();
 
@@ -109,20 +112,27 @@ export default function BOMPage() {
     quantity_needed: 1,
   }]);
 
+  const fetchUsdRate = async (forceRefresh = false) => {
+    try {
+      const url = forceRefresh ? '/api/exchange/usd?refresh=true' : '/api/exchange/usd';
+      const r = await fetch(url, { cache: 'no-store' });
+      if (r.ok) {
+        const d = await r.json();
+        if (d?.rate) setUsdRate(Number(d.rate));
+        if (d?.fetchedAt) setUsdFetchedAt(d.fetchedAt);
+        if (d?.nextUpdateAt) setUsdNextUpdateAt(d.nextUpdateAt);
+        if (forceRefresh) toast.success(`Dolar kuru g\u00fcncellendi: \u20ba${Number(d.rate).toFixed(4)}`);
+      }
+    } catch {
+      toast.error('Kur g\u00fcncellenemedi');
+    }
+  };
+
   useEffect(() => {
     fetchFinishedProducts();
     fetchRawMaterials();
     fetchSemiFinishedProducts();
-    // Fetch USD rate (TCMB via our API)
-    (async () => {
-      try {
-        const r = await fetch('/api/exchange/usd', { cache: 'no-store' });
-        if (r.ok) {
-          const d = await r.json();
-          if (d?.rate) setUsdRate(Number(d.rate));
-        }
-      } catch {}
-    })();
+    fetchUsdRate();
   }, []);
 
   // Nihai + Yarı mamulleri birleştir
@@ -932,6 +942,26 @@ export default function BOMPage() {
             <Download className="h-4 w-4 mr-2" />
             Excel Export
           </Button>
+          <div className="flex flex-col items-end gap-0.5">
+            <Button 
+              variant="outline"
+              onClick={() => fetchUsdRate(true)}
+              title="TCMB üzerinden dolar kurunu güncelle"
+            >
+              <RefreshCw className="h-4 w-4 mr-2" />
+              {usdRate ? `$1 = ₺${usdRate.toFixed(4)}` : 'Kuru Güncelle'}
+            </Button>
+            {usdFetchedAt && (
+              <span className="text-xs text-muted-foreground">
+                Güncellendi: {new Date(usdFetchedAt).toLocaleString('tr-TR', { timeZone: 'Europe/Istanbul', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+              </span>
+            )}
+            {usdNextUpdateAt && (
+              <span className="text-xs text-muted-foreground">
+                Sonraki: {new Date(usdNextUpdateAt).toLocaleString('tr-TR', { timeZone: 'Europe/Istanbul', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+              </span>
+            )}
+          </div>
           <Button 
             variant="default"
             onClick={handleCalculateAllCosts}
@@ -1035,6 +1065,7 @@ export default function BOMPage() {
                     productCode={selectedProduct.code}
                     productName={selectedProduct.name}
                     currentSalePrice={selectedProduct.sale_price || selectedProduct.unit_cost || 0}
+                    usdRateFromParent={usdRate}
                     trigger={
                       <Button variant="outline" size="sm">
                         <Calculator className="h-4 w-4 mr-2" />

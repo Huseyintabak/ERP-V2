@@ -1,5 +1,6 @@
 module.exports = {
-  apps: [{
+  apps: [
+    {
     name: 'thunder-erp',
     script: 'npm',
     args: 'start',
@@ -18,6 +19,23 @@ module.exports = {
     log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
     merge_logs: true,
     time: true
-  }]
+  },
+  {
+    // Dolar kurunu her gün 08:00 Türkiye saatinde (05:00 UTC) günceller
+    name: 'exchange-rate-cron',
+    script: './scripts/refresh-exchange-rate.sh',
+    interpreter: '/bin/bash',
+    cwd: '/var/www/thunder-erp',
+    instances: 1,
+    autorestart: false,   // Her çalıştırmadan sonra yeniden başlatma
+    cron_restart: '0 5 * * *', // 05:00 UTC = 08:00 Türkiye Saati
+    watch: false,
+    error_file: './logs/exchange-rate-cron-error.log',
+    out_file: './logs/exchange-rate-cron-out.log',
+    log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
+    merge_logs: true,
+    time: true
+  }
+  ]
 };
 

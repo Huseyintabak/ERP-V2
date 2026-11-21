@@ -22,6 +22,8 @@ interface CostCalculationDialogProps {
   currentSalePrice: number;
   currentCostPrice?: number;
   trigger?: React.ReactNode;
+  /** Sayfada güncellenen kur buradan verilirse maliyet USD hesabı buna göre yapılır */
+  usdRateFromParent?: number | null;
 }
 
 interface BreakdownItem {
@@ -66,25 +68,28 @@ export function CostCalculationDialog({
   productName,
   currentSalePrice,
   currentCostPrice = 0,
-  trigger
+  trigger,
+  usdRateFromParent
 }: CostCalculationDialogProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<CostCalculationResult | null>(null);
-  const [usdRate, setUsdRate] = useState<number | null>(null);
+  const [usdRateLocal, setUsdRateLocal] = useState<number | null>(null);
   const [usdRateLoading, setUsdRateLoading] = useState(false);
   const { user } = useAuthStore();
 
-  // USD rate'i sadece dialog açıldığında fetch et (her component mount'ta değil)
+  // Üst sayfadan kur geliyorsa onu kullan (Kuru Güncelle ile senkron), yoksa kendi fetch
+  const usdRate = usdRateFromParent ?? usdRateLocal;
+
+  // USD rate'i sadece dialog açıldığında fetch et (parent'tan gelmiyorsa)
   const fetchUsdRate = async () => {
-    if (usdRate || usdRateLoading) return; // Zaten fetch ediliyorsa veya var ise tekrar fetch etme
-    
+    if (usdRateFromParent != null || usdRateLocal || usdRateLoading) return;
     setUsdRateLoading(true);
     try {
       const r = await fetch('/api/exchange/usd', { cache: 'no-store' });
       if (r.ok) {
         const d = await r.json();
-        if (d?.rate) setUsdRate(Number(d.rate));
+        if (d?.rate) setUsdRateLocal(Number(d.rate));
       }
     } catch {} finally {
       setUsdRateLoading(false);

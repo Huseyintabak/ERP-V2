@@ -1,7 +1,7 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 
-// In-memory cache for USD exchange rate (1 hour TTL)
-// TCMB günlük olarak güncelliyor (genellikle saat 15:00'te), bu yüzden 1 saat cache yeterli
+// In-memory cache for USD exchange rate
+// Cache her gün Türkiye saati (UTC+3) ile 08:00'de sıfırlanır
 interface CachedRate {
   rate: number;
   source: string;
@@ -10,17 +10,50 @@ interface CachedRate {
 }
 
 let usdRateCache: CachedRate | null = null;
-const CACHE_TTL_MS = 60 * 60 * 1000; // 1 saat
 
-export async function GET() {
-  // Cache kontrolü - eğer cache varsa ve henüz expire olmamışsa, cache'den döndür
+/**
+ * Bir sonraki 08:00 Türkiye saatinin UTC timestamp'ini döndürür.
+ * Türkiye = UTC+3. Yani 08:00 TR = 05:00 UTC.
+ */
+function getNext8amTRTimestamp(): number {
+  const TR_OFFSET_MS = 3 * 60 * 60 * 1000; // UTC+3
+  const nowUTC = Date.now();
+
+  // Şu anı TR saatine çevir (UTC dizinde düşünceli olmak için UTC metodlarını kullan)
+  const nowTRDate = new Date(nowUTC + TR_OFFSET_MS);
+  // Bugünün 08:00 TR zamanını UTC olarak hesapla
+  const today8amTR = Date.UTC(
+    nowTRDate.getUTCFullYear(),
+    nowTRDate.getUTCMonth(),
+    nowTRDate.getUTCDate(),
+    8, 0, 0, 0
+  ) - TR_OFFSET_MS; // TR 08:00 → UTC 05:00
+
+  if (nowUTC < today8amTR) {
+    // Henüz bugünün 08:00 TR'si geçmedi
+    return today8amTR;
+  }
+  // Bugünün 08:00'i geçmiş, yarınki 08:00'e kadar bekle
+  return today8amTR + 24 * 60 * 60 * 1000;
+}
+
+export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  const forceRefresh = searchParams.get('refresh') === 'true';
+
+  if (forceRefresh) {
+    usdRateCache = null;
+  }
+
   const now = Date.now();
-  if (usdRateCache && usdRateCache.expiresAt > now) {
+  // Cache kontrolü - refresh yoksa ve cache varsa, cache'den döndür
+  if (!forceRefresh && usdRateCache && usdRateCache.expiresAt > now) {
     return NextResponse.json({
       currency: 'USD',
       source: usdRateCache.source,
       rate: usdRateCache.rate,
       fetchedAt: usdRateCache.fetchedAt,
+      nextUpdateAt: new Date(usdRateCache.expiresAt).toISOString(),
       cached: true
     });
   }
@@ -30,28 +63,28 @@ export async function GET() {
     // TCMB günlük olarak güncelliyor (genellikle saat 15:00'te)
     try {
       const res = await fetch('https://www.tcmb.gov.tr/kurlar/today.xml', {
-        cache: 'no-store',
-        next: { revalidate: 3600 } // Next.js cache: 1 saat
+        cache: 'no-store'
       });
       if (res.ok) {
         const xml = await res.text();
-        const banknoteSell = xml.match(/<Currency\s+Kod="USD"[\s\S]*?<BanknoteSelling>(.*?)<\/BanknoteSelling>/);
-        const forexSell = xml.match(/<Currency\s+Kod="USD"[\s\S]*?<ForexSelling>(.*?)<\/ForexSelling>/);
+        const banknoteSell = xml.match(/<Currency[^>]*Kod="USD"[^>]*>[\s\S]*?<BanknoteSelling>(.*?)<\/BanknoteSelling>/);
+        const forexSell = xml.match(/<Currency[^>]*Kod="USD"[^>]*>[\s\S]*?<ForexSelling>(.*?)<\/ForexSelling>/);
         const valueStr = (banknoteSell?.[1] ?? forexSell?.[1] ?? '').replace(',', '.').trim();
         const rate = parseFloat(valueStr);
         if (rate && !Number.isNaN(rate)) {
-          // Cache'e kaydet
+          // Cache'e kaydet — bir sonraki 08:00 TR saatine kadar geçerli
           usdRateCache = {
             rate,
             source: 'TCMB',
             fetchedAt: new Date().toISOString(),
-            expiresAt: now + CACHE_TTL_MS
+            expiresAt: getNext8amTRTimestamp()
           };
           return NextResponse.json({ 
             currency: 'USD', 
             source: 'TCMB', 
             rate, 
             fetchedAt: usdRateCache.fetchedAt,
+            nextUpdateAt: new Date(usdRateCache.expiresAt).toISOString(),
             cached: false
           });
         }
@@ -60,20 +93,19 @@ export async function GET() {
 
     // FALLBACK: exchangerate.host (USD->TRY)
     const fx = await fetch('https://api.exchangerate.host/latest?base=USD&symbols=TRY', { 
-      cache: 'no-store',
-      next: { revalidate: 3600 } // Next.js cache: 1 saat
+      cache: 'no-store'
     });
     if (!fx.ok) throw new Error('Fallback provider failed');
     const data = await fx.json();
     const rate = Number(data?.rates?.TRY);
     if (!rate || Number.isNaN(rate)) throw new Error('USD/TRY not found');
     
-    // Cache'e kaydet
+    // Cache'e kaydet — bir sonraki 08:00 TR saatine kadar geçerli
     usdRateCache = {
       rate,
       source: 'exchangerate.host',
       fetchedAt: new Date().toISOString(),
-      expiresAt: now + CACHE_TTL_MS
+      expiresAt: getNext8amTRTimestamp()
     };
     
     return NextResponse.json({ 
@@ -81,6 +113,7 @@ export async function GET() {
       source: 'exchangerate.host', 
       rate, 
       fetchedAt: usdRateCache.fetchedAt,
+      nextUpdateAt: new Date(usdRateCache.expiresAt).toISOString(),
       cached: false
     });
   } catch (error: any) {
