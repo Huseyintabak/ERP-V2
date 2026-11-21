@@ -98,24 +98,35 @@ export async function DELETE(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    // Check if product is referenced in other tables
-    const { data: bomReferences } = await supabase
+    // BOM'u olan ürün silinemez. (Önceden bom.product_id — var olmayan kolon — sorgulanıyor,
+    // hata yutulduğu için kontrol hiç çalışmıyordu.) Kontrol hata verirse silme yapılmaz.
+    const { data: bomReferences, error: bomCheckError } = await supabase
       .from('bom')
       .select('id')
-      .eq('product_id', id)
+      .eq('finished_product_id', id)
       .limit(1);
+
+    if (bomCheckError) {
+      logger.error('BOM check error:', bomCheckError);
+      return NextResponse.json({ error: 'Silme kontrolü yapılamadı, ürün silinmedi' }, { status: 500 });
+    }
 
     if (bomReferences && bomReferences.length > 0) {
       return NextResponse.json({ 
-        error: 'Bu ürün BOM\'da kullanılıyor. Önce BOM\'dan kaldırın.' 
+        error: 'Bu ürünün BOM\'u var. Silmek için önce BOM\'unu boşaltın.' 
       }, { status: 400 });
     }
 
-    const { data: orderReferences } = await supabase
+    const { data: orderReferences, error: orderCheckError } = await supabase
       .from('order_items')
       .select('id')
       .eq('product_id', id)
       .limit(1);
+
+    if (orderCheckError) {
+      logger.error('Order reference check error:', orderCheckError);
+      return NextResponse.json({ error: 'Silme kontrolü yapılamadı, ürün silinmedi' }, { status: 500 });
+    }
 
     if (orderReferences && orderReferences.length > 0) {
       return NextResponse.json({ 

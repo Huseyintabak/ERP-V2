@@ -98,12 +98,36 @@ export async function DELETE(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    // Check if product is referenced in BOM
-    const { data: bomReferences } = await supabase
+    // Kendi BOM'u (semi_bom) olan yarı mamul silinemez (FK cascade BOM'u sessizce silerdi).
+    // Kontrol sorguları hata verirse silme yapılmaz.
+    const { data: ownBom, error: ownBomError } = await supabase
+      .from('semi_bom')
+      .select('id')
+      .eq('semi_product_id', id)
+      .limit(1);
+
+    if (ownBomError) {
+      logger.error('Semi BOM check error:', ownBomError);
+      return NextResponse.json({ error: 'Silme kontrolü yapılamadı, ürün silinmedi' }, { status: 500 });
+    }
+
+    if (ownBom && ownBom.length > 0) {
+      return NextResponse.json({ 
+        error: 'Bu yarı mamulün BOM\'u var. Silmek için önce BOM\'unu boşaltın.' 
+      }, { status: 400 });
+    }
+
+    // Başka bir ürünün BOM'unda malzeme olarak kullanılıyor mu
+    const { data: bomReferences, error: bomCheckError } = await supabase
       .from('bom')
       .select('id')
       .eq('material_id', id)
       .limit(1);
+
+    if (bomCheckError) {
+      logger.error('BOM reference check error:', bomCheckError);
+      return NextResponse.json({ error: 'Silme kontrolü yapılamadı, ürün silinmedi' }, { status: 500 });
+    }
 
     if (bomReferences && bomReferences.length > 0) {
       return NextResponse.json({ 
