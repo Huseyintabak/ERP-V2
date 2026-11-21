@@ -13,12 +13,14 @@ import { NextRequest, NextResponse } from 'next/server';
  */
 export async function POST(request: NextRequest) {
   // Güvenlik kontrolü
+  // CRON_SECRET zorunlu: tanımlı değilse endpoint tamamen kapalı
   const cronSecret = process.env.CRON_SECRET;
-  if (cronSecret) {
-    const auth = request.headers.get('authorization');
-    if (auth !== `Bearer ${cronSecret}`) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+  if (!cronSecret) {
+    return NextResponse.json({ error: 'CRON_SECRET is not configured' }, { status: 503 });
+  }
+  const auth = request.headers.get('authorization');
+  if (auth !== `Bearer ${cronSecret}`) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   try {

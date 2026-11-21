@@ -65,7 +65,9 @@ export async function GET(
         logger.log('Plan found, fetching BOM directly for product:', plan.product_id);
         // BOM'u direkt çek
         try {
-          const bomResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/bom/${plan.product_id}`);
+          const bomResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/bom/${plan.product_id}`, {
+            headers: { Cookie: `thunder_token=${token}` }
+          });
           if (bomResponse.ok) {
             const bomData = await bomResponse.json();
             logger.log('BOM data fetched directly:', bomData);

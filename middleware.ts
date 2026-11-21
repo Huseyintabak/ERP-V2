@@ -1,59 +1,130 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { jwtVerify } from 'jose';
 
-// Public routes that don't need auth
-const PUBLIC_ROUTES = [
-  '/login',
-  '/operator-login',
-  '/403',
-  '/',
+const AUTH_COOKIE = 'thunder_token';
+
+// Sayfalar: login olmadan erişilebilenler
+const PUBLIC_PAGES = ['/login', '/operator-login', '/403', '/'];
+
+// API: JWT olmadan erişilebilenler (route kendi korumasını yapar ya da veri hassas değil)
+const PUBLIC_API_PREFIXES = [
+  '/api/auth/login',
+  '/api/auth/logout',
+  '/api/operators/public', // operator-login ekranındaki operatör listesi
+  '/api/exchange/usd', // public TCMB kuru; cron da cookie'siz çağırıyor
+  '/api/cron/', // CRON_SECRET ile korunur
+  '/api/settings/broadcast', // x-service-token veya JWT ile korunur (route içinde)
 ];
 
-// Static files and API routes to skip
-const SKIP_PATTERNS = [
-  '/api',
-  '/_next',
-  '/favicon.ico',
-  '/manifest.json',
-  '/icons',
+// Client'ın sahteleyebileceği kimlik header'ları — her istekte silinip JWT'den yeniden yazılır
+const IDENTITY_HEADERS = ['x-user-id', 'x-user-role', 'x-user-email'];
+
+const AI_ENABLED = process.env.AI_ENABLED === 'true';
+const AI_PAGE_PREFIXES = [
+  '/ai-agent-builder',
+  '/ai-dashboard',
+  '/ai-gelistirme',
+  '/ai-geliştirme',
+  '/ai-konusmalar',
+  '/ai-logs',
+  '/ai-maliyetler',
+  '/ai-manager',
+  '/ai-onaylar',
 ];
 
-export function middleware(request: NextRequest) {
-  const pathname = request.nextUrl.pathname;
+interface TokenPayload {
+  userId: string;
+  role: string;
+  email: string;
+}
 
-  // Skip static files and API routes
-  if (SKIP_PATTERNS.some(pattern => pathname.startsWith(pattern))) {
+async function verifyToken(token: string | undefined): Promise<TokenPayload | null> {
+  const secret = process.env.JWT_SECRET;
+  if (!token || !secret) return null;
+  try {
+    const { payload } = await jwtVerify(token, new TextEncoder().encode(secret), {
+      algorithms: ['HS256'],
+    });
+    const userId = (payload.userId || payload.user_id || payload.id || payload.sub) as string | undefined;
+    const role = (payload.role || payload.user_role) as string | undefined;
+    if (!userId || !role) return null;
+    return { userId, role, email: String(payload.email || '') };
+  } catch {
+    return null;
+  }
+}
+
+function getToken(request: NextRequest): string | undefined {
+  const cookie = request.cookies.get(AUTH_COOKIE)?.value;
+  if (cookie) return cookie;
+  const auth = request.headers.get('authorization');
+  if (auth?.startsWith('Bearer ')) return auth.slice(7);
+  return undefined;
+}
+
+function stripIdentityHeaders(request: NextRequest): Headers {
+  const headers = new Headers(request.headers);
+  IDENTITY_HEADERS.forEach((h) => headers.delete(h));
+  return headers;
+}
+
+async function handleApi(request: NextRequest, pathname: string) {
+  if (!AI_ENABLED && pathname.startsWith('/api/ai/')) {
+    return NextResponse.json({ error: 'AI module is disabled' }, { status: 404 });
+  }
+
+  const headers = stripIdentityHeaders(request);
+
+  if (PUBLIC_API_PREFIXES.some((p) => pathname.startsWith(p))) {
+    return NextResponse.next({ request: { headers } });
+  }
+
+  const user = await verifyToken(getToken(request));
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  headers.set('x-user-id', user.userId);
+  headers.set('x-user-role', user.role);
+  headers.set('x-user-email', user.email);
+  return NextResponse.next({ request: { headers } });
+}
+
+async function handlePage(request: NextRequest, pathname: string) {
+  if (PUBLIC_PAGES.includes(pathname)) {
     return NextResponse.next();
   }
 
-  // Allow public routes
-  if (PUBLIC_ROUTES.includes(pathname)) {
-    return NextResponse.next();
+  const user = await verifyToken(request.cookies.get(AUTH_COOKIE)?.value);
+  if (!user) {
+    const loginPath = pathname.startsWith('/operator') ? '/operator-login' : '/login';
+    const response = NextResponse.redirect(new URL(loginPath, request.url));
+    response.cookies.delete(AUTH_COOKIE);
+    return response;
   }
 
-  // Check for auth cookie
-  const token = request.cookies.get('thunder_token');
-
-  // If no token, redirect to appropriate login
-  if (!token) {
-    if (pathname.startsWith('/operator')) {
-      return NextResponse.redirect(new URL('/operator-login', request.url));
-    }
-    return NextResponse.redirect(new URL('/login', request.url));
+  if (!AI_ENABLED && AI_PAGE_PREFIXES.some((p) => pathname.startsWith(p))) {
+    return NextResponse.redirect(new URL('/dashboard', request.url));
   }
 
-  // Token exists, allow access
   return NextResponse.next();
+}
+
+export async function middleware(request: NextRequest) {
+  const pathname = request.nextUrl.pathname;
+  if (pathname.startsWith('/api/')) {
+    return handleApi(request, pathname);
+  }
+  return handlePage(request, pathname);
 }
 
 export const config = {
   matcher: [
     /*
-     * Match all request paths except for the ones starting with:
-     * - api (API routes)
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
+     * API dahil tüm path'ler; statik dosyalar hariç:
+     * _next/static, _next/image, icons/ ve public/ altındaki uzantılı dosyalar
+     * (favicon, manifest, svg, PWA worker, örnek xlsx vb.)
      */
-    '/((?!api|_next/static|_next/image|favicon.ico).*)',
+    '/((?!_next/static|_next/image|icons/|.*\\.(?:svg|png|jpg|jpeg|gif|ico|webp|json|js|map|xlsx|txt|webmanifest)$).*)',
   ],
 };

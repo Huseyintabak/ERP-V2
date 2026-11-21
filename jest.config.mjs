@@ -39,4 +39,15 @@ const customJestConfig = {
   },
 }
 
-export default createJestConfig(customJestConfig)
+// next/jest transformIgnorePatterns'i ezdiği için config üretildikten sonra override ediyoruz.
+// jose ESM-only olduğundan (middleware JWT doğrulaması) transform edilmesi gerekiyor.
+const ESM_PACKAGES = ['jose']
+
+export default async function jestConfig() {
+  const config = await createJestConfig(customJestConfig)()
+  config.transformIgnorePatterns = [
+    `/node_modules/(?!(${ESM_PACKAGES.join('|')})/)`,
+    '^.+\\.module\\.(css|sass|scss)$',
+  ]
+  return config
+}
