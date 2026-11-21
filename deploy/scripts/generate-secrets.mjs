@@ -93,11 +93,6 @@ CRON_SECRET=${CRON_SECRET}
 
 # HTTPS yokken false kalmalı; domain + Let's Encrypt sonrası true yap
 USE_HTTPS=false
-
-# AI/n8n modülü kapalı
-AI_ENABLED=false
-NEXT_PUBLIC_AI_ENABLED=false
-AGENT_ENABLED=false
 `;
 
 function write(path, content) {

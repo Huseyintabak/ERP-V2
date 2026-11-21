@@ -52,11 +52,7 @@ interface NavItem {
   icon: any;
   roles?: string[];
   children?: NavItem[];
-  /** AI modülü kapalıyken (NEXT_PUBLIC_AI_ENABLED !== 'true') gizlenir */
-  requiresAI?: boolean;
 }
-
-const AI_ENABLED = process.env.NEXT_PUBLIC_AI_ENABLED === 'true';
 
 const navItems: NavItem[] = [
   {
@@ -180,24 +176,6 @@ const navItems: NavItem[] = [
     roles: ["yonetici"],
   },
   {
-    title: "AI Yönetimi",
-    icon: Bot,
-    roles: ["yonetici", "planlama"],
-    requiresAI: true,
-    children: [
-      { title: "AI Dashboard", href: "/ai-dashboard", icon: Activity },
-      { title: "Agent Builder", href: "/ai-agent-builder", icon: Bot },
-      { title: "Karar Onayları", href: "/ai-onaylar", icon: UserCheck },
-      { title: "Maliyetler", href: "/ai-maliyetler", icon: DollarSign },
-      {
-        title: "Agent Konuşmaları",
-        href: "/ai-konusmalar",
-        icon: MessageSquare,
-      },
-      { title: "Developer Agent", href: "/ai-gelistirme", icon: Code },
-    ],
-  },
-  {
     title: "Sistem Bakım",
     icon: Settings,
     roles: ["yonetici"],
@@ -259,7 +237,6 @@ export function Sidebar() {
   };
 
   const canAccess = (item: NavItem) => {
-    if (item.requiresAI && !AI_ENABLED) return false;
     if (!item.roles || item.roles.length === 0) return true;
     return item.roles.includes(user?.role || "");
   };

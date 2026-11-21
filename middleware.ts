@@ -19,19 +19,6 @@ const PUBLIC_API_PREFIXES = [
 // Client'ın sahteleyebileceği kimlik header'ları — her istekte silinip JWT'den yeniden yazılır
 const IDENTITY_HEADERS = ['x-user-id', 'x-user-role', 'x-user-email'];
 
-const AI_ENABLED = process.env.AI_ENABLED === 'true';
-const AI_PAGE_PREFIXES = [
-  '/ai-agent-builder',
-  '/ai-dashboard',
-  '/ai-gelistirme',
-  '/ai-geliştirme',
-  '/ai-konusmalar',
-  '/ai-logs',
-  '/ai-maliyetler',
-  '/ai-manager',
-  '/ai-onaylar',
-];
-
 interface TokenPayload {
   userId: string;
   role: string;
@@ -69,10 +56,6 @@ function stripIdentityHeaders(request: NextRequest): Headers {
 }
 
 async function handleApi(request: NextRequest, pathname: string) {
-  if (!AI_ENABLED && pathname.startsWith('/api/ai/')) {
-    return NextResponse.json({ error: 'AI module is disabled' }, { status: 404 });
-  }
-
   const headers = stripIdentityHeaders(request);
 
   if (PUBLIC_API_PREFIXES.some((p) => pathname.startsWith(p))) {
@@ -120,10 +103,6 @@ async function handlePage(request: NextRequest, pathname: string) {
     const response = redirectTo(request, loginPath);
     response.cookies.delete(AUTH_COOKIE);
     return response;
-  }
-
-  if (!AI_ENABLED && AI_PAGE_PREFIXES.some((p) => pathname.startsWith(p))) {
-    return redirectTo(request, '/dashboard');
   }
 
   return NextResponse.next();

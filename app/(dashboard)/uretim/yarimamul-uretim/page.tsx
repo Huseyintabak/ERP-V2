@@ -44,13 +44,11 @@ import {
   Trash2,
   Check,
   Pencil,
-  Brain,
   XCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatDate } from "@/lib/utils";
 import { useAuthStore } from "@/stores/auth-store";
-import { AiConsensusDialog } from "@/components/production/ai-consensus-dialog";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
@@ -105,9 +103,6 @@ export default function YariMamulUretimPage() {
   const [editingOrder, setEditingOrder] = useState<SemiProductionOrder | null>(
     null,
   );
-  const [selectedOrderForConsensus, setSelectedOrderForConsensus] =
-    useState<SemiProductionOrder | null>(null);
-  const [isConsensusDialogOpen, setIsConsensusDialogOpen] = useState(false);
   const [stockErrorDialog, setStockErrorDialog] = useState<{
     isOpen: boolean;
     error: string;
@@ -763,7 +758,6 @@ export default function YariMamulUretimPage() {
                     <TableHead>Operatör</TableHead>
                     <TableHead>Öncelik</TableHead>
                     <TableHead>Durum</TableHead>
-                    <TableHead>İşlemler</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -808,21 +802,6 @@ export default function YariMamulUretimPage() {
                           {getStatusIcon(order.status)}
                           {order.status.toUpperCase()}
                         </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-1">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => {
-                              setSelectedOrderForConsensus(order);
-                              setIsConsensusDialogOpen(true);
-                            }}
-                          >
-                            <Brain className="h-4 w-4 mr-1" />
-                            AI Konsensüs
-                          </Button>
-                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -886,17 +865,6 @@ export default function YariMamulUretimPage() {
                       </TableCell>
                       <TableCell>
                         <div className="flex gap-1">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => {
-                              setSelectedOrderForConsensus(order);
-                              setIsConsensusDialogOpen(true);
-                            }}
-                          >
-                            <Brain className="h-4 w-4 mr-1" />
-                            AI Konsensüs
-                          </Button>
                           <Button
                             size="sm"
                             variant="outline"
@@ -995,15 +963,6 @@ export default function YariMamulUretimPage() {
         </CardContent>
       </Card>
 
-      {/* AI Consensus Dialog */}
-      <AiConsensusDialog
-        isOpen={isConsensusDialogOpen}
-        onClose={() => {
-          setIsConsensusDialogOpen(false);
-          setSelectedOrderForConsensus(null);
-        }}
-        semiOrder={selectedOrderForConsensus}
-      />
 
       {/* Stock Error Dialog */}
       <Dialog

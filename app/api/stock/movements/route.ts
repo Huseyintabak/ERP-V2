@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { verifyJWT } from '@/lib/auth/jwt';
-import { AgentOrchestrator } from '@/lib/ai/orchestrator';
-import { agentLogger } from '@/lib/ai/utils/logger';
 
 import { logger } from '@/lib/utils/logger';
 export async function GET(request: NextRequest) {
@@ -177,97 +175,6 @@ export async function POST(request: NextRequest) {
         }, { status: 400 });
       }
       newQuantity = currentQuantity - quantity;
-    }
-
-    // ============================================
-    // AI AGENT VALIDATION (Opsiyonel - AGENT_ENABLED kontrolü ile)
-    // ============================================
-    if (process.env.AGENT_ENABLED === 'true') {
-      try {
-        logger.log('🤖 AI Agent validation başlatılıyor (Warehouse - Stock Movement)...');
-        
-        // Warehouse Agent ile konuşma başlat
-        const orchestrator = AgentOrchestrator.getInstance();
-        const agentResult = await orchestrator.startConversation('warehouse', {
-          id: `stock_movement_${material_id}_${Date.now()}`,
-          prompt: `Bu stok hareketini doğrula: ${movement_type} - ${quantity} ${material_type}`,
-          type: 'validation',
-          context: {
-            materialType: material_type,
-            materialId: material_id,
-            movementType: movement_type,
-            quantity: quantity,
-            currentQuantity: currentQuantity,
-            newQuantity: newQuantity,
-            movementSource: movement_source || 'manual',
-            description: description,
-            requestedBy: payload.userId,
-            requestedByRole: payload.role
-          },
-          urgency: movement_type === 'cikis' || movement_type === 'uretim' ? 'high' : 'medium',
-          severity: movement_type === 'cikis' || movement_type === 'uretim' ? 'high' : 'medium'
-        });
-
-        await agentLogger.log({
-          agent: 'warehouse',
-          action: 'stock_movement_validation',
-          materialId: material_id,
-          materialType: material_type,
-          movementType: movement_type,
-          finalDecision: agentResult.finalDecision,
-          protocolResult: agentResult.protocolResult
-        });
-
-        // Agent reddettiyse
-        if (agentResult.finalDecision === 'rejected') {
-          logger.warn('❌ AI Agent stok hareketini reddetti:', agentResult.protocolResult?.errors);
-          return NextResponse.json(
-            {
-              error: 'AI Agent validation failed',
-              message: 'Stok hareketi AI Agent tarafından reddedildi',
-              details: agentResult.protocolResult?.errors || [],
-              warnings: agentResult.protocolResult?.warnings || [],
-              agentReasoning: agentResult.protocolResult?.decision?.reasoning
-            },
-            { status: 400 }
-          );
-        }
-
-        // Human approval bekleniyorsa
-        if (agentResult.finalDecision === 'pending_approval') {
-          logger.log('⏳ AI Agent human approval bekliyor...');
-          return NextResponse.json(
-            {
-              error: 'Human approval required',
-              message: 'Bu stok hareketi için yönetici onayı gerekiyor',
-              approvalRequired: true,
-              decisionId: agentResult.protocolResult?.decision?.action
-            },
-            { status: 403 }
-          );
-        }
-
-        // Agent onayladıysa
-        if (agentResult.finalDecision === 'approved') {
-          logger.log('✅ AI Agent stok hareketini onayladı');
-          logger.log('📊 Agent reasoning:', agentResult.protocolResult?.decision?.reasoning);
-          
-          // Agent'ın önerileri varsa logla
-          if (agentResult.protocolResult?.warnings && agentResult.protocolResult.warnings.length > 0) {
-            logger.warn('⚠️ AI Agent uyarıları:', agentResult.protocolResult.warnings);
-          }
-        }
-      } catch (error: any) {
-        // Agent hatası durumunda graceful degradation - manuel işlem devam eder
-        logger.warn('⚠️ AI Agent validation hatası, manuel işlem devam ediyor:', error.message);
-        await agentLogger.error({
-          agent: 'warehouse',
-          action: 'stock_movement_validation_error',
-          materialId: material_id,
-          error: error.message
-        });
-        // Hata olsa bile manuel işlem devam eder (graceful degradation)
-      }
     }
 
     // Update material quantity

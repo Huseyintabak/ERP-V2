@@ -4,8 +4,6 @@
  */
 
 import { createTestClient } from '@/lib/supabase/test-client';
-import { BaseAgent } from '@/lib/ai/agents/base-agent';
-import { AgentRequest, AgentResponse } from '@/lib/ai/types/agent.types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 /**
@@ -58,37 +56,6 @@ export function createMockSupabaseClient(): Partial<SupabaseClient> {
  */
 export function createRealSupabaseClient(useServiceRole: boolean = false) {
   return createTestClient(useServiceRole);
-}
-
-/**
- * Mock Agent Instance
- * Test için mock agent oluştur
- */
-export function createMockAgent(
-  name: string = 'Mock Agent',
-  role: string = 'mock'
-): Partial<BaseAgent> {
-  return {
-    getInfo: jest.fn(() => ({
-      name,
-      role,
-      responsibilities: [],
-    })),
-    processRequest: jest.fn().mockResolvedValue({
-      agent: name,
-      decision: 'approve',
-      confidence: 0.9,
-      reasoning: 'Mock reasoning',
-      timestamp: new Date(),
-      suggestions: [],
-      issues: [],
-    } as AgentResponse),
-    validateWithOtherAgents: jest.fn().mockResolvedValue({
-      isValid: true,
-      confidence: 0.9,
-      issues: [],
-    }),
-  } as any;
 }
 
 /**
@@ -178,37 +145,6 @@ export function createMockFinishedProduct(overrides: Partial<any> = {}) {
 }
 
 /**
- * Mock Agent Request
- */
-export function createMockAgentRequest(overrides: Partial<AgentRequest> = {}): AgentRequest {
-  return {
-    id: 'test-request-1',
-    prompt: 'Test request prompt',
-    type: 'request',
-    context: {},
-    urgency: 'medium',
-    severity: 'medium',
-    ...overrides,
-  };
-}
-
-/**
- * Mock Agent Response
- */
-export function createMockAgentResponse(overrides: Partial<AgentResponse> = {}): AgentResponse {
-  return {
-    agent: 'Mock Agent',
-    decision: 'approve',
-    confidence: 0.9,
-    reasoning: 'Mock reasoning',
-    timestamp: new Date(),
-    suggestions: [],
-    issues: [],
-    ...overrides,
-  };
-}
-
-/**
  * Mock User Data
  */
 export function createMockUser(overrides: Partial<any> = {}) {
@@ -263,40 +199,11 @@ export function wait(ms: number): Promise<void> {
 }
 
 /**
- * Mock OpenAI Response
- */
-export function createMockOpenAIResponse(content: string = '{"decision": "approve", "confidence": 0.9}') {
-  return {
-    id: 'chatcmpl-test',
-    object: 'chat.completion',
-    created: Math.floor(Date.now() / 1000),
-    model: 'gpt-4o',
-    choices: [
-      {
-        index: 0,
-        message: {
-          role: 'assistant' as const,
-          content,
-        },
-        finish_reason: 'stop',
-      },
-    ],
-    usage: {
-      prompt_tokens: 100,
-      completion_tokens: 50,
-      total_tokens: 150,
-    },
-  };
-}
-
-/**
  * Setup test environment
  */
 export function setupTestEnvironment() {
   // Set test environment variables
-  process.env.NODE_ENV = 'test';
-  process.env.AGENT_ENABLED = 'true';
-  process.env.AGENT_LOGGING_ENABLED = 'true';
+  (process.env as Record<string, string>).NODE_ENV = 'test';
   
   // Mock console methods to reduce noise in tests
   global.console = {

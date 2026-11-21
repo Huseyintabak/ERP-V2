@@ -30,7 +30,6 @@ function forwardedHeader(res: Response, name: string): string | null {
 
 beforeAll(async () => {
   process.env.JWT_SECRET = SECRET;
-  delete process.env.AI_ENABLED;
   jest.resetModules();
   middleware = (await import('@/middleware')).middleware as MiddlewareFn;
 });
@@ -88,11 +87,6 @@ describe('middleware — API auth', () => {
     expect((await middleware(req('/api/auth/verify', { cookie: token }))).status).toBe(200);
   });
 
-  it('returns 404 for AI routes when AI is disabled, even with valid token', async () => {
-    const token = await sign({ userId: 'u1', role: 'yonetici' });
-    const res = await middleware(req('/api/ai/dashboard', { cookie: token }));
-    expect(res.status).toBe(404);
-  });
 });
 
 describe('middleware — matcher', () => {
@@ -128,12 +122,6 @@ describe('middleware — pages', () => {
   it('redirects operator pages to /operator-login', async () => {
     const res = await middleware(req('/operator-dashboard'));
     expect(res.headers.get('location')).toBe('http://localhost:3000/operator-login');
-  });
-
-  it('redirects AI pages to /dashboard when AI is disabled', async () => {
-    const token = await sign({ userId: 'u1', role: 'yonetici' });
-    const res = await middleware(req('/ai-dashboard', { cookie: token }));
-    expect(res.headers.get('location')).toBe('http://localhost:3000/dashboard');
   });
 
   it('redirects to the public host (from Host / X-Forwarded-Proto), not the internal origin', async () => {

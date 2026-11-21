@@ -20,12 +20,10 @@ import {
   XCircle,
   UserPlus,
   MoreHorizontal,
-  Brain
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { CompleteProductionDialog } from '@/components/production/complete-production-dialog';
 import { ProductionPlanCancelDialog } from '@/components/production/production-plan-cancel-dialog';
-import { AiConsensusDialog } from '@/components/production/ai-consensus-dialog';
 import { useProductionPlans, useOrderActions, useOrderLoading } from '@/stores/order-store';
 import { useRoleBasedRealtime } from '@/lib/hooks/use-realtime-store';
 import { useAuthStore } from '@/stores/auth-store';
@@ -89,7 +87,6 @@ export default function UretimPlanlariPage() {
   const [operatorFilter, setOperatorFilter] = useState('all');
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<ProductionPlan | null>(null);
-  const [consensusDialogOpen, setConsensusDialogOpen] = useState(false);
   
   // Real-time updates for production plans
   useRoleBasedRealtime('planlama');
@@ -467,20 +464,6 @@ export default function UretimPlanlariPage() {
                     <TableCell>{plan.order?.delivery_date ? new Date(plan.order.delivery_date).toLocaleDateString('tr-TR') : 'N/A'}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        {/* AI Konsensüs Analizi butonu - tüm durumlarda görünür */}
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => {
-                            setSelectedPlan(plan);
-                            setConsensusDialogOpen(true);
-                          }}
-                          title="AI Konsensüs Analizi"
-                          className="text-purple-600 hover:text-purple-700 hover:bg-purple-50"
-                        >
-                          <Brain className="h-4 w-4" />
-                        </Button>
-
                         {/* Üretimi başlat butonu sadece planlandı durumunda */}
                         {plan.status === 'planlandi' && (
                           <Button
@@ -600,15 +583,6 @@ export default function UretimPlanlariPage() {
         onCancelSuccess={handleCancelSuccess}
       />
 
-      {/* AI Consensus Dialog */}
-      <AiConsensusDialog
-        isOpen={consensusDialogOpen}
-        onClose={() => {
-          setConsensusDialogOpen(false);
-          setSelectedPlan(null);
-        }}
-        plan={selectedPlan}
-      />
     </div>
   );
 }
