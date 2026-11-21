@@ -7,9 +7,15 @@ import OpenAI from 'openai';
 import { agentLogger } from './utils/logger';
 import { costTracker } from './utils/cost-tracker';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+// Lazy: modül import edilirken (örn. `next build` sayfa verisi toplarken) OPENAI_API_KEY
+// yoksa hata fırlatmasın; client ilk gerçek çağrıda oluşturulur.
+let openaiClient: OpenAI | null = null;
+function getOpenAI(): OpenAI {
+  if (!openaiClient) {
+    openaiClient = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  }
+  return openaiClient;
+}
 
 export interface AgentBuilderRunResult {
   threadId: string;
@@ -36,7 +42,7 @@ export async function runAgentBuilderWorkflow(
 
   try {
     // 1. Thread oluştur
-    const thread = await openai.beta.threads.create({
+    const thread = await getOpenAI().beta.threads.create({
       messages: [
         {
           role: 'user',
@@ -53,7 +59,7 @@ export async function runAgentBuilderWorkflow(
     agentLogger.log(`✅ Thread created: ${thread.id}`);
 
     // 2. Agent'ı çalıştır
-    const run = await openai.beta.threads.runs.create(thread.id, {
+    const run = await getOpenAI().beta.threads.runs.create(thread.id, {
       assistant_id: assistantId,
       instructions: 'Thunder ERP request. Respond in JSON format if possible.',
     });
@@ -61,7 +67,7 @@ export async function runAgentBuilderWorkflow(
     agentLogger.log(`🚀 Run started: ${run.id}`);
 
     // 3. Tamamlanmasını bekle (max 60 saniye)
-    let runStatus = await openai.beta.threads.runs.retrieve(thread.id, run.id);
+    let runStatus = await getOpenAI().beta.threads.runs.retrieve(thread.id, run.id);
     let retries = 0;
     const maxRetries = 60;
 
@@ -72,7 +78,7 @@ export async function runAgentBuilderWorkflow(
       retries < maxRetries
     ) {
       await new Promise((resolve) => setTimeout(resolve, 1000));
-      runStatus = await openai.beta.threads.runs.retrieve(thread.id, run.id);
+      runStatus = await getOpenAI().beta.threads.runs.retrieve(thread.id, run.id);
       retries++;
 
       if (retries % 5 === 0) {
@@ -97,7 +103,7 @@ export async function runAgentBuilderWorkflow(
     agentLogger.log(`✅ Run completed: ${runStatus.status}`);
 
     // 4. Mesajları al
-    const messages = await openai.beta.threads.messages.list(thread.id);
+    const messages = await getOpenAI().beta.threads.messages.list(thread.id);
     const lastMessage = messages.data[0];
 
     if (!lastMessage || lastMessage.role !== 'assistant') {
@@ -155,7 +161,7 @@ export async function runAgentBuilderWorkflow(
  */
 export async function listAssistants() {
   try {
-    const assistants = await openai.beta.assistants.list();
+    const assistants = await getOpenAI().beta.assistants.list();
     return assistants.data;
   } catch (error: any) {
     agentLogger.error(`❌ Failed to list assistants:`, error);
@@ -168,7 +174,7 @@ export async function listAssistants() {
  */
 export async function deleteThread(threadId: string) {
   try {
-    await openai.beta.threads.del(threadId);
+    await getOpenAI().beta.threads.del(threadId);
     agentLogger.log(`🗑️ Thread deleted: ${threadId}`);
   } catch (error: any) {
     agentLogger.error(`❌ Failed to delete thread:`, error);
